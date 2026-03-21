@@ -1,0 +1,190 @@
+{
+  "common": {
+    "siteName": "Template",
+    "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "contact": "Contact",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More",
+    "readMore": "Read More",
+    "viewAll": "View All",
+    "sendMessage": "Send Message",
+    "copyright": "All rights reserved",
+    "search": "Search",
+    "login": "Login",
+    "viewProject": "View Project",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "message": "Message",
+    "subject": "Subject"
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "services": "Services",
+    "portfolio": "Portfolio",
+    "blog": "Blog",
+    "contact": "Contact",
+    "team": "Team",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "testimonials": "Testimonials",
+    "careers": "Careers",
+    "dashboard": "Dashboard",
+    "gallery": "Gallery",
+    "designer": "Designer"
+  },
+  "hero": {
+    "badge": "Building the Digital Future",
+    "title": "We Create",
+    "titleHighlight": "Digital Experiences",
+    "description": "We deliver integrated digital solutions combining creative design and advanced technology to help you achieve your goals. From concept to launch, our expert team crafts tailored experiences that drive growth, engage audiences, and transform your vision into reality.",
+    "cta": "Start Your Project",
+    "secondaryCta": "View Our Work"
+  },
+  "stats": {
+    "clients": "Clients",
+    "projects": "Projects",
+    "experience": "Years Experience",
+    "awards": "Awards",
+    "satisfaction": "Client Satisfaction"
+  },
+  "features": {
+    "title": "Why Choose Us",
+    "subtitle": "Features",
+    "performance": "High Performance",
+    "performanceDesc": "Fast, optimized websites that rank well in search engines",
+    "design": "Modern Design",
+    "designDesc": "Elegant, responsive interfaces that work across all devices",
+    "security": "Advanced Security",
+    "securityDesc": "Top security standards to protect your data and customer information",
+    "support": "24/7 Support",
+    "supportDesc": "Dedicated support team available around the clock to assist you",
+    "scalable": "Scalability",
+    "scalableDesc": "Flexible technical architecture that grows seamlessly with your business",
+    "analytics": "Smart Analytics",
+    "analyticsDesc": "Advanced dashboards to monitor performance and make data-driven decisions"
+  },
+  "services": {
+    "title": "Our Premium Services",
+    "subtitle": "What We Offer",
+    "webDev": "Web Development",
+    "webDevDesc": "Building professional websites and advanced web applications with cutting-edge technologies",
+    "mobileDev": "Mobile Development",
+    "mobileDevDesc": "Smart iOS and Android apps with high performance and seamless experience",
+    "uiux": "UI/UX Design",
+    "uiuxDesc": "Beautiful user interfaces with smooth, well-researched user experiences",
+    "marketing": "Digital Marketing",
+    "marketingDesc": "Effective marketing strategies to boost your brand awareness",
+    "branding": "Brand Identity",
+    "brandingDesc": "Complete visual identity design that reflects your company's values and vision",
+    "consulting": "Tech Consulting",
+    "consultingDesc": "Expert consulting to help you make the right technical decisions"
+  },
+  "about": {
+    "title": "About Us",
+    "subtitle": "Our Story",
+    "description": "A team of creators and passionate developers building exceptional digital products that make a real difference",
+    "mission": "Our Mission",
+    "missionDesc": "Empowering businesses and individuals to reach their full digital potential through innovative technology solutions and user-centered design",
+    "vision": "Our Vision",
+    "visionDesc": "To be the leading technology partner in the region, driving digital transformation with innovation and responsibility",
+    "values": "Our Values",
+    "valuesDesc": "Innovation, transparency, quality, and teamwork are the core pillars on which we build every project",
+    "teamTitle": "Our Creative Team",
+    "teamSubtitle": "The Team"
+  },
+  "portfolio": {
+    "title": "Our Latest Work",
+    "subtitle": "Portfolio",
+    "description": "Selected projects we're proud to have delivered for our clients",
+    "all": "All",
+    "web": "Websites",
+    "mobile": "Apps",
+    "branding": "Branding"
+  },
+  "blog": {
+    "title": "Latest Articles",
+    "subtitle": "Blog",
+    "description": "Latest insights and thoughts on technology and design",
+    "readTime": "min read",
+    "by": "By"
+  },
+  "contact": {
+    "title": "Get in Touch",
+    "subtitle": "Contact Us",
+    "description": "We'd love to hear about your ideas and projects. Reach out and we'll respond promptly",
+    "address": "Riyadh, Saudi Arabia",
+    "phone": "+966 50 000 1234",
+    "email": "hello@template.sa",
+    "formTitle": "Send Us a Message",
+    "success": "Your message has been sent successfully!"
+  },
+  "cta": {
+    "title": "Ready to Start Your Project?",
+    "description": "Let us help you transform your idea into a stunning digital reality. Contact us today",
+    "button": "Contact Us Now"
+  },
+  "pricing": {
+    "subtitle": "Pricing",
+    "title": "Simple, Transparent Pricing",
+    "description": "Choose the plan that fits your needs. No hidden fees.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "popular": "Most Popular",
+    "getStarted": "Get Started",
+    "contactSales": "Contact Sales",
+    "perMonth": "/month",
+    "perYear": "/year"
+  },
+  "faq": {
+    "subtitle": "FAQ",
+    "title": "Frequently Asked Questions",
+    "description": "Everything you need to know about our services."
+  },
+  "testimonials": {
+    "title": "What Our Clients Say",
+    "subtitle": "Testimonials"
+  },
+  "footer": {
+    "description": "We create exceptional digital experiences combining creativity and technology to achieve our clients' goals",
+    "quickLinks": "Quick Links",
+    "services": "Services",
+    "pages": "Pages",
+    "contactUs": "Contact Us",
+    "newsletter": "Newsletter",
+    "newsletterDesc": "Stay updated with our latest insights and news.",
+    "subscribe": "Subscribe",
+    "emailPlaceholder": "Enter your email",
+    "address": "Riyadh, Saudi Arabia",
+    "workingHours": "Sun – Thu: 9 AM – 6 PM",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookies",
+    "madeWith": "Crafted with passion"
+  },
+  "showcase": {
+    "title": "Component Showcase",
+    "subtitle": "All Components",
+    "description": "A complete overview of all available components, styles, and patterns."
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "Legal",
+    "lastUpdated": "Last updated: March 2026"
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "subtitle": "Legal",
+    "lastUpdated": "Last updated: March 2026"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "goHome": "Go Home"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(npx create-next-app@latest master-template --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(ls -la src/app/[locale]/\\\\\\(public\\\\\\)/\\\\\\(home\\\\\\)/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/about/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/services/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/shop/page.tsx)",
+      "Bash(ls src/app/[locale]/\\\\\\(public\\\\\\)/blog/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/faq/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/pricing/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/contact/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/team/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/careers/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/portfolio/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/testimonials/page.tsx src/app/[locale]/\\\\\\(public\\\\\\)/categories/page.tsx)",
+      "Bash(ls src/app/[locale]/\\\\\\(dashboard\\\\\\)/*/page.tsx)",
+      "Bash(npm run:*)",
+      "Bash(npx next:*)",
+      "Bash(grep -r \"missionTitle\\\\|missionDescription\\\\|visionTitle\\\\|visionDescription\\\\|statsTitle\\\\|statsSubtitle\" C:UsersmohanDesktopweb_templatesrc --include=*.tsx --include=*.ts --include=*.json)",
+      "Bash(find \"C:\\\\Users\\\\mohan\\\\Desktop\\\\web_template\\\\src\\\\app\\\\[locale]\\\\\\(public\\)\" -name \"services\" -type d)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\mohan\\Desktop\\web_template"
+    ]
+  }
+}
