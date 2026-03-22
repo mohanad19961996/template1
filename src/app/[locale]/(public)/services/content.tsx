@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { Modal } from "@/components/shared/modal";
 import {
   Code,
@@ -156,6 +158,10 @@ export function ServicesContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const tx = (en: string, ar: string) => isAr ? ar : en;
+
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.services?.sections ?? DEFAULT_PAGES_CONTENT.services.sections;
 
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [modalService, setModalService] = useState<(typeof services)[0] | null>(null);
@@ -191,6 +197,7 @@ export function ServicesContent() {
   return (
     <>
       {/* ─── 1. Premium Hero ────────────────────────────────────── */}
+      {sections.hero?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{
@@ -287,10 +294,12 @@ export function ServicesContent() {
           </div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ─── 2. Service Categories Filter ───────────────────────── */}
+      {sections.serviceGrid?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -487,6 +496,7 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
@@ -558,6 +568,7 @@ export function ServicesContent() {
       <SectionDivider />
 
       {/* ─── 5. Our Process ─────────────────────────────────────── */}
+      {sections.process?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{
@@ -567,8 +578,8 @@ export function ServicesContent() {
       >
         <Container>
           <SectionHeading
-            title={isAr ? "كيف نعمل" : "Our Process"}
-            subtitle={isAr ? "المنهجية" : "Methodology"}
+            title={sections.process?.titleEn ? tx(sections.process.titleEn, sections.process.titleAr) : tx("Our Process", "كيف نعمل")}
+            subtitle={sections.process?.subtitleEn ? tx(sections.process.subtitleEn, sections.process.subtitleAr) : tx("Methodology", "المنهجية")}
           />
 
           <motion.div
@@ -635,15 +646,17 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ─── 6. Technologies We Use ─────────────────────────────── */}
+      {sections.techStack?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "التقنيات التي نستخدمها" : "Technologies We Use"}
-            subtitle={isAr ? "أدواتنا" : "Our Stack"}
+            title={sections.techStack?.titleEn ? tx(sections.techStack.titleEn, sections.techStack.titleAr) : tx("Technologies We Use", "التقنيات التي نستخدمها")}
+            subtitle={sections.techStack?.subtitleEn ? tx(sections.techStack.subtitleEn, sections.techStack.subtitleAr) : tx("Our Stack", "أدواتنا")}
           />
 
           <motion.div
@@ -699,10 +712,12 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ─── 7. Service Comparison Table ─────────────────────────── */}
+      {sections.comparison?.visible !== false && (
       <section
         className="relative"
         style={{
@@ -712,8 +727,8 @@ export function ServicesContent() {
       >
         <Container>
           <SectionHeading
-            title={isAr ? "مقارنة الباقات" : "Compare Plans"}
-            subtitle={isAr ? "الخطط" : "Packages"}
+            title={sections.comparison?.titleEn ? tx(sections.comparison.titleEn, sections.comparison.titleAr) : tx("Compare Plans", "مقارنة الباقات")}
+            subtitle={sections.comparison?.subtitleEn ? tx(sections.comparison.subtitleEn, sections.comparison.subtitleAr) : tx("Packages", "الخطط")}
           />
 
           <motion.div
@@ -789,6 +804,7 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
@@ -875,6 +891,7 @@ export function ServicesContent() {
       <SectionDivider />
 
       {/* ─── 9. FAQ Mini Section ─────────────────────────────────── */}
+      {sections.faq?.visible !== false && (
       <section
         className="relative"
         style={{
@@ -884,8 +901,8 @@ export function ServicesContent() {
       >
         <Container size="sm">
           <SectionHeading
-            title={isAr ? "أسئلة شائعة" : "Frequently Asked Questions"}
-            subtitle={isAr ? "الأسئلة" : "FAQ"}
+            title={sections.faq?.titleEn ? tx(sections.faq.titleEn, sections.faq.titleAr) : tx("Frequently Asked Questions", "أسئلة شائعة")}
+            subtitle={sections.faq?.subtitleEn ? tx(sections.faq.subtitleEn, sections.faq.subtitleAr) : tx("FAQ", "الأسئلة")}
           />
 
           <motion.div
@@ -952,10 +969,12 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ─── 10. Bottom CTA ──────────────────────────────────────── */}
+      {sections.cta?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -1048,6 +1067,7 @@ export function ServicesContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       {/* ─── Service Modal ───────────────────────────────────────── */}
       <Modal

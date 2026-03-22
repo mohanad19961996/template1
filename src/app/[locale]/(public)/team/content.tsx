@@ -5,6 +5,8 @@ import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
 import { Modal } from "@/components/shared/modal";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import {
   Lightbulb,
   Users,
@@ -225,6 +227,8 @@ function AnimatedStat({
 export function TeamContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.team?.sections ?? DEFAULT_PAGES_CONTENT.team.sections;
 
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -251,6 +255,7 @@ export function TeamContent() {
 
   return (
     <div style={{ background: "var(--color-background)" }}>
+      {sections.hero?.visible !== false && (<>
       {/* ═══════════════════ SECTION 1: PREMIUM HERO ═══════════════════ */}
       <section
         className="relative overflow-hidden"
@@ -363,13 +368,15 @@ export function TeamContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.leadership?.visible !== false && (<>
       {/* ═══════════════════ SECTION 2: LEADERSHIP TEAM ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={isAr ? "القيادة" : "Leadership"}
-            title={isAr ? "فريق القيادة" : "Leadership Team"}
+            subtitle={isAr ? (sections.leadership?.subtitleAr ?? "القيادة") : (sections.leadership?.subtitleEn ?? "Leadership")}
+            title={isAr ? (sections.leadership?.titleAr ?? "فريق القيادة") : (sections.leadership?.titleEn ?? "Leadership Team")}
             description={
               isAr
                 ? "القادة الذين يوجهون رؤيتنا ويلهمون فريقنا لتحقيق التميز"
@@ -477,13 +484,15 @@ export function TeamContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.fullGrid?.visible !== false && (<>
       {/* ═══════════════════ SECTION 3: FULL TEAM GRID ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={isAr ? "الفريق" : "The Team"}
-            title={isAr ? "تعرّف على فريقنا" : "Meet Our Team"}
+            subtitle={isAr ? (sections.fullGrid?.subtitleAr ?? "الفريق") : (sections.fullGrid?.subtitleEn ?? "The Team")}
+            title={isAr ? (sections.fullGrid?.titleAr ?? "تعرّف على فريقنا") : (sections.fullGrid?.titleEn ?? "Meet Our Team")}
             description={
               isAr
                 ? "نخبة من المواهب المتنوعة تعمل معًا لتحقيق رؤيتنا المشتركة"
@@ -580,7 +589,9 @@ export function TeamContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.culture?.visible !== false && (<>
       {/* ═══════════════════ SECTION 4: TEAM CULTURE ═══════════════════ */}
       <section
         style={{
@@ -591,8 +602,8 @@ export function TeamContent() {
       >
         <Container>
           <SectionHeading
-            subtitle={isAr ? "ثقافتنا" : "Our Culture"}
-            title={isAr ? "ما يجمعنا" : "What Unites Us"}
+            subtitle={isAr ? (sections.culture?.subtitleAr ?? "ثقافتنا") : (sections.culture?.subtitleEn ?? "Our Culture")}
+            title={isAr ? (sections.culture?.titleAr ?? "ما يجمعنا") : (sections.culture?.titleEn ?? "What Unites Us")}
             description={
               isAr
                 ? "القيم الأساسية التي تشكل ثقافة فريقنا وتدفعنا نحو التميز"
@@ -679,13 +690,15 @@ export function TeamContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.stats?.visible !== false && (<>
       {/* ═══════════════════ SECTION 5: BY THE NUMBERS ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={isAr ? "إنجازاتنا" : "By The Numbers"}
-            title={isAr ? "فريقنا بالأرقام" : "Our Team in Numbers"}
+            subtitle={isAr ? (sections.stats?.subtitleAr ?? "إنجازاتنا") : (sections.stats?.subtitleEn ?? "By The Numbers")}
+            title={isAr ? (sections.stats?.titleAr ?? "فريقنا بالأرقام") : (sections.stats?.titleEn ?? "Our Team in Numbers")}
           />
 
           <div
@@ -727,7 +740,9 @@ export function TeamContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.cta?.visible !== false && (<>
       {/* ═══════════════════ SECTION 6: JOIN OUR TEAM CTA ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
@@ -822,6 +837,7 @@ export function TeamContent() {
           </motion.div>
         </Container>
       </section>
+      </>)}
 
       {/* ═══════════════════ MEMBER MODAL ═══════════════════ */}
       <Modal

@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import {
   Search,
   ChevronDown,
@@ -228,6 +230,8 @@ export function FaqContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const t = useTranslations("faq");
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.faq?.sections ?? DEFAULT_PAGES_CONTENT.faq.sections;
 
   const [activeCategory, setActiveCategory] = useState("general");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -262,6 +266,7 @@ export function FaqContent() {
 
   return (
     <div style={{ background: "var(--color-background)" }}>
+      {sections.hero?.visible !== false && (<>
       {/* ═══════════════ 1. PREMIUM HERO ═══════════════ */}
       <section
         style={{
@@ -356,7 +361,9 @@ export function FaqContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.categories?.visible !== false && (<>
       {/* ═══════════════ 2. CATEGORY TABS ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -483,7 +490,9 @@ export function FaqContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.stats?.visible !== false && (<>
       {/* ═══════════════ 4. QUICK STATS ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -581,7 +590,9 @@ export function FaqContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.cta?.visible !== false && (<>
       {/* ═══════════════ 5. CONTACT CTA ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -661,6 +672,7 @@ export function FaqContent() {
           </motion.div>
         </Container>
       </section>
+      </>)}
     </div>
   );
 }

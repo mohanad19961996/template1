@@ -158,6 +158,21 @@ export interface ProcessConfig {
   showBottomCta: boolean;
 }
 
+/* ── Page Content types ── */
+export interface SectionConfig {
+  visible: boolean;
+  titleEn: string;
+  titleAr: string;
+  subtitleEn: string;
+  subtitleAr: string;
+}
+
+export interface PageContentConfig {
+  sections: Record<string, SectionConfig>;
+}
+
+export type PagesContent = Record<string, PageContentConfig>;
+
 export interface SiteConfig {
   pages: PageConfig[];
   hero: HeroConfig;
@@ -170,6 +185,7 @@ export interface SiteConfig {
   testimonials: TestimonialsConfig;
   cta: CtaConfig;
   process: ProcessConfig;
+  pagesContent: PagesContent;
 }
 
 export const DEFAULT_HERO_CONTENT: HeroContent = {
@@ -313,6 +329,145 @@ export const ALL_PAGES: PageConfig[] = [
   { key: "designer", href: "/designer", labelEn: "Designer", labelAr: "المصمم", visible: true, inNavbar: true },
 ];
 
+const s = (titleEn: string, titleAr: string, subtitleEn = "", subtitleAr = ""): SectionConfig => ({
+  visible: true,
+  titleEn,
+  titleAr,
+  subtitleEn,
+  subtitleAr,
+});
+
+export const DEFAULT_PAGES_CONTENT: PagesContent = {
+  about: {
+    sections: {
+      hero: s("About Us", "من نحن", "Learn more about our company", "تعرف على شركتنا"),
+      story: s("Our Story", "قصتنا", "How we started", "كيف بدأنا"),
+      mission: s("Mission & Vision", "الرسالة والرؤية", "What drives us forward", "ما يدفعنا للأمام"),
+      stats: s("Our Numbers", "أرقامنا", "Achievements in numbers", "إنجازاتنا بالأرقام"),
+      approach: s("Our Approach", "نهجنا", "How we work", "كيف نعمل"),
+      team: s("Our Team", "فريقنا", "Meet the people behind our success", "تعرف على فريقنا"),
+      awards: s("Awards & Recognition", "الجوائز والتقدير", "Our achievements", "إنجازاتنا"),
+      partners: s("Our Partners", "شركاؤنا", "Companies we work with", "الشركات التي نعمل معها"),
+      cta: s("Get Started", "ابدأ الآن", "Ready to work with us?", "هل أنت مستعد للعمل معنا؟"),
+    },
+  },
+  services: {
+    sections: {
+      hero: s("Our Services", "خدماتنا", "What we offer", "ما نقدمه"),
+      categories: s("Service Categories", "فئات الخدمات", "Browse by category", "تصفح حسب الفئة"),
+      serviceGrid: s("All Services", "جميع الخدمات", "Explore our full range", "استكشف مجموعتنا الكاملة"),
+      process: s("Our Process", "عمليتنا", "How we deliver results", "كيف نحقق النتائج"),
+      techStack: s("Technology Stack", "التقنيات المستخدمة", "Tools we use", "الأدوات التي نستخدمها"),
+      comparison: s("Service Comparison", "مقارنة الخدمات", "Find the right fit", "اعثر على الأنسب"),
+      faq: s("Frequently Asked Questions", "الأسئلة الشائعة", "Common questions answered", "إجابات الأسئلة الشائعة"),
+      cta: s("Start Your Project", "ابدأ مشروعك", "Let's build something great", "لنبني شيئاً رائعاً"),
+    },
+  },
+  portfolio: {
+    sections: {
+      hero: s("Our Portfolio", "أعمالنا", "See what we've built", "شاهد ما بنيناه"),
+      featured: s("Featured Projects", "المشاريع المميزة", "Our best work", "أفضل أعمالنا"),
+      projectGrid: s("All Projects", "جميع المشاريع", "Browse our complete portfolio", "تصفح معرض أعمالنا الكامل"),
+      industries: s("Industries We Serve", "القطاعات التي نخدمها", "Diverse expertise", "خبرات متنوعة"),
+      testimonial: s("Client Feedback", "آراء العملاء", "What our clients say", "ماذا يقول عملاؤنا"),
+      cta: s("Start Your Project", "ابدأ مشروعك", "Ready to create something amazing?", "هل أنت مستعد لإنشاء شيء مذهل؟"),
+    },
+  },
+  contact: {
+    sections: {
+      hero: s("Contact Us", "تواصل معنا", "Get in touch", "ابقَ على تواصل"),
+      info: s("Contact Information", "معلومات الاتصال", "Ways to reach us", "طرق التواصل معنا"),
+      form: s("Send a Message", "أرسل رسالة", "We'd love to hear from you", "يسعدنا أن نسمع منك"),
+      map: s("Our Location", "موقعنا", "Find us on the map", "اعثر علينا على الخريطة"),
+      faq: s("Frequently Asked Questions", "الأسئلة الشائعة", "Quick answers", "إجابات سريعة"),
+      cta: s("Let's Talk", "لنتحدث", "Ready to start a conversation?", "هل أنت مستعد لبدء محادثة؟"),
+    },
+  },
+  team: {
+    sections: {
+      hero: s("Our Team", "فريقنا", "Meet the experts", "تعرف على الخبراء"),
+      leadership: s("Leadership", "القيادة", "Our executive team", "فريقنا التنفيذي"),
+      fullGrid: s("All Team Members", "جميع أعضاء الفريق", "The people behind our success", "الأشخاص وراء نجاحنا"),
+      culture: s("Our Culture", "ثقافتنا", "What makes us unique", "ما يجعلنا مميزين"),
+      stats: s("Team Stats", "إحصائيات الفريق", "Our team in numbers", "فريقنا بالأرقام"),
+      cta: s("Join Our Team", "انضم لفريقنا", "We're always looking for talent", "نبحث دائماً عن المواهب"),
+    },
+  },
+  pricing: {
+    sections: {
+      hero: s("Pricing Plans", "خطط الأسعار", "Choose the right plan", "اختر الخطة المناسبة"),
+      plans: s("Our Plans", "خططنا", "Flexible pricing for every need", "أسعار مرنة لكل احتياج"),
+      comparison: s("Plan Comparison", "مقارنة الخطط", "Compare features side by side", "قارن الميزات جنباً إلى جنب"),
+      guarantee: s("Money-Back Guarantee", "ضمان استرداد الأموال", "Risk-free commitment", "التزام بدون مخاطر"),
+      faq: s("Pricing FAQ", "أسئلة شائعة عن الأسعار", "Common pricing questions", "أسئلة شائعة عن التسعير"),
+      enterprise: s("Enterprise Solutions", "حلول المؤسسات", "Custom plans for large teams", "خطط مخصصة للفرق الكبيرة"),
+    },
+  },
+  faq: {
+    sections: {
+      hero: s("FAQ", "الأسئلة الشائعة", "Find answers quickly", "اعثر على الإجابات بسرعة"),
+      categories: s("Browse by Category", "تصفح حسب الفئة", "Organized for easy access", "منظمة لسهولة الوصول"),
+      stats: s("Help Center Stats", "إحصائيات مركز المساعدة", "Our support in numbers", "دعمنا بالأرقام"),
+      cta: s("Still Have Questions?", "لا تزال لديك أسئلة؟", "We're here to help", "نحن هنا للمساعدة"),
+    },
+  },
+  testimonials: {
+    sections: {
+      hero: s("Testimonials", "آراء العملاء", "What our clients say", "ماذا يقول عملاؤنا"),
+      featured: s("Featured Reviews", "التقييمات المميزة", "Top client stories", "أبرز قصص العملاء"),
+      stats: s("Satisfaction Stats", "إحصائيات الرضا", "Our track record", "سجل إنجازاتنا"),
+      grid: s("All Testimonials", "جميع الآراء", "Read more reviews", "اقرأ المزيد من التقييمات"),
+      video: s("Video Testimonials", "شهادات بالفيديو", "Hear directly from clients", "اسمع مباشرة من العملاء"),
+      trust: s("Trust Indicators", "مؤشرات الثقة", "Why clients trust us", "لماذا يثق بنا العملاء"),
+      cta: s("Share Your Experience", "شارك تجربتك", "We'd love your feedback", "يسعدنا سماع رأيك"),
+    },
+  },
+  careers: {
+    sections: {
+      hero: s("Careers", "الوظائف", "Join our growing team", "انضم لفريقنا المتنامي"),
+      benefits: s("Benefits & Perks", "المزايا والفوائد", "Why work with us", "لماذا تعمل معنا"),
+      culture: s("Our Culture", "ثقافتنا", "Life at our company", "الحياة في شركتنا"),
+      jobs: s("Open Positions", "الوظائف المتاحة", "Current opportunities", "الفرص الحالية"),
+      perks: s("Employee Perks", "امتيازات الموظفين", "What we offer our team", "ما نقدمه لفريقنا"),
+      process: s("Hiring Process", "عملية التوظيف", "How to join us", "كيف تنضم إلينا"),
+      cta: s("Apply Now", "قدّم الآن", "Take the next step in your career", "اتخذ الخطوة التالية في مسيرتك"),
+    },
+  },
+  blog: {
+    sections: {
+      hero: s("Our Blog", "مدونتنا", "Insights and updates", "رؤى وتحديثات"),
+      featured: s("Featured Articles", "المقالات المميزة", "Our top picks", "اختياراتنا المميزة"),
+      grid: s("All Articles", "جميع المقالات", "Browse all posts", "تصفح جميع المقالات"),
+      newsletter: s("Newsletter", "النشرة البريدية", "Stay up to date", "ابقَ على اطلاع"),
+      tags: s("Popular Tags", "الوسوم الشائعة", "Browse by topic", "تصفح حسب الموضوع"),
+      cta: s("Subscribe", "اشترك", "Never miss an update", "لا تفوّت أي تحديث"),
+    },
+  },
+  gallery: {
+    sections: {
+      hero: s("Gallery", "المعرض", "Visual showcase", "عرض مرئي"),
+      filters: s("Filter Gallery", "تصفية المعرض", "Browse by category", "تصفح حسب الفئة"),
+      grid: s("All Works", "جميع الأعمال", "Explore our visual portfolio", "استكشف معرض أعمالنا المرئي"),
+      stats: s("Gallery Stats", "إحصائيات المعرض", "Our creative output", "إنتاجنا الإبداعي"),
+      cta: s("Start a Project", "ابدأ مشروعاً", "Let's create something beautiful", "لنصنع شيئاً جميلاً"),
+    },
+  },
+  designer: {
+    sections: {
+      hero: s("Designer", "المصمم", "Creative professional portfolio", "معرض أعمال إبداعي احترافي"),
+      about: s("About Me", "عني", "Get to know me", "تعرف عليّ"),
+      services: s("My Services", "خدماتي", "What I offer", "ما أقدمه"),
+      skills: s("Skills & Expertise", "المهارات والخبرات", "What I'm good at", "ما أتقنه"),
+      portfolio: s("My Portfolio", "أعمالي", "Selected works", "أعمال مختارة"),
+      process: s("My Process", "طريقة عملي", "How I work", "كيف أعمل"),
+      pricing: s("Pricing", "الأسعار", "Investment options", "خيارات الاستثمار"),
+      testimonials: s("Client Reviews", "آراء العملاء", "What clients say", "ماذا يقول العملاء"),
+      contact: s("Get in Touch", "تواصل معي", "Let's work together", "لنعمل معاً"),
+      cta: s("Hire Me", "وظّفني", "Ready to start your project?", "هل أنت مستعد لبدء مشروعك؟"),
+    },
+  },
+};
+
 export const DEFAULT_CONFIG: SiteConfig = {
   pages: ALL_PAGES,
   hero: DEFAULT_HERO,
@@ -325,6 +480,7 @@ export const DEFAULT_CONFIG: SiteConfig = {
   testimonials: DEFAULT_TESTIMONIALS,
   cta: DEFAULT_CTA,
   process: DEFAULT_PROCESS,
+  pagesContent: DEFAULT_PAGES_CONTENT,
 };
 
-export const STORAGE_KEY = "site-config-v10";
+export const STORAGE_KEY = "site-config-v11";

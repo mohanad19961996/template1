@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import {
   MapPin, Phone, Mail, Clock, Send,
   ArrowRight, ArrowLeft, ChevronDown, Check,
@@ -58,6 +60,10 @@ export function ContactContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const tx = (en: string, ar: string) => isAr ? ar : en;
+
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.contact?.sections ?? DEFAULT_PAGES_CONTENT.contact.sections;
 
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -147,6 +153,7 @@ export function ContactContent() {
       {/* ═══════════════════════════════════════════════════════════
           1. PREMIUM HERO — CSS gradient, no image
       ═══════════════════════════════════════════════════════════ */}
+      {sections.hero?.visible !== false && (
       <section ref={heroRef} className="relative overflow-hidden" style={{ minHeight: 440 }}>
         {/* radial gradient bg */}
         <div
@@ -255,10 +262,12 @@ export function ContactContent() {
           style={{ background: "linear-gradient(to top, var(--color-background), transparent)" }}
         />
       </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════
           2. CONTACT METHODS STRIP
       ═══════════════════════════════════════════════════════════ */}
+      {sections.info?.visible !== false && (
       <section ref={stripRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -311,12 +320,14 @@ export function ContactContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ═══════════════════════════════════════════════════════════
           3. CONTACT FORM SECTION — split layout
       ═══════════════════════════════════════════════════════════ */}
+      {sections.form?.visible !== false && (
       <section ref={formRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -634,17 +645,19 @@ export function ContactContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ═══════════════════════════════════════════════════════════
           4. MAP SECTION
       ═══════════════════════════════════════════════════════════ */}
+      {sections.map?.visible !== false && (
       <section ref={mapRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "موقعنا" : "Find Us"}
-            subtitle={isAr ? "الموقع" : "Location"}
+            title={sections.map?.titleEn ? tx(sections.map.titleEn, sections.map.titleAr) : tx("Find Us", "موقعنا")}
+            subtitle={sections.map?.subtitleEn ? tx(sections.map.subtitleEn, sections.map.subtitleAr) : tx("Location", "الموقع")}
             description={isAr ? "قم بزيارتنا في مكتبنا الرئيسي" : "Visit us at our headquarters"}
           />
 
@@ -738,17 +751,19 @@ export function ContactContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ═══════════════════════════════════════════════════════════
           5. FAQ ABOUT CONTACT
       ═══════════════════════════════════════════════════════════ */}
+      {sections.faq?.visible !== false && (
       <section ref={faqRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <SectionHeading
-            title={isAr ? "الأسئلة الشائعة" : "Frequently Asked Questions"}
-            subtitle={isAr ? "أسئلة وأجوبة" : "FAQ"}
+            title={sections.faq?.titleEn ? tx(sections.faq.titleEn, sections.faq.titleAr) : tx("Frequently Asked Questions", "الأسئلة الشائعة")}
+            subtitle={sections.faq?.subtitleEn ? tx(sections.faq.subtitleEn, sections.faq.subtitleAr) : tx("FAQ", "أسئلة وأجوبة")}
             description={isAr ? "إجابات على الأسئلة الأكثر شيوعاً حول العمل معنا" : "Answers to common questions about working with us"}
           />
 
@@ -817,12 +832,14 @@ export function ContactContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ═══════════════════════════════════════════════════════════
           6. SOCIAL LINKS
       ═══════════════════════════════════════════════════════════ */}
+      {sections.cta?.visible !== false && (
       <section ref={socialRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <motion.div
@@ -879,6 +896,7 @@ export function ContactContent() {
           </motion.div>
         </Container>
       </section>
+      )}
     </>
   );
 }

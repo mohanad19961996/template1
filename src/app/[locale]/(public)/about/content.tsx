@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { Modal } from "@/components/shared/modal";
 import {
   Target,
@@ -183,6 +185,10 @@ export function AboutContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const tx = (en: string, ar: string) => isAr ? ar : en;
+
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.about?.sections ?? DEFAULT_PAGES_CONTENT.about.sections;
 
   const [modalMember, setModalMember] = useState<(typeof team)[0] | null>(
     null,
@@ -217,6 +223,7 @@ export function AboutContent() {
   return (
     <>
       {/* ━━━━━━━━━━━━━━ 1. PREMIUM HERO BANNER ━━━━━━━━━━━━━━ */}
+      {sections.hero?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{ minHeight: "520px" }}
@@ -369,10 +376,12 @@ export function AboutContent() {
           }}
         />
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 2. STORY / JOURNEY ━━━━━━━━━━━━━━ */}
+      {sections.story?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -449,15 +458,17 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 3. MISSION / VISION / VALUES ━━━━━━━━━━━━━━ */}
+      {sections.mission?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "\u0645\u0627 \u064a\u0642\u0648\u062f\u0646\u0627" : "What Drives Us"}
-            subtitle={t("subtitle")}
+            title={sections.mission?.titleEn ? tx(sections.mission.titleEn, sections.mission.titleAr) : tx("What Drives Us", "\u0645\u0627 \u064a\u0642\u0648\u062f\u0646\u0627")}
+            subtitle={sections.mission?.subtitleEn ? tx(sections.mission.subtitleEn, sections.mission.subtitleAr) : t("subtitle")}
           />
 
           <motion.div
@@ -577,10 +588,12 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 4. STATS COUNTER ROW ━━━━━━━━━━━━━━ */}
+      {sections.stats?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{
@@ -688,15 +701,17 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 5. OUR APPROACH / PHILOSOPHY ━━━━━━━━━━━━━━ */}
+      {sections.approach?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "\u0646\u0647\u062c\u0646\u0627" : "Our Approach"}
-            subtitle={isAr ? "\u0627\u0644\u0641\u0644\u0633\u0641\u0629" : "Philosophy"}
+            title={sections.approach?.titleEn ? tx(sections.approach.titleEn, sections.approach.titleAr) : tx("Our Approach", "\u0646\u0647\u062c\u0646\u0627")}
+            subtitle={sections.approach?.subtitleEn ? tx(sections.approach.subtitleEn, sections.approach.subtitleAr) : tx("Philosophy", "\u0627\u0644\u0641\u0644\u0633\u0641\u0629")}
           />
 
           <motion.div
@@ -812,15 +827,18 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 6. TEAM SECTION ━━━━━━━━━━━━━━ */}
+      {sections.team?.visible !== false && (
+      <>
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={t("teamTitle")}
-            subtitle={t("teamSubtitle")}
+            title={sections.team?.titleEn ? tx(sections.team.titleEn, sections.team.titleAr) : t("teamTitle")}
+            subtitle={sections.team?.subtitleEn ? tx(sections.team.subtitleEn, sections.team.subtitleAr) : t("teamSubtitle")}
           />
 
           <motion.div
@@ -1097,10 +1115,13 @@ export function AboutContent() {
           </div>
         )}
       </Modal>
+      </>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 7. AWARDS & RECOGNITION ━━━━━━━━━━━━━━ */}
+      {sections.awards?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{
@@ -1110,8 +1131,8 @@ export function AboutContent() {
       >
         <Container>
           <SectionHeading
-            title={isAr ? "\u0627\u0644\u062c\u0648\u0627\u0626\u0632 \u0648\u0627\u0644\u062a\u0642\u062f\u064a\u0631" : "Awards & Recognition"}
-            subtitle={isAr ? "\u0625\u0646\u062c\u0627\u0632\u0627\u062a\u0646\u0627" : "Achievements"}
+            title={sections.awards?.titleEn ? tx(sections.awards.titleEn, sections.awards.titleAr) : tx("Awards & Recognition", "\u0627\u0644\u062c\u0648\u0627\u0626\u0632 \u0648\u0627\u0644\u062a\u0642\u062f\u064a\u0631")}
+            subtitle={sections.awards?.subtitleEn ? tx(sections.awards.subtitleEn, sections.awards.subtitleAr) : tx("Achievements", "\u0625\u0646\u062c\u0627\u0632\u0627\u062a\u0646\u0627")}
           />
 
           <motion.div
@@ -1190,10 +1211,12 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 8. PARTNERS / CLIENTS STRIP ━━━━━━━━━━━━━━ */}
+      {sections.partners?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <motion.div
@@ -1273,10 +1296,12 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ━━━━━━━━━━━━━━ 9. BOTTOM CTA ━━━━━━━━━━━━━━ */}
+      {sections.cta?.visible !== false && (
       <section
         className="relative overflow-hidden"
         style={{ paddingBlock: "var(--section-y)" }}
@@ -1349,6 +1374,7 @@ export function AboutContent() {
           </motion.div>
         </Container>
       </section>
+      )}
     </>
   );
 }

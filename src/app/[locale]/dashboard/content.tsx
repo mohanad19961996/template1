@@ -27,6 +27,18 @@ import {
   ChevronRight,
   ChevronLeft,
   Home,
+  FileText,
+  Users,
+  DollarSign,
+  HelpCircle,
+  Star,
+  GraduationCap,
+  BookOpen,
+  Image,
+  Palette,
+  Phone,
+  FolderOpen,
+  Info,
 } from "lucide-react";
 import type { FooterVariant, HeroVariant } from "@/lib/site-config";
 
@@ -327,6 +339,45 @@ export function DashboardContent() {
             delay={0.45}
           />
         </div>
+
+        {/* ═══ PAGE CONTENT EDITORS ═══ */}
+        <SectionCard title={isAr ? "محتوى الصفحات" : "Page Content"}>
+          <p className="text-[11px] mb-3" style={{ opacity: 0.45 }}>
+            {isAr
+              ? "تحكم في أقسام وعناوين كل صفحة — إظهار/إخفاء الأقسام وتعديل النصوص."
+              : "Control sections & headings for each page — toggle visibility and edit text."}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {([
+              { key: "about", icon: Info, labelEn: "About", labelAr: "عن الشركة" },
+              { key: "services", icon: Briefcase, labelEn: "Services", labelAr: "الخدمات" },
+              { key: "portfolio", icon: FolderOpen, labelEn: "Portfolio", labelAr: "الأعمال" },
+              { key: "contact", icon: Phone, labelEn: "Contact", labelAr: "اتصل بنا" },
+              { key: "team", icon: Users, labelEn: "Team", labelAr: "الفريق" },
+              { key: "pricing", icon: DollarSign, labelEn: "Pricing", labelAr: "الأسعار" },
+              { key: "faq", icon: HelpCircle, labelEn: "FAQ", labelAr: "الأسئلة" },
+              { key: "testimonials", icon: Star, labelEn: "Testimonials", labelAr: "الآراء" },
+              { key: "careers", icon: GraduationCap, labelEn: "Careers", labelAr: "الوظائف" },
+              { key: "blog", icon: BookOpen, labelEn: "Blog", labelAr: "المدونة" },
+              { key: "gallery", icon: Image, labelEn: "Gallery", labelAr: "المعرض" },
+              { key: "designer", icon: Palette, labelEn: "Designer", labelAr: "المصمم" },
+            ] as const).map(({ key, icon: Icon, labelEn, labelAr }) => (
+              <Link
+                key={key}
+                href={`/dashboard/pages/${key}`}
+                className="group flex items-center gap-2.5 px-3 py-3 rounded-xl cursor-pointer"
+                style={{ border: "1.5px solid rgba(var(--color-primary-rgb) / 0.1)", transition: "all 0.3s ease" }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-primary)"; e.currentTarget.style.background = "rgba(var(--color-primary-rgb) / 0.04)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(var(--color-primary-rgb) / 0.1)"; e.currentTarget.style.background = "transparent"; }}
+              >
+                <div className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(var(--color-primary-rgb) / 0.06)", border: "1px solid rgba(var(--color-primary-rgb) / 0.08)" }}>
+                  <Icon className="h-3.5 w-3.5" style={{ color: "var(--color-primary)" }} />
+                </div>
+                <span className="text-[12px] font-semibold">{isAr ? labelAr : labelEn}</span>
+              </Link>
+            ))}
+          </div>
+        </SectionCard>
 
         {/* ═══ FOOTER VARIANT ═══ */}
         <SectionCard title={isAr ? "نمط التذييل" : "Footer Variant"}>

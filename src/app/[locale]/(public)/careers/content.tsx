@@ -5,6 +5,8 @@ import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
 import { Link } from "@/i18n/navigation";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import {
   Globe,
   Banknote,
@@ -221,6 +223,8 @@ const processSteps = [
 export function CareersContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.careers?.sections ?? DEFAULT_PAGES_CONTENT.careers.sections;
 
   const [activeDept, setActiveDept] = useState("All");
 
@@ -234,6 +238,7 @@ export function CareersContent() {
 
   return (
     <div style={{ background: "var(--color-background)" }}>
+      {sections.hero?.visible !== false && (<>
       {/* ═══════════════ 1 · HERO ═══════════════ */}
       <section
         className="relative overflow-hidden"
@@ -325,16 +330,18 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.benefits?.visible !== false && (<>
       {/* ═══════════════ 2 · WHY JOIN US ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={isAr ? "لماذا تنضم إلينا" : "Why Join Us"}
+            subtitle={isAr ? (sections.benefits?.subtitleAr ?? "لماذا تنضم إلينا") : (sections.benefits?.subtitleEn ?? "Why Join Us")}
             title={
               isAr
-                ? "مزايا العمل معنا"
-                : "Benefits of Working With Us"
+                ? (sections.benefits?.titleAr ?? "مزايا العمل معنا")
+                : (sections.benefits?.titleEn ?? "Benefits of Working With Us")
             }
             description={
               isAr
@@ -352,7 +359,9 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.culture?.visible !== false && (<>
       {/* ═══════════════ 3 · CULTURE VALUES ═══════════════ */}
       <section
         style={{
@@ -362,8 +371,8 @@ export function CareersContent() {
       >
         <Container>
           <SectionHeading
-            subtitle={isAr ? "ثقافتنا" : "Our Culture"}
-            title={isAr ? "القيم التي تقودنا" : "Values That Drive Us"}
+            subtitle={isAr ? (sections.culture?.subtitleAr ?? "ثقافتنا") : (sections.culture?.subtitleEn ?? "Our Culture")}
+            title={isAr ? (sections.culture?.titleAr ?? "القيم التي تقودنا") : (sections.culture?.titleEn ?? "Values That Drive Us")}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
@@ -375,16 +384,18 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.jobs?.visible !== false && (<>
       {/* ═══════════════ 4 + 5 · DEPARTMENT FILTER + OPEN POSITIONS ═══════════════ */}
       <section ref={positionsRef} style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={isAr ? "الوظائف المتاحة" : "Open Positions"}
+            subtitle={isAr ? (sections.jobs?.subtitleAr ?? "الوظائف المتاحة") : (sections.jobs?.subtitleEn ?? "Open Positions")}
             title={
               isAr
-                ? "ابحث عن دورك القادم"
-                : "Find Your Next Role"
+                ? (sections.jobs?.titleAr ?? "ابحث عن دورك القادم")
+                : (sections.jobs?.titleEn ?? "Find Your Next Role")
             }
           />
 
@@ -461,7 +472,9 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.perks?.visible !== false && (<>
       {/* ═══════════════ 6 · BENEFITS & PERKS ═══════════════ */}
       <section
         style={{
@@ -471,9 +484,9 @@ export function CareersContent() {
       >
         <Container>
           <SectionHeading
-            subtitle={isAr ? "المزايا والامتيازات" : "Benefits & Perks"}
+            subtitle={isAr ? (sections.perks?.subtitleAr ?? "المزايا والامتيازات") : (sections.perks?.subtitleEn ?? "Benefits & Perks")}
             title={
-              isAr ? "ما نقدمه لفريقنا" : "What We Offer Our Team"
+              isAr ? (sections.perks?.titleAr ?? "ما نقدمه لفريقنا") : (sections.perks?.titleEn ?? "What We Offer Our Team")
             }
           />
 
@@ -486,14 +499,16 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.process?.visible !== false && (<>
       {/* ═══════════════ 7 · APPLICATION PROCESS ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <SectionHeading
-            subtitle={isAr ? "كيفية التقديم" : "How to Apply"}
+            subtitle={isAr ? (sections.process?.subtitleAr ?? "كيفية التقديم") : (sections.process?.subtitleEn ?? "How to Apply")}
             title={
-              isAr ? "عملية التقديم" : "Application Process"
+              isAr ? (sections.process?.titleAr ?? "عملية التقديم") : (sections.process?.titleEn ?? "Application Process")
             }
           />
 
@@ -525,13 +540,18 @@ export function CareersContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.cta?.visible !== false && (
+      <>
       {/* ═══════════════ 8 · CTA ═══════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <CtaSection isAr={isAr} />
         </Container>
       </section>
+      </>
+      )}
     </div>
   );
 }

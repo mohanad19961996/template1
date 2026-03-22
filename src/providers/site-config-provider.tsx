@@ -4,11 +4,11 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import {
   DEFAULT_CONFIG, DEFAULT_NAVBAR, DEFAULT_HERO, DEFAULT_HERO_CONTENT,
   DEFAULT_LOGO_CLOUD, DEFAULT_FEATURES, DEFAULT_SERVICES, DEFAULT_STATS,
-  DEFAULT_TESTIMONIALS, DEFAULT_CTA, DEFAULT_PROCESS,
+  DEFAULT_TESTIMONIALS, DEFAULT_CTA, DEFAULT_PROCESS, DEFAULT_PAGES_CONTENT,
   STORAGE_KEY,
   type SiteConfig, type PageConfig, type NavbarConfig, type HeroConfig, type HeroContent,
   type LogoCloudConfig, type FeaturesConfig, type ServicesConfig, type StatsConfig,
-  type TestimonialsConfig, type CtaConfig, type ProcessConfig,
+  type TestimonialsConfig, type CtaConfig, type ProcessConfig, type PagesContent,
 } from "@/lib/site-config";
 
 interface SiteConfigContextValue {
@@ -80,6 +80,20 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
         if (!parsed.hero && parsed.heroVariant) {
           mergedHero.variant = parsed.heroVariant;
         }
+        // Merge pagesContent: deep merge each page's sections with defaults
+        const mergedPagesContent: PagesContent = {};
+        for (const [pageKey, defaultPageContent] of Object.entries(DEFAULT_PAGES_CONTENT)) {
+          const storedPageContent = parsed.pagesContent?.[pageKey];
+          const mergedSections: Record<string, typeof defaultPageContent.sections[string]> = {};
+          for (const [sectionKey, defaultSection] of Object.entries(defaultPageContent.sections)) {
+            mergedSections[sectionKey] = {
+              ...defaultSection,
+              ...(storedPageContent?.sections?.[sectionKey] ?? {}),
+            };
+          }
+          mergedPagesContent[pageKey] = { sections: mergedSections };
+        }
+
         setConfig({
           pages: mergedPages,
           hero: mergedHero,
@@ -92,6 +106,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
           testimonials: { ...DEFAULT_TESTIMONIALS, ...(parsed.testimonials ?? {}) },
           cta: { ...DEFAULT_CTA, ...(parsed.cta ?? {}) },
           process: { ...DEFAULT_PROCESS, ...(parsed.process ?? {}) },
+          pagesContent: mergedPagesContent,
         });
       }
     } catch {

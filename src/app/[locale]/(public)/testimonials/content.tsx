@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
 import Image from "next/image";
@@ -894,41 +896,57 @@ function CTASection({ isAr }: { isAr: boolean }) {
 export function TestimonialsContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.testimonials?.sections ?? DEFAULT_PAGES_CONTENT.testimonials.sections;
 
   return (
     <main style={{ background: "var(--color-background)" }}>
+      {sections.hero?.visible !== false && (<>
       {/* Section 1: Premium Hero */}
       <HeroSection isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.featured?.visible !== false && (<>
       {/* Section 2: Featured Testimonial */}
       <FeaturedTestimonial isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.stats?.visible !== false && (<>
       {/* Section 3: Stats Row */}
       <StatsRow isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.grid?.visible !== false && (<>
       {/* Section 4 & 5: Category Filter + Testimonials Grid */}
       <TestimonialsGrid isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.video?.visible !== false && (<>
       {/* Section 6: Video Testimonials */}
       <VideoTestimonials isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.trust?.visible !== false && (<>
       {/* Section 7: Trust Badges */}
       <TrustBadges isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
-      {/* Section 8: CTA */}
+      {sections.cta?.visible !== false && (
+      /* Section 8: CTA */
       <CTASection isAr={isAr} />
+      )}
     </main>
   );
 }

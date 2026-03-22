@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import {
   Check,
   X,
@@ -213,6 +215,8 @@ export function PricingContent() {
   const isAr = locale === "ar";
   const t = useTranslations("pricing");
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.pricing?.sections ?? DEFAULT_PAGES_CONTENT.pricing.sections;
 
   const [isYearly, setIsYearly] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -242,6 +246,7 @@ export function PricingContent() {
 
   return (
     <div style={{ direction: isAr ? "rtl" : "ltr" }}>
+      {sections.hero?.visible !== false && (<>
       {/* ════════════════ 1. Premium Hero ════════════════ */}
       <section
         ref={heroRef}
@@ -324,7 +329,9 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.plans?.visible !== false && (<>
       {/* ════════════════ 2. Billing Toggle ════════════════ */}
       <section
         ref={toggleRef}
@@ -577,7 +584,9 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.comparison?.visible !== false && (<>
       {/* ════════════════ 4. Feature Comparison Table ════════════════ */}
       <section
         ref={tableRef}
@@ -585,8 +594,8 @@ export function PricingContent() {
       >
         <Container>
           <SectionHeading
-            subtitle={isAr ? "\u0645\u0642\u0627\u0631\u0646\u0629" : "Compare"}
-            title={isAr ? "\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0645\u0645\u064a\u0632\u0627\u062a" : "Feature Comparison"}
+            subtitle={isAr ? (sections.comparison?.subtitleAr ?? "\u0645\u0642\u0627\u0631\u0646\u0629") : (sections.comparison?.subtitleEn ?? "Compare")}
+            title={isAr ? (sections.comparison?.titleAr ?? "\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0645\u0645\u064a\u0632\u0627\u062a") : (sections.comparison?.titleEn ?? "Feature Comparison")}
             description={
               isAr
                 ? "\u0627\u0637\u0644\u0639 \u0639\u0644\u0649 \u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u0645\u064a\u0632\u0627\u062a \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u0641\u064a \u0643\u0644 \u062e\u0637\u0629"
@@ -695,7 +704,9 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.guarantee?.visible !== false && (<>
       {/* ════════════════ 5. Money-Back Guarantee ════════════════ */}
       <section
         ref={guaranteeRef}
@@ -801,7 +812,9 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.faq?.visible !== false && (<>
       {/* ════════════════ 6. FAQ Section ════════════════ */}
       <section
         ref={faqRef}
@@ -809,11 +822,11 @@ export function PricingContent() {
       >
         <Container size="sm">
           <SectionHeading
-            subtitle={isAr ? "\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0634\u0627\u0626\u0639\u0629" : "FAQ"}
+            subtitle={isAr ? (sections.faq?.subtitleAr ?? "\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0634\u0627\u0626\u0639\u0629") : (sections.faq?.subtitleEn ?? "FAQ")}
             title={
               isAr
-                ? "\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0634\u0627\u0626\u0639\u0629 \u062d\u0648\u0644 \u0627\u0644\u062a\u0633\u0639\u064a\u0631"
-                : "Frequently Asked Questions"
+                ? (sections.faq?.titleAr ?? "\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0634\u0627\u0626\u0639\u0629 \u062d\u0648\u0644 \u0627\u0644\u062a\u0633\u0639\u064a\u0631")
+                : (sections.faq?.titleEn ?? "Frequently Asked Questions")
             }
             description={
               isAr
@@ -884,7 +897,9 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.enterprise?.visible !== false && (<>
       {/* ════════════════ 7. Enterprise CTA ════════════════ */}
       <section
         ref={enterpriseRef}
@@ -962,6 +977,7 @@ export function PricingContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
       {/* ════════════════ 8. Client Logos Strip ════════════════ */}
       <section

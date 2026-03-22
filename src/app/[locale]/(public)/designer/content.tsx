@@ -1,6 +1,8 @@
 "use client";
 
 import { useLocale } from "next-intl";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { Container } from "@/components/shared/container";
 import { SectionDivider } from "@/components/shared/section-divider";
 import {
@@ -325,6 +327,8 @@ export function DesignerContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const tx = (en: string, ar: string) => (isAr ? ar : en);
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.designer?.sections ?? DEFAULT_PAGES_CONTENT.designer.sections;
   const Arrow = isAr ? ArrowLeft : ArrowRight;
 
   const [activePortfolioCat, setActivePortfolioCat] = useState("all");
@@ -347,6 +351,7 @@ export function DesignerContent() {
 
   return (
     <div dir={isAr ? "rtl" : "ltr"}>
+      {sections.hero?.visible !== false && (<>
       {/* ═══════════════════ 1. HERO SECTION ═══════════════════ */}
       <section
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
@@ -634,7 +639,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.about?.visible !== false && (<>
       {/* ═══════════════════ 2. STATS BAR ═══════════════════ */}
       <section
         className="relative py-16 overflow-hidden"
@@ -678,7 +685,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.services?.visible !== false && (<>
       {/* ═══════════════════ 3. SERVICES — FLIP CARDS ═══════════════════ */}
       <section id="services" style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -795,7 +804,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.skills?.visible !== false && (<>
       {/* ═══════════════════ 4. TOOLS & SKILLS ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -844,7 +855,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.portfolio?.visible !== false && (<>
       {/* ═══════════════════ 5. PORTFOLIO ═══════════════════ */}
       <section id="portfolio" style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -917,7 +930,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.process?.visible !== false && (<>
       {/* ═══════════════════ 6. PROCESS ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
@@ -990,7 +1005,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.pricing?.visible !== false && (<>
       {/* ═══════════════════ 7. PRICING ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -1150,7 +1167,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.testimonials?.visible !== false && (<>
       {/* ═══════════════════ 8. TESTIMONIALS ═══════════════════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -1251,7 +1270,9 @@ export function DesignerContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.contact?.visible !== false && (<>
       {/* ═══════════════════ 9. CONTACT / CTA ═══════════════════ */}
       <section id="contact" style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
@@ -1447,6 +1468,7 @@ export function DesignerContent() {
           </div>
         </Container>
       </section>
+      </>)}
     </div>
   );
 }

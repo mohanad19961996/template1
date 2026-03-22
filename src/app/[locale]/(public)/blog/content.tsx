@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT, type SectionConfig } from "@/lib/site-config";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
@@ -474,9 +476,11 @@ function HeroSection({
 function FeaturedArticles({
   t,
   isAr,
+  sectionConfig,
 }: {
   t: ReturnType<typeof useTranslations>;
   isAr: boolean;
+  sectionConfig?: SectionConfig;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
@@ -489,8 +493,8 @@ function FeaturedArticles({
     <section ref={ref} style={{ paddingBlock: "var(--section-y)" }}>
       <Container>
         <SectionHeading
-          subtitle={isAr ? "مقالات مميزة" : "Featured"}
-          title={isAr ? "المقالات المختارة" : "Editor's Picks"}
+          subtitle={isAr ? (sectionConfig?.subtitleAr || "مقالات مميزة") : (sectionConfig?.subtitleEn || "Featured")}
+          title={isAr ? (sectionConfig?.titleAr || "المقالات المختارة") : (sectionConfig?.titleEn || "Editor's Picks")}
         />
 
         <div
@@ -1168,9 +1172,11 @@ function ArticleCard({
 function ArticlesGrid({
   t,
   isAr,
+  sectionConfig,
 }: {
   t: ReturnType<typeof useTranslations>;
   isAr: boolean;
+  sectionConfig?: SectionConfig;
 }) {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -1204,8 +1210,8 @@ function ArticlesGrid({
     <section style={{ paddingBlock: "var(--section-y)" }}>
       <Container>
         <SectionHeading
-          subtitle={isAr ? "جميع المقالات" : "All Articles"}
-          title={isAr ? "استكشف مقالاتنا" : "Explore Our Articles"}
+          subtitle={isAr ? (sectionConfig?.subtitleAr || "جميع المقالات") : (sectionConfig?.subtitleEn || "All Articles")}
+          title={isAr ? (sectionConfig?.titleAr || "استكشف مقالاتنا") : (sectionConfig?.titleEn || "Explore Our Articles")}
           description={
             isAr
               ? "تصفح مجموعتنا من المقالات والرؤى المتنوعة"
@@ -1790,36 +1796,50 @@ export function BlogContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const t = useTranslations("blog");
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.blog?.sections ?? DEFAULT_PAGES_CONTENT.blog.sections;
 
   return (
     <main dir={isAr ? "rtl" : "ltr"}>
+      {sections.hero?.visible !== false && (<>
       {/* 1. Premium Hero */}
       <HeroSection t={t} isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.featured?.visible !== false && (<>
       {/* 2. Featured Articles */}
-      <FeaturedArticles t={t} isAr={isAr} />
+      <FeaturedArticles t={t} isAr={isAr} sectionConfig={sections.featured} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.grid?.visible !== false && (<>
       {/* 3-6. Category Filter + Search + Articles Grid + Load More */}
-      <ArticlesGrid t={t} isAr={isAr} />
+      <ArticlesGrid t={t} isAr={isAr} sectionConfig={sections.grid} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.newsletter?.visible !== false && (<>
       {/* 7. Newsletter Signup */}
       <NewsletterSection isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
+      {sections.tags?.visible !== false && (<>
       {/* 8. Popular Tags Cloud */}
       <PopularTags isAr={isAr} />
 
       <SectionDivider />
+      </>)}
 
-      {/* 9. Bottom CTA */}
+      {sections.cta?.visible !== false && (
+      /* 9. Bottom CTA */
       <BottomCTA isAr={isAr} />
+      )}
     </main>
   );
 }

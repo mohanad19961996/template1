@@ -1,6 +1,8 @@
 "use client";
 
 import { useLocale } from "next-intl";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
@@ -348,6 +350,8 @@ export function GalleryContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const tx = (en: string, ar: string) => (isAr ? ar : en);
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.gallery?.sections ?? DEFAULT_PAGES_CONTENT.gallery.sections;
   const Arrow = isAr ? ArrowLeft : ArrowRight;
 
   const [activeCategory, setActiveCategory] = useState("all");
@@ -422,6 +426,7 @@ export function GalleryContent() {
 
   return (
     <div dir={isAr ? "rtl" : "ltr"}>
+      {sections.hero?.visible !== false && (<>
       {/* ═══════ 1. HERO ═══════ */}
       <section
         className="relative min-h-[70vh] flex items-center justify-center overflow-hidden"
@@ -567,13 +572,15 @@ export function GalleryContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.filters?.visible !== false && (<>
       {/* ═══════ 2. FILTER + LAYOUT CONTROLS ═══════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={tx("Browse Work", "تصفح الأعمال")}
-            title={tx("Explore by Category", "استكشف حسب الفئة")}
+            subtitle={tx(sections.filters?.subtitleEn || "Browse Work", sections.filters?.subtitleAr || "تصفح الأعمال")}
+            title={tx(sections.filters?.titleEn || "Explore by Category", sections.filters?.titleAr || "استكشف حسب الفئة")}
             description={tx(
               "Filter through our diverse collection to find exactly what inspires you.",
               "تصفح مجموعتنا المتنوعة للعثور على ما يلهمك."
@@ -664,6 +671,7 @@ export function GalleryContent() {
           </div>
 
           {/* ═══════ 3. GALLERY GRID ═══════ */}
+          {sections.grid?.visible !== false && (
           <div className="mt-10">
             <AnimatePresence mode="wait">
               {/* MASONRY LAYOUT */}
@@ -780,17 +788,20 @@ export function GalleryContent() {
               </AnimatedBlock>
             )}
           </div>
+          )}
         </Container>
       </section>
 
       <SectionDivider />
+      </>)}
 
+      {sections.stats?.visible !== false && (<>
       {/* ═══════ 4. FEATURED SHOWCASE ═══════ */}
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            subtitle={tx("Featured", "المميزة")}
-            title={tx("Spotlight Projects", "مشاريع مميزة")}
+            subtitle={tx(sections.stats?.subtitleEn || "Featured", sections.stats?.subtitleAr || "المميزة")}
+            title={tx(sections.stats?.titleEn || "Spotlight Projects", sections.stats?.titleAr || "مشاريع مميزة")}
             description={tx(
               "Hand-picked pieces that showcase our finest creative work.",
               "أعمال مختارة بعناية تعرض أفضل إبداعاتنا."
@@ -904,8 +915,10 @@ export function GalleryContent() {
       </section>
 
       <SectionDivider />
+      </>)}
 
-      {/* ═══════ 5. CTA ═══════ */}
+      {sections.cta?.visible !== false && (
+      /* ═══════ 5. CTA ═══════ */
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <AnimatedBlock>
@@ -980,6 +993,7 @@ export function GalleryContent() {
           </AnimatedBlock>
         </Container>
       </section>
+      )}
 
       {/* ═══════ LIGHTBOX ═══════ */}
       <AnimatePresence>

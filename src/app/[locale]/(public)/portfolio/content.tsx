@@ -4,6 +4,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@/components/shared/container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { SectionDivider } from "@/components/shared/section-divider";
+import { useSiteConfig } from "@/providers/site-config-provider";
+import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { Link } from "@/i18n/navigation";
 import {
   ArrowRight,
@@ -156,6 +158,10 @@ export function PortfolioContent() {
   const locale = useLocale();
   const isAr = locale === "ar";
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+  const tx = (en: string, ar: string) => isAr ? ar : en;
+
+  const { config } = useSiteConfig();
+  const sections = config.pagesContent?.portfolio?.sections ?? DEFAULT_PAGES_CONTENT.portfolio.sections;
   const [activeFilter, setActiveFilter] = useState("all");
 
   /* Refs for scroll-triggered animations */
@@ -189,6 +195,7 @@ export function PortfolioContent() {
       {/* ══════════════════════════════════════════════════
           1. PREMIUM HERO
       ══════════════════════════════════════════════════ */}
+      {sections.hero?.visible !== false && (
       <section className="relative overflow-hidden" ref={heroRef}>
         {/* Layered radial gradients */}
         <div className="absolute inset-0 pointer-events-none">
@@ -321,17 +328,19 @@ export function PortfolioContent() {
           }}
         />
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ══════════════════════════════════════════════════
           2. FEATURED PROJECT
       ══════════════════════════════════════════════════ */}
+      {sections.featured?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "المشروع المميز" : "Featured Project"}
-            subtitle={isAr ? "أبرز أعمالنا" : "Spotlight"}
+            title={sections.featured?.titleEn ? tx(sections.featured.titleEn, sections.featured.titleAr) : tx("Featured Project", "المشروع المميز")}
+            subtitle={sections.featured?.subtitleEn ? tx(sections.featured.subtitleEn, sections.featured.subtitleAr) : tx("Spotlight", "أبرز أعمالنا")}
           />
 
           <motion.div
@@ -450,17 +459,19 @@ export function PortfolioContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ══════════════════════════════════════════════════
           3. FILTER TABS + 4. PROJECT GRID
       ══════════════════════════════════════════════════ */}
+      {sections.projectGrid?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={t("title")}
-            subtitle={t("description")}
+            title={sections.projectGrid?.titleEn ? tx(sections.projectGrid.titleEn, sections.projectGrid.titleAr) : t("title")}
+            subtitle={sections.projectGrid?.subtitleEn ? tx(sections.projectGrid.subtitleEn, sections.projectGrid.subtitleAr) : t("description")}
           />
 
           {/* Filter Tabs */}
@@ -635,6 +646,7 @@ export function PortfolioContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
@@ -709,11 +721,12 @@ export function PortfolioContent() {
       {/* ══════════════════════════════════════════════════
           6. INDUSTRIES WE SERVE
       ══════════════════════════════════════════════════ */}
+      {sections.industries?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container>
           <SectionHeading
-            title={isAr ? "القطاعات التي نخدمها" : "Industries We Serve"}
-            subtitle={isAr ? "خبراتنا" : "Expertise"}
+            title={sections.industries?.titleEn ? tx(sections.industries.titleEn, sections.industries.titleAr) : tx("Industries We Serve", "القطاعات التي نخدمها")}
+            subtitle={sections.industries?.subtitleEn ? tx(sections.industries.subtitleEn, sections.industries.subtitleAr) : tx("Expertise", "خبراتنا")}
           />
 
           <motion.div
@@ -758,6 +771,7 @@ export function PortfolioContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
@@ -864,6 +878,7 @@ export function PortfolioContent() {
       {/* ══════════════════════════════════════════════════
           8. CLIENT TESTIMONIAL
       ══════════════════════════════════════════════════ */}
+      {sections.testimonial?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <motion.div
@@ -936,12 +951,14 @@ export function PortfolioContent() {
           </motion.div>
         </Container>
       </section>
+      )}
 
       <SectionDivider />
 
       {/* ══════════════════════════════════════════════════
           9. BOTTOM CTA
       ══════════════════════════════════════════════════ */}
+      {sections.cta?.visible !== false && (
       <section style={{ paddingBlock: "var(--section-y)" }}>
         <Container size="sm">
           <motion.div
@@ -1029,6 +1046,7 @@ export function PortfolioContent() {
           </motion.div>
         </Container>
       </section>
+      )}
     </>
   );
 }
