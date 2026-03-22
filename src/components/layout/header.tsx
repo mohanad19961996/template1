@@ -48,8 +48,8 @@ export function Header() {
   const shadowStyle = () => {
     if (nav.shadow === "none") return {};
     if (nav.shadow === "lg")
-      return { boxShadow: "0 12px 40px rgba(var(--color-primary-rgb) / 0.12), 0 4px 12px rgba(0,0,0,0.06)" };
-    return { boxShadow: "0 8px 32px rgba(var(--color-primary-rgb) / 0.08), 0 2px 8px rgba(0,0,0,0.04)" };
+      return { boxShadow: "0 12px 40px rgba(var(--color-primary-rgb) / 0.12), 0 4px 12px rgba(var(--color-foreground-rgb, 0 0 0) / 0.06)" };
+    return { boxShadow: "0 8px 32px rgba(var(--color-primary-rgb) / 0.08), 0 2px 8px rgba(var(--color-foreground-rgb, 0 0 0) / 0.04)" };
   };
 
   // --- Variant-based backgrounds ---
@@ -104,7 +104,7 @@ export function Header() {
             <div
               className="absolute inset-0 -z-20"
               style={{
-                background: `linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.12) 0%, rgba(var(--color-primary-rgb) / 0.06) 20%, rgba(255, 255, 255, 0.78) 50%, rgba(var(--color-primary-rgb) / 0.06) 80%, rgba(var(--color-primary-rgb) / 0.12) 100%)`,
+                background: `linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.12) 0%, rgba(var(--color-primary-rgb) / 0.06) 20%, rgba(var(--color-background-rgb, 255 255 255) / 0.78) 50%, rgba(var(--color-primary-rgb) / 0.06) 80%, rgba(var(--color-primary-rgb) / 0.12) 100%)`,
                 backdropFilter: "blur(24px) saturate(200%)",
                 WebkitBackdropFilter: "blur(24px) saturate(200%)",
               }}
@@ -408,7 +408,7 @@ export function Header() {
               <div
                 className="absolute inset-0 -z-20"
                 style={{
-                  background: `linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.1), rgba(255,255,255,0.8), rgba(var(--color-primary-rgb) / 0.1))`,
+                  background: `linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.1), rgba(var(--color-background-rgb, 255 255 255) / 0.8), rgba(var(--color-primary-rgb) / 0.1))`,
                   backdropFilter: "blur(24px) saturate(200%)",
                   WebkitBackdropFilter: "blur(24px) saturate(200%)",
                   borderRadius: "inherit",

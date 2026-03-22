@@ -67,9 +67,14 @@
   --animate-slide-down: slide-down 0.25s ease-out;
   --animate-scale-in: scale-in 0.25s ease-out;
 
-  /* ── Light Theme Palette ── */
+}
+
+/* ── Color Theme (non-inline so Tailwind uses var() references) ── */
+@theme {
   --color-background: #ffffff;
+  --color-background-rgb: 255 255 255;
   --color-foreground: #000000;
+  --color-foreground-rgb: 0 0 0;
   --color-card: #ffffff;
   --color-card-foreground: #000000;
   --color-popover: #ffffff;
@@ -97,7 +102,9 @@
 /* ── Dark Theme ── */
 .dark {
   --color-background: #000000;
+  --color-background-rgb: 0 0 0;
   --color-foreground: #ffffff;
+  --color-foreground-rgb: 255 255 255;
   --color-card: #000000;
   --color-card-foreground: #ffffff;
   --color-popover: #000000;

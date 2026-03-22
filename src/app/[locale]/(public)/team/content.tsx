@@ -250,7 +250,7 @@ export function TeamContent() {
   };
 
   return (
-    <div>
+    <div style={{ background: "var(--color-background)" }}>
       {/* ═══════════════════ SECTION 1: PREMIUM HERO ═══════════════════ */}
       <section
         className="relative overflow-hidden"
@@ -800,7 +800,7 @@ export function TeamContent() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300"
                 style={{
                   background: "var(--color-primary)",
-                  color: "var(--color-card)",
+                  color: "var(--color-background)",
                   boxShadow:
                     "0 4px 16px rgba(var(--color-primary-rgb) / 0.3), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.1)",
                 }}

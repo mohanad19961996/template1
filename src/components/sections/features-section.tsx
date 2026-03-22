@@ -297,7 +297,7 @@ function FlipCard({
               border: "2px solid var(--color-primary)",
               boxShadow: hovered
                 ? "0 20px 60px rgba(var(--color-primary-rgb) / 0.15)"
-                : "0 2px 20px rgba(0,0,0,0.04)",
+                : "0 2px 20px rgba(var(--color-foreground-rgb, 0 0 0) / 0.04)",
             }}
           >
 

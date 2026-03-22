@@ -1046,9 +1046,9 @@ export function DesignerContent() {
                     <div
                       className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                       style={{
-                        background: "#ffffff",
+                        background: "var(--color-card)",
                         color: "var(--color-primary)",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        boxShadow: "0 4px 12px rgba(var(--color-foreground-rgb, 0 0 0) / 0.1)",
                       }}
                     >
                       {tx("Most Popular", "الأكثر شيوعاً")}

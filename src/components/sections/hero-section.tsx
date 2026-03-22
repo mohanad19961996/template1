@@ -159,7 +159,7 @@ function HeroVisual({ inView, isAr, imageStyle, showFloatingCards }: { inView: b
 
   const floatingCards = showFloatingCards && (
     <>
-      <motion.div initial={{ opacity: 0, x: -30, y: -10 }} animate={inView ? { opacity: 1, x: 0, y: 0 } : {}} transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }} className="absolute -top-4 -start-6 z-20 hidden md:flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "var(--color-card)", border: "1px solid rgba(var(--color-primary-rgb) / 0.1)", boxShadow: "0 16px 48px rgba(0,0,0,0.08)" }}>
+      <motion.div initial={{ opacity: 0, x: -30, y: -10 }} animate={inView ? { opacity: 1, x: 0, y: 0 } : {}} transition={{ delay: 0.7, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }} className="absolute -top-4 -start-6 z-20 hidden md:flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "var(--color-card)", border: "1px solid rgba(var(--color-primary-rgb) / 0.1)", boxShadow: "0 16px 48px rgba(var(--color-foreground-rgb) / 0.08)" }}>
         <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(var(--color-primary-rgb) / 0.08)", border: "1px solid rgba(var(--color-primary-rgb) / 0.08)" }}>
           <Shield className="h-5 w-5" style={{ color: "var(--color-primary)" }} />
         </div>
@@ -171,7 +171,7 @@ function HeroVisual({ inView, isAr, imageStyle, showFloatingCards }: { inView: b
           <Check className="h-3 w-3" style={{ color: "var(--color-primary)" }} />
         </div>
       </motion.div>
-      <motion.div initial={{ opacity: 0, x: 30, y: 10 }} animate={inView ? { opacity: 1, x: 0, y: 0 } : {}} transition={{ delay: 0.85, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }} className="absolute -bottom-4 -end-6 z-20 hidden md:flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "var(--color-card)", border: "1px solid rgba(var(--color-primary-rgb) / 0.1)", boxShadow: "0 16px 48px rgba(0,0,0,0.08)" }}>
+      <motion.div initial={{ opacity: 0, x: 30, y: 10 }} animate={inView ? { opacity: 1, x: 0, y: 0 } : {}} transition={{ delay: 0.85, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }} className="absolute -bottom-4 -end-6 z-20 hidden md:flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "var(--color-card)", border: "1px solid rgba(var(--color-primary-rgb) / 0.1)", boxShadow: "0 16px 48px rgba(var(--color-foreground-rgb) / 0.08)" }}>
         <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(var(--color-primary-rgb) / 0.08)", border: "1px solid rgba(var(--color-primary-rgb) / 0.08)" }}>
           <TrendingUp className="h-5 w-5" style={{ color: "var(--color-primary)" }} />
         </div>
@@ -198,13 +198,13 @@ function HeroVisual({ inView, isAr, imageStyle, showFloatingCards }: { inView: b
 
       {imageStyle === "gradient-border" ? (
         <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-          <div className="relative rounded-3xl p-[3px] group cursor-pointer" style={{ background: "linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.35), var(--color-primary), rgba(var(--color-primary-rgb) / 0.6), var(--color-primary))", backgroundSize: "400% 400%", animation: "gradientBorder 3s ease infinite", boxShadow: "0 40px 100px rgba(0,0,0,0.1), 0 0 20px rgba(var(--color-primary-rgb) / 0.12)" }}>
+          <div className="relative rounded-3xl p-[3px] group cursor-pointer" style={{ background: "linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.35), var(--color-primary), rgba(var(--color-primary-rgb) / 0.6), var(--color-primary))", backgroundSize: "400% 400%", animation: "gradientBorder 3s ease infinite", boxShadow: "0 40px 100px rgba(var(--color-foreground-rgb) / 0.1), 0 0 20px rgba(var(--color-primary-rgb) / 0.12)" }}>
             <div className="relative rounded-[calc(1.5rem-3px)] overflow-hidden">{imageContent}</div>
           </div>
         </motion.div>
       ) : imageStyle === "floating" ? (
         <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-          <div className="relative rounded-3xl overflow-hidden group cursor-pointer" style={{ boxShadow: "0 40px 100px rgba(0,0,0,0.12), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.08)" }}>
+          <div className="relative rounded-3xl overflow-hidden group cursor-pointer" style={{ boxShadow: "0 40px 100px rgba(var(--color-foreground-rgb) / 0.12), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.08)" }}>
             <div className="absolute top-0 inset-x-0 h-[2px] z-10" style={{ background: "linear-gradient(90deg, transparent, var(--color-primary), transparent)" }} />
             {imageContent}
           </div>
@@ -219,8 +219,8 @@ function HeroVisual({ inView, isAr, imageStyle, showFloatingCards }: { inView: b
           animate={inView ? { opacity: 1, y: 0, scale: 1, rotateX: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] as const }}
           className="relative rounded-3xl overflow-hidden group cursor-pointer"
-          style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.12)", boxShadow: "0 40px 100px rgba(0,0,0,0.1), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.04), inset 0 1px 0 rgba(255,255,255,0.06)", transition: "border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
-          whileHover={{ y: -6, boxShadow: "0 50px 120px rgba(0,0,0,0.14), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.12), 0 0 40px rgba(var(--color-primary-rgb) / 0.08)" }}
+          style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.12)", boxShadow: "0 40px 100px rgba(var(--color-foreground-rgb) / 0.1), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.04), inset 0 1px 0 rgba(255,255,255,0.06)", transition: "border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
+          whileHover={{ y: -6, boxShadow: "0 50px 120px rgba(var(--color-foreground-rgb) / 0.14), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.12), 0 0 40px rgba(var(--color-primary-rgb) / 0.08)" }}
         >
           {imageContent}
           <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, var(--color-primary), transparent)" }} />

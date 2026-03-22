@@ -480,7 +480,7 @@ export function AboutContent() {
                       "rgba(var(--color-primary-rgb) / 0.02)",
                     backdropFilter: "blur(16px)",
                     WebkitBackdropFilter: "blur(16px)",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.03)",
+                    boxShadow: "0 4px 24px rgba(var(--color-foreground-rgb, 0 0 0) / 0.03)",
                     transition:
                       "border-color 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)",
                   }}
@@ -494,7 +494,7 @@ export function AboutContent() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow =
-                      "0 4px 24px rgba(0,0,0,0.03)";
+                      "0 4px 24px rgba(var(--color-foreground-rgb, 0 0 0) / 0.03)";
                     e.currentTarget.style.borderColor =
                       "rgba(var(--color-primary-rgb) / 0.1)";
                   }}
@@ -621,7 +621,7 @@ export function AboutContent() {
                     WebkitBackdropFilter: "blur(12px)",
                     border:
                       "1px solid rgba(var(--color-primary-rgb) / 0.1)",
-                    boxShadow: "0 2px 16px rgba(0,0,0,0.02)",
+                    boxShadow: "0 2px 16px rgba(var(--color-foreground-rgb, 0 0 0) / 0.02)",
                     transition:
                       "border-color 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)",
                   }}
@@ -635,7 +635,7 @@ export function AboutContent() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow =
-                      "0 2px 16px rgba(0,0,0,0.02)";
+                      "0 2px 16px rgba(var(--color-foreground-rgb, 0 0 0) / 0.02)";
                     e.currentTarget.style.borderColor =
                       "rgba(var(--color-primary-rgb) / 0.1)";
                   }}
@@ -881,7 +881,7 @@ export function AboutContent() {
                     style={{
                       border:
                         "3px solid rgba(var(--color-primary-rgb) / 0.15)",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                      boxShadow: "0 4px 20px rgba(var(--color-foreground-rgb, 0 0 0) / 0.08)",
                       transition:
                         "border-color 0.4s ease, box-shadow 0.4s ease, transform 0.5s cubic-bezier(0.16,1,0.3,1)",
                     }}

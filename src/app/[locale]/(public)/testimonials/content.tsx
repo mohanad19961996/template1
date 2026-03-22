@@ -896,7 +896,7 @@ export function TestimonialsContent() {
   const isAr = locale === "ar";
 
   return (
-    <main>
+    <main style={{ background: "var(--color-background)" }}>
       {/* Section 1: Premium Hero */}
       <HeroSection isAr={isAr} />
 

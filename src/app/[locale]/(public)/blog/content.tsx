@@ -527,8 +527,8 @@ function FeaturedArticles({
                     border: `1px solid rgba(var(--color-primary-rgb) / ${hovered === i ? "0.3" : "0.08"})`,
                     boxShadow:
                       hovered === i
-                        ? "0 20px 60px rgba(var(--color-primary-rgb) / 0.12), 0 8px 24px rgba(0,0,0,0.08)"
-                        : "0 4px 20px rgba(0,0,0,0.04)",
+                        ? "0 20px 60px rgba(var(--color-primary-rgb) / 0.12), 0 8px 24px rgba(var(--color-foreground-rgb, 0 0 0) / 0.08)"
+                        : "0 4px 20px rgba(var(--color-foreground-rgb, 0 0 0) / 0.04)",
                     transform: hovered === i ? "translateY(-6px)" : "translateY(0)",
                     transition:
                       "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -911,7 +911,7 @@ function SearchBar({
               "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
             boxShadow: focused
               ? "0 0 0 4px rgba(var(--color-primary-rgb) / 0.1), 0 4px 20px rgba(var(--color-primary-rgb) / 0.08)"
-              : "0 2px 8px rgba(0,0,0,0.02)",
+              : "0 2px 8px rgba(var(--color-foreground-rgb, 0 0 0) / 0.02)",
           }}
         />
       </div>
@@ -961,8 +961,8 @@ function ArticleCard({
             background: "var(--color-card)",
             border: `1px solid rgba(var(--color-primary-rgb) / ${hovered ? "0.25" : "0.06"})`,
             boxShadow: hovered
-              ? "0 16px 50px rgba(var(--color-primary-rgb) / 0.1), 0 6px 20px rgba(0,0,0,0.06)"
-              : "0 2px 12px rgba(0,0,0,0.03)",
+              ? "0 16px 50px rgba(var(--color-primary-rgb) / 0.1), 0 6px 20px rgba(var(--color-foreground-rgb, 0 0 0) / 0.06)"
+              : "0 2px 12px rgba(var(--color-foreground-rgb, 0 0 0) / 0.03)",
             transform: hovered ? "translateY(-8px)" : "translateY(0)",
             transition:
               "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",

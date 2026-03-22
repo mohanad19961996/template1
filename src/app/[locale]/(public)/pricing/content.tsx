@@ -361,7 +361,7 @@ export function PricingContent() {
                 className="absolute top-0.5 w-6 h-6 rounded-full"
                 style={{
                   background: "#ffffff",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                  boxShadow: "0 2px 4px rgba(var(--color-foreground-rgb, 0 0 0) / 0.2)",
                 }}
                 animate={{ x: isYearly ? (isAr ? 2 : 30) : (isAr ? 30 : 2) }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
@@ -425,10 +425,10 @@ export function PricingContent() {
                       ? "2px solid var(--color-primary)"
                       : "1px solid rgba(var(--color-primary-rgb) / 0.1)",
                     boxShadow: tier.popular
-                      ? "0 0 40px rgba(var(--color-primary-rgb) / 0.15), 0 8px 32px rgba(0,0,0,0.1)"
+                      ? "0 0 40px rgba(var(--color-primary-rgb) / 0.15), 0 8px 32px rgba(var(--color-foreground-rgb, 0 0 0) / 0.1)"
                       : isHovered
-                        ? "0 8px 32px rgba(0,0,0,0.1)"
-                        : "0 2px 8px rgba(0,0,0,0.05)",
+                        ? "0 8px 32px rgba(var(--color-foreground-rgb, 0 0 0) / 0.1)"
+                        : "0 2px 8px rgba(var(--color-foreground-rgb, 0 0 0) / 0.05)",
                     transform: tier.popular ? "scale(1.03)" : undefined,
                     transition: "box-shadow 0.3s ease, transform 0.3s ease",
                     padding: "2rem",

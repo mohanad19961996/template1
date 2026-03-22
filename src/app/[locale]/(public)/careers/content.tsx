@@ -233,7 +233,7 @@ export function CareersContent() {
   const positionsRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div>
+    <div style={{ background: "var(--color-background)" }}>
       {/* ═══════════════ 1 · HERO ═══════════════ */}
       <section
         className="relative overflow-hidden"

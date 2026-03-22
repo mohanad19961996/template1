@@ -2,10 +2,21 @@ export default function NotFound() {
   return (
     <html>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: `.not-found-btn:hover{box-shadow:0 6px 24px rgba(0,0,0,0.2)!important;transform:translateY(-1px)}` }} />
+        <style dangerouslySetInnerHTML={{ __html: `
+          .not-found-btn:hover{box-shadow:0 6px 24px rgba(128,128,128,0.3)!important;transform:translateY(-1px)}
+          @media(prefers-color-scheme:dark){
+            .not-found-root{background:#000!important;color:#fff!important}
+            .not-found-404{background:linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.15) 100%)!important;-webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important}
+            .not-found-desc{color:rgba(255,255,255,0.55)!important}
+            .not-found-btn{background:#fff!important;color:#000!important}
+            .not-found-dots{background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.5) 1px,transparent 0)!important}
+            .not-found-line{background:rgba(255,255,255,0.1)!important}
+          }
+        ` }} />
       </head>
       <body>
         <div
+          className="not-found-root"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -22,6 +33,7 @@ export default function NotFound() {
         >
           {/* Decorative background dots */}
           <div
+            className="not-found-dots"
             style={{
               position: "fixed",
               inset: 0,
@@ -36,6 +48,7 @@ export default function NotFound() {
           {/* 404 large text */}
           <div style={{ position: "relative" }}>
             <h1
+              className="not-found-404"
               style={{
                 fontSize: "clamp(100px, 20vw, 200px)",
                 fontWeight: 800,
@@ -67,6 +80,7 @@ export default function NotFound() {
               Page Not Found
             </h2>
             <p
+              className="not-found-desc"
               style={{
                 fontSize: "0.875rem",
                 color: "rgba(26,26,26,0.55)",
@@ -95,7 +109,7 @@ export default function NotFound() {
                 background: "#1a1a1a",
                 textDecoration: "none",
                 transition: "box-shadow 0.3s ease, transform 0.3s ease",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+                boxShadow: "0 2px 12px rgba(128,128,128,0.15)",
               }}
             >
               <svg
@@ -117,6 +131,7 @@ export default function NotFound() {
 
           {/* Bottom decorative line */}
           <div
+            className="not-found-line"
             style={{
               position: "absolute",
               bottom: "2rem",
