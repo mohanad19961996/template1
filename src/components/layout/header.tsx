@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -8,8 +8,13 @@ import { ThemeToggle } from "./theme-toggle";
 import { ThemeSwitcher } from "./theme-switcher";
 import { LanguageSwitcher } from "./language-switcher";
 import { MobileMenu } from "./mobile-menu";
-import { Menu, ArrowRight, ArrowLeft, LayoutDashboard } from "lucide-react";
-import { motion } from "framer-motion";
+import {
+  Menu, ArrowRight, ArrowLeft, LayoutDashboard, ChevronDown,
+  Info, Briefcase, FolderOpen, Phone, Users, DollarSign,
+  HelpCircle, Star, GraduationCap, BookOpen, Image as ImageIcon, Palette,
+  Home as HomeIcon,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSiteConfig } from "@/providers/site-config-provider";
 
 export function Header() {
@@ -24,7 +29,28 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const Arrow = locale === "ar" ? ArrowLeft : ArrowRight;
+
+  const MAX_VISIBLE_NAV = 4;
+  const visibleNavItems = navItems.slice(0, MAX_VISIBLE_NAV);
+  const overflowNavItems = navItems.slice(MAX_VISIBLE_NAV);
+
+  const pageIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+    home: HomeIcon, about: Info, services: Briefcase, portfolio: FolderOpen,
+    contact: Phone, team: Users, pricing: DollarSign, faq: HelpCircle,
+    testimonials: Star, careers: GraduationCap, blog: BookOpen,
+    gallery: ImageIcon, designer: Palette,
+  };
+
+  const handleMoreEnter = () => {
+    if (moreTimeout.current) clearTimeout(moreTimeout.current);
+    setMoreOpen(true);
+  };
+  const handleMoreLeave = () => {
+    moreTimeout.current = setTimeout(() => setMoreOpen(false), 200);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -291,7 +317,7 @@ export function Header() {
     if (nav.ctaStyle === "outlined") {
       return (
         <Link
-          href="/contact"
+          href="/app"
           className="inline-flex items-center gap-2 h-[38px] px-5 rounded-xl text-[13px] font-semibold cursor-pointer"
           style={{
             color: "var(--color-primary)",
@@ -320,7 +346,7 @@ export function Header() {
     if (nav.ctaStyle === "gradient") {
       return (
         <Link
-          href="/contact"
+          href="/app"
           className="inline-flex items-center gap-2 h-[38px] px-5 rounded-xl text-[13px] font-semibold text-white cursor-pointer"
           style={{
             background: `linear-gradient(135deg, var(--color-primary) 0%, rgba(var(--color-primary-rgb) / 0.7) 50%, var(--color-primary) 100%)`,
@@ -347,7 +373,7 @@ export function Header() {
     if (nav.ctaStyle === "glow") {
       return (
         <Link
-          href="/contact"
+          href="/app"
           className="inline-flex items-center gap-2 h-[38px] px-5 rounded-xl text-[13px] font-semibold text-white cursor-pointer"
           style={{
             background: "var(--color-primary)",
@@ -546,7 +572,121 @@ export function Header() {
                   }
                   transition={{ duration: 0.3 }}
                 >
-                  {navItems.map((item) => renderNavLink(item))}
+                  {visibleNavItems.map((item) => renderNavLink(item))}
+
+                  {/* More dropdown */}
+                  {overflowNavItems.length > 0 && (
+                    <div
+                      className="relative"
+                      onMouseEnter={handleMoreEnter}
+                      onMouseLeave={handleMoreLeave}
+                    >
+                      <button
+                        className="relative flex items-center gap-1 px-4 py-[6px] text-[13px] font-medium rounded-full cursor-pointer group"
+                        style={{ transition: "color 0.3s ease" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-primary)"; }}
+                        onMouseLeave={(e) => { if (!moreOpen) e.currentTarget.style.color = ""; }}
+                      >
+                        <span className="relative z-10">{locale === "ar" ? "المزيد" : "More"}</span>
+                        <ChevronDown
+                          className="h-3.5 w-3.5 relative z-10 transition-transform duration-300"
+                          style={{ transform: moreOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                        />
+                        {/* Hover bg */}
+                        <div
+                          className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100"
+                          style={{ background: "rgba(var(--color-primary-rgb) / 0.08)", transition: "opacity 0.3s ease" }}
+                        />
+                      </button>
+
+                      <AnimatePresence>
+                        {moreOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            className="absolute top-full mt-3 min-w-[220px] rounded-2xl overflow-hidden z-50"
+                            style={{
+                              [locale === "ar" ? "right" : "left"]: "50%",
+                              transform: `translateX(${locale === "ar" ? "50%" : "-50%"})`,
+                              background: "var(--color-card)",
+                              border: "1px solid rgba(var(--color-primary-rgb) / 0.1)",
+                              boxShadow: "0 20px 60px rgba(var(--color-foreground-rgb, 0 0 0) / 0.12), 0 8px 24px rgba(var(--color-primary-rgb) / 0.06)",
+                              backdropFilter: "blur(24px) saturate(180%)",
+                            }}
+                          >
+                            {/* Top accent line */}
+                            <div className="h-[2px]" style={{ background: "linear-gradient(90deg, transparent, var(--color-primary), transparent)" }} />
+
+                            <div className="p-2">
+                              {overflowNavItems.map((item, i) => {
+                                const active = isActive(item.href);
+                                const Icon = pageIcons[item.key];
+                                return (
+                                  <motion.div
+                                    key={item.key}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.25, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                                  >
+                                    <Link
+                                      href={item.href}
+                                      onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setMoreOpen(false); }}
+                                      className="group/item flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium cursor-pointer"
+                                      style={{
+                                        color: active ? "var(--color-primary)" : "inherit",
+                                        background: active ? "rgba(var(--color-primary-rgb) / 0.08)" : "transparent",
+                                        transition: "all 0.2s ease",
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (!active) {
+                                          e.currentTarget.style.background = "rgba(var(--color-primary-rgb) / 0.06)";
+                                          e.currentTarget.style.color = "var(--color-primary)";
+                                          e.currentTarget.style.transform = `translateX(${locale === "ar" ? "-4px" : "4px"})`;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!active) {
+                                          e.currentTarget.style.background = "transparent";
+                                          e.currentTarget.style.color = "inherit";
+                                          e.currentTarget.style.transform = "translateX(0)";
+                                        }
+                                      }}
+                                    >
+                                      {/* Icon */}
+                                      <div
+                                        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200"
+                                        style={{
+                                          background: active ? "rgba(var(--color-primary-rgb) / 0.12)" : "rgba(var(--color-primary-rgb) / 0.05)",
+                                          border: active ? "1px solid rgba(var(--color-primary-rgb) / 0.2)" : "1px solid rgba(var(--color-primary-rgb) / 0.06)",
+                                        }}
+                                      >
+                                        {Icon && <Icon className="h-3.5 w-3.5" style={{ color: "var(--color-primary)", opacity: active ? 1 : 0.6 }} />}
+                                      </div>
+
+                                      {/* Label */}
+                                      <span className="flex-1">{t(item.key)}</span>
+
+                                      {/* Active dot */}
+                                      {active && (
+                                        <motion.div
+                                          initial={{ scale: 0 }}
+                                          animate={{ scale: 1 }}
+                                          className="h-2 w-2 rounded-full shrink-0"
+                                          style={{ background: "var(--color-primary)", boxShadow: "0 0 8px rgba(var(--color-primary-rgb) / 0.4)" }}
+                                        />
+                                      )}
+                                    </Link>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
                 </motion.div>
               </nav>
 
@@ -565,7 +705,7 @@ export function Header() {
 
                 {nav.showDashboardBtn && (
                   <Link
-                    href="/dashboard"
+                    href="/app"
                     className="hidden md:flex items-center justify-center h-[38px] w-[38px] rounded-xl cursor-pointer"
                     style={{
                       border: "1.5px solid rgba(var(--color-primary-rgb) / 0.15)",
