@@ -2022,7 +2022,6 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
   const [flippedTab, setFlippedTab] = useState<'details' | 'stats'>('details');
   const [showNote, setShowNote] = useState(false);
   const [noteText, setNoteText] = useState(habit.notes || '');
-  const [showResize, setShowResize] = useState(false);
   const [minimized, setMinimized] = useState(true);
   const hc = resolveHabitColor(habit.color); // resolved color (handles 'theme')
   const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
@@ -2199,46 +2198,6 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                       {habit.archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                     </motion.button>
                   </>
-                )}
-                {/* Resize — only when expanded */}
-                {!minimized && (
-                  <div className="relative">
-                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowResize(!showResize)}
-                      className={cn('h-8 w-8 rounded-xl flex items-center justify-center border border-transparent transition-all',
-                        showResize ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10')}
-                      title={isAr ? 'حجم البطاقة' : 'Card Size'}>
-                      <Maximize2 className="h-4 w-4" />
-                    </motion.button>
-                    {showResize && (
-                      <div className="absolute top-full mt-1 end-0 z-50 rounded-xl border bg-[var(--color-background)] shadow-xl p-3 w-44"
-                        style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.15)' }}
-                        onClick={e => e.stopPropagation()}>
-                        <p className="text-[10px] font-bold text-[var(--foreground)]/60 mb-2">{isAr ? 'عرض' : 'Width'}</p>
-                        <div className="flex gap-1 mb-3">
-                          {[1, 2, 3].map(n => (
-                            <button key={n} onClick={() => { store.updateHabit(habit.id, { colSpan: n > 1 ? n : undefined }); setShowResize(false); }}
-                              className={cn('flex-1 py-1.5 rounded-lg text-xs font-black transition-all',
-                                (habit.colSpan || 1) === n ? 'text-white' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.06]')}
-                              style={(habit.colSpan || 1) === n ? { background: 'var(--color-primary)' } : undefined}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[10px] font-bold text-[var(--foreground)]/60 mb-2">{isAr ? 'ارتفاع' : 'Height'}</p>
-                        <div className="flex gap-1">
-                          {[1, 2, 3].map(n => (
-                            <button key={n} onClick={() => { store.updateHabit(habit.id, { rowSpan: n > 1 ? n : undefined }); setShowResize(false); }}
-                              className={cn('flex-1 py-1.5 rounded-lg text-xs font-black transition-all',
-                                (habit.rowSpan || 1) === n ? 'text-white' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.06]')}
-                              style={(habit.rowSpan || 1) === n ? { background: 'var(--color-primary)' } : undefined}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 )}
                 {/* Minimize/Expand */}
                 <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
