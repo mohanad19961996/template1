@@ -241,17 +241,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     // Then load habits & logs from API (separate collections) for latest data
     Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI()]).then(([habits, logs]) => {
-      if (habits || logs) {
+      if (habits && habits.length > 0 || logs && logs.length > 0) {
         setState(prev => {
           const updated = {
             ...prev,
-            ...(habits ? { habits } : {}),
-            ...(logs ? { habitLogs: logs } : {}),
+            ...(habits && habits.length > 0 ? { habits } : {}),
+            ...(logs && logs.length > 0 ? { habitLogs: logs } : {}),
           };
           const normalized = normalizeState(updated);
           saveState(normalized);
           return normalized;
         });
+      } else if (recovered.habits.length > 0 || recovered.habitLogs.length > 0) {
+        // MongoDB is empty but localStorage has data — sync it up
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            habits: recovered.habits,
+            habitLogs: recovered.habitLogs,
+          }),
+        }).catch(() => {});
       }
     });
   }, []);

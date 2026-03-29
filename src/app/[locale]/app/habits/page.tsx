@@ -20,7 +20,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Zap, Award, Hash, Trophy, Activity,
   Sparkles, ArrowRight, Play, Pause, Square, Timer, MapPin, Repeat, Gift,
   Lightbulb, Maximize2, Hourglass, LayoutGrid, List, Columns3, Grid3x3,
-  CreditCard, Palette, ArrowUpDown, SlidersHorizontal, Minus, GripVertical, Tag, Rows3,
+  CreditCard, Palette, ArrowUpDown, SlidersHorizontal, Minus, GripVertical, Tag, Rows3, ChevronsUpDown,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -158,6 +158,9 @@ export default function HabitsPage() {
   const [fullCalendarHabit, setFullCalendarHabit] = useState<Habit | null>(null);
   const [activeTab, setActiveTab] = useState<'habits' | 'insights'>('habits');
   const [viewMode, setViewMode] = useState<'cards' | 'grid' | 'list' | 'board' | 'minimal'>('cards');
+  const [gridCols, setGridCols] = useState<2 | 3>(3);
+  const [cardsExpanded, setCardsExpanded] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'priority' | 'newest' | 'streak' | 'completion' | 'order' | 'custom'>('order');
   const [showGoals, setShowGoals] = useState(false);
   const [goalInput, setGoalInput] = useState('');
@@ -741,6 +744,30 @@ export default function HabitsPage() {
             })()}
 
             {/* Search */}
+            {/* Column toggle + Expand/Collapse */}
+            {viewMode === 'cards' && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 rounded-xl border border-[var(--foreground)]/[0.12] p-1">
+                  {([2, 3] as const).map(n => (
+                    <button key={n} onClick={() => setGridCols(n)}
+                      className={cn('px-3 py-1.5 rounded-lg text-xs font-black transition-all',
+                        gridCols === n ? 'text-white' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.06]')}
+                      style={gridCols === n ? { background: 'var(--color-primary)' } : undefined}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => { const next = !cardsExpanded; setCardsExpanded(next); if (next) { const totalRows = Math.ceil(filteredHabits.length / gridCols); setExpandedRows(new Set(Array.from({ length: totalRows }, (_, i) => i))); } else { setExpandedRows(new Set()); } }}
+                  className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all',
+                    cardsExpanded
+                      ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                      : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05]')}>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', cardsExpanded && 'rotate-180')} />
+                  {cardsExpanded ? (isAr ? 'طي الكل' : 'Collapse') : (isAr ? 'توسيع الكل' : 'Expand')}
+                </button>
+              </div>
+            )}
+
             <div className="relative ms-auto">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground)]/40" />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
@@ -1168,11 +1195,13 @@ export default function HabitsPage() {
             const viewContent = (
               <>
               {viewMode === 'cards' && (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
                   {filteredHabits.map((habit, i) => (
                     <SortableItem key={habit.id} id={habit.id} disabled={!isDragMode}>
-                      <HabitFlipCard habit={habit} index={i} isAr={isAr} store={store} today={today}
-                        onEdit={() => openEdit(habit)} onArchive={() => store.toggleHabitArchive(habit.id)} onDelete={() => store.deleteHabit(habit.id)} onDetail={() => setDetailHabit(habit)} onViewPage={`/app/habits/${habit.id}`} />
+                      <HabitFlipCard habit={habit} index={i} isAr={isAr} store={store} today={today} expanded={cardsExpanded || expandedRows.has(Math.floor(i / gridCols))}
+                        onEdit={() => openEdit(habit)} onArchive={() => store.toggleHabitArchive(habit.id)} onDelete={() => store.deleteHabit(habit.id)} onDetail={() => setDetailHabit(habit)} onViewPage={`/app/habits/${habit.id}`}
+                        rowExpanded={expandedRows.has(Math.floor(i / gridCols))}
+                        onToggleRow={() => { const row = Math.floor(i / gridCols); setExpandedRows(prev => { const next = new Set(prev); if (next.has(row)) next.delete(row); else next.add(row); return next; }); }} />
                     </SortableItem>
                   ))}
                 </div>
@@ -2014,15 +2043,16 @@ function HabitFullCalendar({ habit, isAr, store, onClose }: { habit: Habit; isAr
 }
 
 /* ─── Flip Card — redesigned with clear hierarchy ─── */
-function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, onDelete, onDetail, onViewPage }: {
+function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, onDelete, onDetail, onViewPage, expanded = false, rowExpanded = false, onToggleRow }: {
   habit: Habit; index: number; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string;
-  onEdit: () => void; onArchive: () => void; onDelete: () => void; onDetail: () => void; onViewPage?: string;
+  onEdit: () => void; onArchive: () => void; onDelete: () => void; onDetail: () => void; onViewPage?: string; expanded?: boolean;
+  rowExpanded?: boolean; onToggleRow?: () => void;
 }) {
   const [flipped, setFlipped] = useState(false);
   const [flippedTab, setFlippedTab] = useState<'details' | 'stats'>('details');
   const [showNote, setShowNote] = useState(false);
   const [noteText, setNoteText] = useState(habit.notes || '');
-  const [minimized, setMinimized] = useState(true);
+  const minimized = !expanded;
   const hc = resolveHabitColor(habit.color); // resolved color (handles 'theme')
   const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
   const hasDuration = !!habit.expectedDuration;
@@ -2123,7 +2153,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
 
   return (
     <motion.div
-      variants={fadeUp} custom={index + 3} layout
+      variants={fadeUp} custom={index + 3}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -2138,17 +2168,19 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
       >
         {/* ── FRONT ── */}
         <div
-          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-front group/card hover:shadow-xl transition-all duration-300', flipped && 'invisible')}
+          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-front group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', flipped && 'invisible')}
           style={{
             backfaceVisibility: 'hidden',
-            border: `2px solid ${done || allRepsDone ? '#22c55e30' : isDisabled ? '#ef444420' : `${hc}25`}`,
+            '--habit-color': hc,
+            '--habit-border-color': done || allRepsDone ? '#22c55e' : isDisabled ? '#ef4444' : hc,
             background: minimized ? 'var(--color-background)' : `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 120px)`,
             boxShadow: `0 2px 12px ${hc}10`,
-            height: minimized ? undefined : 780,
-          }}
+            maxHeight: minimized ? '180px' : '780px',
+            overflow: 'hidden',
+          } as React.CSSProperties}
         >
           {/* Color accent bar */}
-          <div className={minimized ? 'h-1 w-full' : 'h-2 w-full'} style={{ background: `linear-gradient(90deg, ${hc}, ${hc}bb)` }} />
+          <div className="w-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ height: minimized ? 4 : 8, background: `linear-gradient(90deg, ${hc}, ${hc}bb)` }} />
 
           {/* Optional custom image — only when expanded */}
           {!minimized && habit.image && (
@@ -2184,6 +2216,14 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               </div>
               {/* Quick actions */}
               <div className="flex items-center gap-1 shrink-0">
+                {onToggleRow && (
+                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={(e) => { e.stopPropagation(); onToggleRow(); }}
+                    className={cn('h-8 w-8 rounded-xl flex items-center justify-center border border-transparent transition-all',
+                      rowExpanded ? 'text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)]/20' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)]/20')}
+                    title={rowExpanded ? (isAr ? 'طي الصف' : 'Collapse Row') : (isAr ? 'توسيع الصف' : 'Expand Row')}>
+                    <ChevronsUpDown className="h-4 w-4" />
+                  </motion.button>
+                )}
                 {!minimized && (
                   <>
                     <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onEdit}
@@ -2199,14 +2239,6 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                     </motion.button>
                   </>
                 )}
-                {/* Minimize/Expand */}
-                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                  onClick={() => setMinimized(!minimized)}
-                  className={cn('h-8 w-8 rounded-xl flex items-center justify-center border border-transparent transition-all',
-                    minimized ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.08]')}
-                  title={minimized ? (isAr ? 'توسيع' : 'Expand') : (isAr ? 'تصغير' : 'Minimize')}>
-                  <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', minimized && 'rotate-180')} />
-                </motion.button>
               </div>
             </div>
 
@@ -2529,14 +2561,15 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
 
         {/* ── BACK ── */}
         <div
-          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-back', !flipped ? 'invisible absolute inset-0' : 'absolute inset-x-0 top-0')}
+          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-back habit-card-animated-border', !flipped ? 'invisible absolute inset-0' : 'absolute inset-x-0 top-0')}
           style={{
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
-            border: `2px solid ${hc}25`,
+            '--habit-color': hc,
+            '--habit-border-color': hc,
             background: `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 100px)`,
             boxShadow: `0 2px 12px ${hc}10`,
-          }}
+          } as React.CSSProperties}
         >
           <div className="h-1.5 w-full shrink-0" style={{ background: `linear-gradient(90deg, ${hc}, ${hc}99)` }} />
 

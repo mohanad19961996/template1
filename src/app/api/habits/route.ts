@@ -57,48 +57,35 @@ export async function POST(request: NextRequest) {
     const nextOrder = (lastHabit?.order ?? -1) + 1;
 
     const now = new Date().toISOString();
+    // Use client-provided id if available, otherwise generate one
+    const habitId = body.id || generateId();
+
+    // Accept all fields from client, apply defaults only for missing values
+    const { _id, ...bodyWithoutMongo } = body;
     const habit = {
-      id: generateId(),
+      ...bodyWithoutMongo,
+      id: habitId,
       userId,
       nameEn: body.nameEn || '',
       nameAr: body.nameAr || '',
-      descriptionEn: body.descriptionEn || '',
-      descriptionAr: body.descriptionAr || '',
       category: body.category || 'other',
       frequency: body.frequency || 'daily',
-      customDays: body.customDays || [],
       priority: body.priority || 'medium',
       difficulty: body.difficulty || 'medium',
       color: body.color || '#3B82F6',
-      icon: body.icon || 'Activity',
       type: body.type || 'positive',
       trackingType: body.trackingType || 'boolean',
-      targetValue: body.targetValue ?? 1,
-      targetUnit: body.targetUnit || 'times',
-      scheduleType: body.scheduleType || 'daily',
-      scheduleDays: body.scheduleDays || body.customDays || [],
-      weeklyTarget: body.weeklyTarget,
-      allowPartial: body.allowPartial ?? false,
-      allowSkip: body.allowSkip ?? false,
-      reminderEnabled: body.reminderEnabled ?? false,
-      reminderTime: body.reminderTime,
-      reminderDays: body.reminderDays,
-      targetPerDay: body.targetPerDay,
-      image: body.image,
-      cueEn: body.cueEn, cueAr: body.cueAr,
-      routineEn: body.routineEn, routineAr: body.routineAr,
-      rewardEn: body.rewardEn, rewardAr: body.rewardAr,
-      placeEn: body.placeEn, placeAr: body.placeAr,
-      preferredTime: body.preferredTime,
-      expectedDuration: body.expectedDuration,
-      windowStart: body.windowStart,
-      windowEnd: body.windowEnd,
-      createdAt: now,
-      archived: false,
-      order: nextOrder,
+      createdAt: body.createdAt || now,
+      archived: body.archived ?? false,
+      order: body.order ?? nextOrder,
     };
 
-    await db.collection(COLLECTION).insertOne({ ...habit, _id: habit.id as any });
+    // Upsert to handle duplicate ids (e.g. re-syncing from localStorage)
+    await db.collection(COLLECTION).updateOne(
+      { id: habitId, userId },
+      { $set: { ...habit, _id: habitId as any } },
+      { upsert: true }
+    );
 
     return successResponse(habit, 201);
   } catch (error) {

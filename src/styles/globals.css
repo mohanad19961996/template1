@@ -1103,6 +1103,44 @@ h3 {
   border-color: rgba(var(--color-primary-rgb) / 0.2);
 }
 
+/* ── App: Animated gradient border for habit cards ── */
+@keyframes border-rotate {
+  0% { --border-angle: 0deg; }
+  100% { --border-angle: 360deg; }
+}
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.habit-card-animated-border {
+  --habit-border-color: var(--color-primary);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.habit-card-animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    var(--habit-border-color) 0%,
+    transparent 25%,
+    transparent 50%,
+    var(--habit-border-color) 75%,
+    var(--habit-border-color) 100%
+  );
+  opacity: 0.25;
+  animation: border-rotate 4s linear infinite;
+  transition: opacity 0.4s ease;
+}
+.habit-card-animated-border:hover::before {
+  opacity: 0.5;
+}
+
 /* ── App: Input with theme focus ── */
 .app-input {
   border: 1px solid rgba(var(--color-primary-rgb) / 0.1);
