@@ -6,6 +6,8 @@
 
 export type HabitFrequency = 'daily' | 'weekly' | 'monthly' | 'custom';
 export type HabitType = 'positive' | 'avoidance';
+export type HabitTrackingType = 'boolean' | 'count' | 'timer';
+export type HabitLogStatus = 'completed' | 'partial' | 'skipped' | 'missed' | 'pending';
 export type Priority = 'low' | 'medium' | 'high';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type MoodLevel = 1 | 2 | 3 | 4 | 5;
@@ -76,6 +78,17 @@ export interface Habit {
   color: string;
   icon: string;
   type: HabitType;
+  // ── Tracking type (how completion is measured) ──
+  trackingType?: HabitTrackingType; // boolean = yes/no, count = numeric target, timer = time-based (default: boolean)
+  targetValue?: number;             // 1 for boolean, 8 for "8 cups", 30 for "30 minutes" (default: 1)
+  targetUnit?: string;              // 'times' | 'cups' | 'pages' | 'minutes' | 'steps' | custom (default: times)
+  // ── Schedule ──
+  scheduleType?: 'daily' | 'weekly' | 'custom'; // how often (default: daily)
+  scheduleDays?: WeekDay[];        // specific days if custom
+  weeklyTarget?: number;           // e.g. 3 times per week
+  // ── Behavior ──
+  allowPartial?: boolean;           // can log partial completion (default: false)
+  allowSkip?: boolean;              // can skip with excuse (default: false)
   reminderEnabled: boolean;
   reminderTime?: string;
   reminderDays?: WeekDay[];
@@ -95,6 +108,23 @@ export interface Habit {
   expectedDuration?: number; // minutes — expected time to complete this habit
   windowStart?: string; // HH:mm — ideal window start (optional)
   windowEnd?: string;   // HH:mm — ideal window end (optional)
+  strictWindow?: boolean; // if true, habit can ONLY be done within windowStart-windowEnd, auto-missed otherwise
+  maxDailyReps?: number;  // max times this habit can be completed per day (e.g. study 3 sessions/day)
+  // Streak challenges (up to 3 tiers)
+  streakGoal?: number;     // tier 1 e.g. 7 days
+  streakRewardEn?: string;
+  streakRewardAr?: string;
+  streakGoal2?: number;    // tier 2 e.g. 30 days
+  streakRewardEn2?: string;
+  streakRewardAr2?: string;
+  streakGoal3?: number;    // tier 3 e.g. 90 days
+  streakRewardEn3?: string;
+  streakRewardAr3?: string;
+  // Habit notes (persistent, not daily)
+  notes?: string;
+  // Card display size
+  colSpan?: number; // 1-4 columns this card spans
+  rowSpan?: number; // 1-3 rows this card spans
   createdAt: string;
   archived: boolean;
   order: number;
@@ -103,7 +133,7 @@ export interface Habit {
 export interface HabitLog {
   id: string;
   habitId: string;
-  date: string;       // YYYY-MM-DD
+  date: string;       // YYYY-MM-DD (dateKey)
   time: string;       // HH:mm
   duration?: number;   // minutes
   note: string;
@@ -112,6 +142,22 @@ export interface HabitLog {
   reminderUsed: boolean;
   perceivedDifficulty: Difficulty;
   completed: boolean;
+  // ── New fields for proper tracking ──
+  status?: HabitLogStatus;         // completed | partial | skipped | missed | pending (default: based on completed)
+  value?: number;                  // actual value achieved (e.g. 6 cups out of 8)
+  source?: 'manual' | 'timer' | 'auto'; // how this log was created (default: manual)
+}
+
+export type HabitChangeType = 'created' | 'edited' | 'archived' | 'restored';
+
+export interface HabitHistoryEntry {
+  id: string;
+  habitId: string;
+  changeType: HabitChangeType;
+  date: string;       // YYYY-MM-DD
+  timestamp: string;   // ISO
+  changes: Record<string, { from: unknown; to: unknown }>;  // field-level diff
+  snapshot: Partial<Habit>;  // full habit state at this point
 }
 
 export interface Skill {
@@ -157,6 +203,11 @@ export interface SkillSession {
   timerUsed: boolean;
 }
 
+export interface TimerEvent {
+  action: 'start' | 'pause' | 'resume' | 'finish' | 'cancel';
+  at: string; // ISO timestamp
+}
+
 export interface TimerSession {
   id: string;
   type: 'independent' | 'skill-linked' | 'habit-linked';
@@ -167,6 +218,10 @@ export interface TimerSession {
   labelAr: string;
   startedAt: string;
   endedAt?: string;
+  pausedAt?: string;        // when last paused
+  resumedAt?: string;       // when last resumed
+  totalPausedTime?: number; // total seconds spent paused
+  events?: TimerEvent[];    // full timeline of start/pause/resume/finish
   duration: number;         // seconds elapsed
   targetDuration?: number;  // seconds target
   pomodoroConfig?: PomodoroConfig;
@@ -322,6 +377,7 @@ export interface ActiveTimer {
   mode: TimerMode;
   pomodoroPhase?: 'work' | 'short-break' | 'long-break';
   pomodoroRound?: number;
+  runningStartedAt?: string; // ISO timestamp — when the current run segment started
 }
 
 // ── Utility Types ──────────────────────────────────────────
@@ -440,7 +496,17 @@ export const DEFAULT_APP_STATE: AppState = {
 // ── Color Palette for Items ────────────────────────────────
 
 export const ITEM_COLORS = [
+  'theme', // special: uses var(--color-primary), auto-adapts to light/dark
   '#E11D48', '#F97316', '#EAB308', '#22C55E', '#06B6D4',
   '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E',
   '#6366F1', '#A855F7', '#0EA5E9', '#10B981', '#D946EF',
 ];
+
+// Resolve habit color — returns hex color string
+// For 'theme', reads the live --color-primary CSS variable
+export function resolveHabitColor(color: string): string {
+  if (color !== 'theme') return color;
+  if (typeof window === 'undefined') return '#E11D48';
+  return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#E11D48';
+}
+

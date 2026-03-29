@@ -120,9 +120,9 @@ export default function TimersPage() {
 
   const handlePauseResume = () => {
     if (isRunning) {
-      store.updateActiveTimer({ state: 'paused' });
+      store.updateActiveTimer({ state: 'paused', runningStartedAt: undefined });
     } else if (isPaused) {
-      store.updateActiveTimer({ state: 'running' });
+      store.updateActiveTimer({ state: 'running', runningStartedAt: new Date().toISOString() });
     }
   };
 

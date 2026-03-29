@@ -5,7 +5,8 @@ import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePathname, useRouter } from '@/i18n/navigation';
-import { Menu, Moon, Sun, Globe, Sparkles, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Menu, Moon, Sun, Globe, Sparkles, PanelLeftClose, PanelLeftOpen, ExternalLink } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 import { ThemeSwitcher } from '@/components/layout/theme-switcher';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -103,6 +104,13 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
 
       {/* Right side — controls */}
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Template link */}
+        <a href={`/${locale}?template=1`}
+          className="h-9 px-3 rounded-xl flex items-center justify-center gap-1.5 text-[12px] font-bold icon-btn !w-auto cursor-pointer">
+          <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+          <span className="hidden sm:inline">{isAr ? 'القالب' : 'Template'}</span>
+        </a>
+
         {/* Theme color switcher */}
         <ThemeSwitcher />
 

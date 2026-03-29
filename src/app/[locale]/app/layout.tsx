@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppSidebar } from '@/components/app/sidebar';
 import { AppNavbar } from '@/components/app/app-navbar';
 import { useAppStore } from '@/stores/app-store';
+import { ToastProvider } from '@/components/app/toast-notifications';
+import { enableAudio } from '@/lib/sounds';
 
 // Global timer tick — runs as long as activeTimer is 'running', regardless of page
 function useGlobalTimerTick() {
@@ -28,14 +30,15 @@ function useGlobalTimerTick() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Global timer tick — persists across all /app/* pages
   useGlobalTimerTick();
 
   return (
-    <div className="min-h-screen app-bg">
+    <div className="min-h-screen app-bg" onClick={() => enableAudio()}>
+      <ToastProvider>
       <AppSidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
@@ -54,6 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      </ToastProvider>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   TimerSession, Reminder, HormoneLog, NutritionLog, HydrationLog,
   Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
   StreakInfo, HabitStats, SkillStats, DateString,
+  HabitHistoryEntry, HabitChangeType,
 } from '@/types/app';
 
 // ── Storage ────────────────────────────────────────────────
@@ -18,7 +19,7 @@ function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_APP_STATE;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_APP_STATE, ...parsed };
+    return normalizeState({ ...DEFAULT_APP_STATE, ...parsed });
   } catch {
     return DEFAULT_APP_STATE;
   }
@@ -31,43 +32,129 @@ function saveState(state: AppState) {
   } catch { /* storage full — silently fail */ }
 }
 
-// ── MongoDB Sync ──────────────────────────────────────────
+// ── Data Normalization (backward compat for new fields) ───
 
-async function loadFromMongo(): Promise<AppState | null> {
+function normalizeState(state: AppState): AppState {
+  return {
+    ...state,
+    habits: state.habits.map(h => ({
+      ...h,
+      trackingType: h.trackingType ?? (h.expectedDuration ? 'timer' : 'boolean'),
+      targetValue: h.targetValue ?? (h.expectedDuration ? h.expectedDuration : 1),
+      targetUnit: h.targetUnit ?? (h.expectedDuration ? 'minutes' : 'times'),
+      scheduleType: h.scheduleType ?? (h.frequency === 'custom' ? 'custom' : h.frequency === 'weekly' ? 'weekly' : 'daily'),
+      scheduleDays: h.scheduleDays ?? h.customDays,
+      allowPartial: h.allowPartial ?? false,
+      allowSkip: h.allowSkip ?? false,
+    })),
+    habitLogs: state.habitLogs.map(l => ({
+      ...l,
+      status: l.status ?? (l.completed ? 'completed' : 'missed'),
+      source: l.source ?? 'manual',
+    })),
+  };
+}
+
+// ── API Helpers (per-collection) ─────────────────────────
+
+async function fetchHabitsFromAPI(): Promise<Habit[] | null> {
   try {
-    const res = await fetch('/api/state');
+    const res = await fetch('/api/habits');
     if (!res.ok) return null;
     const { data } = await res.json();
-    if (!data) return null;
-    return { ...DEFAULT_APP_STATE, ...data };
+    return Array.isArray(data) ? data : null;
   } catch {
     return null;
   }
 }
 
-let mongoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+async function fetchLogsFromAPI(): Promise<HabitLog[] | null> {
+  try {
+    const res = await fetch('/api/logs');
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
 
-function saveToMongo(state: AppState) {
-  if (mongoSaveTimer) clearTimeout(mongoSaveTimer);
-  mongoSaveTimer = setTimeout(async () => {
-    try {
-      await fetch('/api/state', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
-      });
-    } catch { /* network error — silently fail, localStorage still has the data */ }
-  }, 1000);
+// Fire-and-forget API calls for mutations (optimistic local updates)
+function apiPost(url: string, body: unknown) {
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .catch(() => { /* network error — localStorage has the data */ });
+}
+
+function apiPatch(url: string, body: unknown) {
+  fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .catch(() => {});
+}
+
+function apiDelete(url: string) {
+  fetch(url, { method: 'DELETE' }).catch(() => {});
+}
+
+// Record a habit change in the history collection
+function recordHabitHistory(
+  habitId: string,
+  changeType: HabitChangeType,
+  changes: Record<string, { from: unknown; to: unknown }>,
+  snapshot: Partial<Habit>,
+) {
+  apiPost(`/api/habits/${habitId}/history`, { changeType, changes, snapshot });
+}
+
+// Build a field-level diff between old and new habit
+function diffHabit(old: Habit, updates: Partial<Habit>): Record<string, { from: unknown; to: unknown }> {
+  const diff: Record<string, { from: unknown; to: unknown }> = {};
+  for (const key of Object.keys(updates) as (keyof Habit)[]) {
+    if (key === 'id' || key === 'createdAt') continue;
+    const oldVal = old[key];
+    const newVal = updates[key];
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      diff[key] = { from: oldVal, to: newVal };
+    }
+  }
+  return diff;
+}
+
+// ── Timer Recovery ────────────────────────────────────────
+
+function recoverTimer(state: AppState): AppState {
+  const t = state.activeTimer;
+  if (!t || t.state !== 'running' || !t.runningStartedAt) return state;
+
+  const now = Date.now();
+  const startedAt = new Date(t.runningStartedAt).getTime();
+  const secondsPassed = Math.floor((now - startedAt) / 1000);
+  const newElapsed = t.elapsed + secondsPassed;
+
+  // For countdown/pomodoro: cap at target and auto-complete if exceeded
+  if (t.targetDuration && newElapsed >= t.targetDuration) {
+    return {
+      ...state,
+      activeTimer: { ...t, elapsed: t.targetDuration, state: 'completed', runningStartedAt: undefined },
+      timerSessions: state.timerSessions.map(s =>
+        s.id === t.sessionId ? { ...s, completed: true, endedAt: new Date().toISOString(), duration: t.targetDuration! } : s
+      ),
+    };
+  }
+
+  return {
+    ...state,
+    activeTimer: { ...t, elapsed: newElapsed, runningStartedAt: new Date().toISOString() },
+  };
 }
 
 // ── Context ────────────────────────────────────────────────
 
 interface AppStore extends AppState {
   // Habits
-  addHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'archived' | 'order'>) => Habit;
+  addHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'archived' | 'order'> & { order?: number }) => Habit;
   updateHabit: (id: string, updates: Partial<Habit>) => void;
   deleteHabit: (id: string) => void;
   toggleHabitArchive: (id: string) => void;
+  reorderHabits: (orderedIds: string[]) => void;
   logHabit: (log: Omit<HabitLog, 'id'>) => HabitLog;
   deleteHabitLog: (id: string) => void;
   getHabitLogs: (habitId: string, startDate?: string, endDate?: string) => HabitLog[];
@@ -146,15 +233,25 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   stateRef.current = state;
 
   useEffect(() => {
-    // Load localStorage immediately, then try MongoDB for latest data
+    // Load localStorage immediately for fast first paint
     const local = loadState();
-    setState(local);
+    const recovered = recoverTimer(local);
+    setState(recovered);
     setMounted(true);
 
-    loadFromMongo().then(remote => {
-      if (remote) {
-        setState(remote);
-        saveState(remote); // sync localStorage with MongoDB data
+    // Then load habits & logs from API (separate collections) for latest data
+    Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI()]).then(([habits, logs]) => {
+      if (habits || logs) {
+        setState(prev => {
+          const updated = {
+            ...prev,
+            ...(habits ? { habits } : {}),
+            ...(logs ? { habitLogs: logs } : {}),
+          };
+          const normalized = normalizeState(updated);
+          saveState(normalized);
+          return normalized;
+        });
       }
     });
   }, []);
@@ -165,7 +262,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveState(state);
-      saveToMongo(state);
     }, 300);
   }, [state, mounted]);
 
@@ -175,32 +271,91 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Habits ──
 
-  const addHabit = useCallback((data: Omit<Habit, 'id' | 'createdAt' | 'archived' | 'order'>): Habit => {
-    const habit: Habit = { ...data, id: generateId(), createdAt: new Date().toISOString(), archived: false, order: stateRef.current.habits.length };
+  const addHabit = useCallback((data: Omit<Habit, 'id' | 'createdAt' | 'archived' | 'order'> & { order?: number }): Habit => {
+    const habit: Habit = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      archived: false,
+      order: data.order ?? stateRef.current.habits.length,
+      trackingType: data.trackingType ?? 'boolean',
+      targetValue: data.targetValue ?? 1,
+      targetUnit: data.targetUnit ?? 'times',
+      scheduleType: data.scheduleType ?? 'daily',
+      allowPartial: data.allowPartial ?? false,
+      allowSkip: data.allowSkip ?? false,
+    };
     update(s => ({ ...s, habits: [...s.habits, habit] }));
+    apiPost('/api/habits', habit);
+    recordHabitHistory(habit.id, 'created', {}, { nameEn: habit.nameEn, nameAr: habit.nameAr, category: habit.category, color: habit.color });
     return habit;
   }, [update]);
 
   const updateHabit = useCallback((id: string, updates: Partial<Habit>) => {
+    const oldHabit = stateRef.current.habits.find(h => h.id === id);
     update(s => ({ ...s, habits: s.habits.map(h => h.id === id ? { ...h, ...updates } : h) }));
+    apiPatch(`/api/habits/${id}`, updates);
+    if (oldHabit) {
+      const changes = diffHabit(oldHabit, updates);
+      if (Object.keys(changes).length > 0) {
+        const snapshot = { ...oldHabit, ...updates };
+        recordHabitHistory(id, 'edited', changes, snapshot);
+      }
+    }
   }, [update]);
 
+  // Habits are never truly deleted — only archived
   const deleteHabit = useCallback((id: string) => {
-    update(s => ({ ...s, habits: s.habits.filter(h => h.id !== id), habitLogs: s.habitLogs.filter(l => l.habitId !== id) }));
+    const habit = stateRef.current.habits.find(h => h.id === id);
+    update(s => ({ ...s, habits: s.habits.map(h => h.id === id ? { ...h, archived: true } : h) }));
+    apiPatch(`/api/habits/${id}`, { archived: true });
+    if (habit) {
+      recordHabitHistory(id, 'archived', { archived: { from: false, to: true } }, { ...habit, archived: true });
+    }
   }, [update]);
 
   const toggleHabitArchive = useCallback((id: string) => {
+    const habit = stateRef.current.habits.find(h => h.id === id);
+    const newArchived = !habit?.archived;
     update(s => ({ ...s, habits: s.habits.map(h => h.id === id ? { ...h, archived: !h.archived } : h) }));
+    apiPatch(`/api/habits/${id}`, { archived: newArchived });
+    if (habit) {
+      recordHabitHistory(id, newArchived ? 'archived' : 'restored',
+        { archived: { from: habit.archived, to: newArchived } },
+        { ...habit, archived: newArchived });
+    }
+  }, [update]);
+
+  const reorderHabits = useCallback((orderedIds: string[]) => {
+    update(s => ({
+      ...s,
+      habits: s.habits.map(h => {
+        const idx = orderedIds.indexOf(h.id);
+        return idx >= 0 ? { ...h, order: idx } : h;
+      }),
+    }));
+    // Persist order to API for each habit
+    orderedIds.forEach((id, idx) => {
+      apiPatch(`/api/habits/${id}`, { order: idx });
+    });
   }, [update]);
 
   const logHabit = useCallback((data: Omit<HabitLog, 'id'>): HabitLog => {
-    const log: HabitLog = { ...data, id: generateId() };
+    const log: HabitLog = {
+      ...data,
+      id: generateId(),
+      status: data.status ?? (data.completed ? 'completed' : 'pending'),
+      source: data.source ?? 'manual',
+    };
     update(s => ({ ...s, habitLogs: [...s.habitLogs, log] }));
+    apiPost(`/api/habits/${data.habitId}/logs`, { ...log, upsert: true });
     return log;
   }, [update]);
 
   const deleteHabitLog = useCallback((id: string) => {
+    const log = stateRef.current.habitLogs.find(l => l.id === id);
     update(s => ({ ...s, habitLogs: s.habitLogs.filter(l => l.id !== id) }));
+    if (log) apiDelete(`/api/habits/${log.habitId}/logs?logId=${id}`);
   }, [update]);
 
   const getHabitLogs = useCallback((habitId: string, startDate?: string, endDate?: string): HabitLog[] => {
@@ -218,6 +373,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getHabitStreak = useCallback((habitId: string): StreakInfo => {
+    const habit = stateRef.current.habits.find(h => h.id === habitId);
     const logs = stateRef.current.habitLogs
       .filter(l => l.habitId === habitId && l.completed)
       .map(l => l.date)
@@ -226,31 +382,39 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     if (logs.length === 0) return { current: 0, best: 0, lastCompletedDate: null };
 
-    const uniqueDates = [...new Set(logs)];
-    const lastDate = uniqueDates[0];
-
-    let current = 0;
-    let best = 0;
-    let streak = 0;
+    const uniqueDates = new Set(logs);
+    const lastDate = [...uniqueDates][0];
     const today = todayString();
+
+    // Determine which days are scheduled for this habit
+    const scheduleDays = habit?.scheduleDays ?? habit?.customDays ?? [];
+    const scheduleType = habit?.scheduleType ?? (habit?.frequency === 'custom' ? 'custom' : habit?.frequency === 'weekly' ? 'weekly' : 'daily');
+    const isScheduledDay = (dateStr: string) => {
+      if (scheduleType === 'daily') return true;
+      if (scheduleType === 'custom' && scheduleDays.length > 0) {
+        const dayOfWeek = new Date(dateStr).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        return scheduleDays.includes(dayOfWeek);
+      }
+      return true; // weekly/monthly: treat all days as eligible for streak
+    };
+
+    // Current streak: go back from today, skip non-scheduled days
+    let current = 0;
     const checkDate = new Date(today);
-
-    // Check if today or yesterday was completed
-    const dayDiff = Math.floor((new Date(today).getTime() - new Date(lastDate).getTime()) / 86400000);
-    if (dayDiff > 1) return { current: 0, best: calculateBestStreak(uniqueDates), lastCompletedDate: lastDate };
-
     for (let i = 0; i < 400; i++) {
       const dateStr = checkDate.toISOString().split('T')[0];
-      if (uniqueDates.includes(dateStr)) {
-        streak++;
-      } else if (i > 0) {
-        break;
+      if (isScheduledDay(dateStr)) {
+        if (uniqueDates.has(dateStr)) {
+          current++;
+        } else if (i > 0 || dateStr === today) {
+          // Today not done yet is OK, break on first missed scheduled day in the past
+          if (dateStr !== today) break;
+        }
       }
       checkDate.setDate(checkDate.getDate() - 1);
     }
-    current = streak;
-    best = Math.max(current, calculateBestStreak(uniqueDates));
 
+    const best = Math.max(current, calculateBestStreak([...uniqueDates], isScheduledDay));
     return { current, best, lastCompletedDate: lastDate };
   }, []);
 
@@ -396,7 +560,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   // ── Timers ──
 
   const startTimer = useCallback((data: Omit<TimerSession, 'id' | 'completed' | 'distractionCount' | 'note'>): string => {
-    const session: TimerSession = { ...data, id: generateId(), completed: false, distractionCount: 0, note: '' };
+    const now = new Date().toISOString();
+    const session: TimerSession = { ...data, id: generateId(), completed: false, distractionCount: 0, note: '', events: [{ action: 'start', at: now }] };
     const active: ActiveTimer = {
       sessionId: session.id,
       state: 'running',
@@ -405,38 +570,71 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       mode: data.mode,
       pomodoroPhase: data.mode === 'pomodoro' ? 'work' : undefined,
       pomodoroRound: data.mode === 'pomodoro' ? 1 : undefined,
+      runningStartedAt: now,
     };
     update(s => ({ ...s, timerSessions: [...s.timerSessions, session], activeTimer: active }));
     return session.id;
   }, [update]);
 
   const updateActiveTimer = useCallback((updates: Partial<ActiveTimer>) => {
-    update(s => s.activeTimer ? { ...s, activeTimer: { ...s.activeTimer, ...updates } } : s);
+    update(s => {
+      if (!s.activeTimer) return s;
+      const now = new Date().toISOString();
+      // Record events on the session when pausing/resuming
+      let updatedSessions = s.timerSessions;
+      if (updates.state === 'paused' || updates.state === 'running') {
+        const action = updates.state === 'paused' ? 'pause' as const : 'resume' as const;
+        updatedSessions = s.timerSessions.map(t => t.id === s.activeTimer!.sessionId ? {
+          ...t,
+          events: [...(t.events || []), { action, at: now }],
+          pausedAt: action === 'pause' ? now : t.pausedAt,
+          resumedAt: action === 'resume' ? now : t.resumedAt,
+          totalPausedTime: action === 'resume' && t.pausedAt
+            ? (t.totalPausedTime || 0) + Math.floor((Date.now() - new Date(t.pausedAt).getTime()) / 1000)
+            : t.totalPausedTime,
+        } : t);
+      }
+      return { ...s, timerSessions: updatedSessions, activeTimer: { ...s.activeTimer, ...updates } };
+    });
   }, [update]);
 
   const tickActiveTimer = useCallback(() => {
-    update(s => s.activeTimer && s.activeTimer.state === 'running'
-      ? { ...s, activeTimer: { ...s.activeTimer, elapsed: s.activeTimer.elapsed + 1 } }
-      : s);
+    update(s => {
+      if (!s.activeTimer || s.activeTimer.state !== 'running') return s;
+      return { ...s, activeTimer: { ...s.activeTimer, elapsed: s.activeTimer.elapsed + 1, runningStartedAt: new Date().toISOString() } };
+    });
   }, [update]);
 
   const completeTimer = useCallback((sessionId: string, note?: string, productivityRating?: number) => {
+    const now = new Date().toISOString();
     update(s => ({
       ...s,
       timerSessions: s.timerSessions.map(t => t.id === sessionId ? {
-        ...t, completed: true, endedAt: new Date().toISOString(),
+        ...t, completed: true, endedAt: now,
         duration: s.activeTimer?.elapsed ?? t.duration,
         note: note ?? t.note,
-        productivityRating: productivityRating as any ?? t.productivityRating
+        productivityRating: productivityRating as any ?? t.productivityRating,
+        events: [...(t.events || []), { action: 'finish' as const, at: now }],
       } : t),
       activeTimer: null,
     }));
   }, [update]);
 
   const cancelTimer = useCallback(() => {
+    const now = new Date().toISOString();
     update(s => {
       if (!s.activeTimer) return s;
-      return { ...s, timerSessions: s.timerSessions.filter(t => t.id !== s.activeTimer!.sessionId), activeTimer: null };
+      return {
+        ...s,
+        timerSessions: s.timerSessions.map(t => t.id === s.activeTimer!.sessionId ? {
+          ...t,
+          endedAt: now,
+          duration: s.activeTimer!.elapsed,
+          completed: false,
+          events: [...(t.events || []), { action: 'cancel' as const, at: now }],
+        } : t),
+        activeTimer: null,
+      };
     });
   }, [update]);
 
@@ -613,7 +811,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const store: AppStore = {
     ...state,
-    addHabit, updateHabit, deleteHabit, toggleHabitArchive,
+    addHabit, updateHabit, deleteHabit, toggleHabitArchive, reorderHabits,
     logHabit, deleteHabitLog, getHabitLogs, getHabitStats, getHabitStreak,
     isHabitCompletedToday, getTodayCompletionRate,
     addSkill, updateSkill, deleteSkill,
@@ -644,21 +842,31 @@ export function useAppStore(): AppStore {
 
 // ── Helpers ──
 
-function calculateBestStreak(sortedDatesDesc: string[]): number {
+function calculateBestStreak(sortedDatesDesc: string[], isScheduledDay?: (d: string) => boolean): number {
   if (sortedDatesDesc.length === 0) return 0;
+  const completedSet = new Set(sortedDatesDesc);
   const sorted = [...sortedDatesDesc].sort();
-  let best = 1;
-  let current = 1;
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1]);
-    const curr = new Date(sorted[i]);
-    const diff = Math.floor((curr.getTime() - prev.getTime()) / 86400000);
-    if (diff === 1) {
-      current++;
-      best = Math.max(best, current);
-    } else if (diff > 1) {
-      current = 1;
+  const firstDate = new Date(sorted[0]);
+  const lastDate = new Date(sorted[sorted.length - 1]);
+
+  let best = 0;
+  let current = 0;
+  const checkDate = new Date(firstDate);
+
+  // Walk through every day from first completion to last
+  while (checkDate <= lastDate) {
+    const ds = checkDate.toISOString().split('T')[0];
+    const scheduled = isScheduledDay ? isScheduledDay(ds) : true;
+    if (scheduled) {
+      if (completedSet.has(ds)) {
+        current++;
+        best = Math.max(best, current);
+      } else {
+        current = 0;
+      }
     }
+    // Non-scheduled days don't affect streak
+    checkDate.setDate(checkDate.getDate() + 1);
   }
   return best;
 }
