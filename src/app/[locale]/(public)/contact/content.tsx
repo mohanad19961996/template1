@@ -68,6 +68,24 @@ export function ContactContent() {
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  /* ── form state ── */
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    service: "",
+    budget: "",
+    message: "",
+  });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (formError) setFormError("");
+  };
+
   const heroRef = useRef(null);
   const stripRef = useRef(null);
   const formRef = useRef(null);
@@ -81,10 +99,33 @@ export function ContactContent() {
   const faqInView = useInView(faqRef, { once: true, margin: "-60px" });
   const socialInView = useInView(socialRef, { once: true, margin: "-60px" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+    setFormLoading(true);
+    setFormError("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setFormError(data.error || (isAr ? "حدث خطأ، يرجى المحاولة لاحقاً" : "Something went wrong. Please try again."));
+        return;
+      }
+
+      setSubmitted(true);
+      setFormData({ name: "", email: "", phone: "", subject: "", service: "", budget: "", message: "" });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch {
+      setFormError(isAr ? "تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً" : "Could not reach the server. Please try again later.");
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   /* ── data ── */
@@ -506,6 +547,8 @@ export function ContactContent() {
                             placeholder={isAr ? "الاسم الكامل" : "Full name"}
                             className="w-full h-11 px-4 rounded-xl text-sm outline-none"
                             style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                            value={formData.name}
+                            onChange={(e) => updateField("name", e.target.value)}
                             onFocus={inputFocus}
                             onBlur={inputBlur}
                           />
@@ -521,6 +564,8 @@ export function ContactContent() {
                             placeholder={isAr ? "البريد الإلكتروني" : "you@example.com"}
                             className="w-full h-11 px-4 rounded-xl text-sm outline-none"
                             style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                            value={formData.email}
+                            onChange={(e) => updateField("email", e.target.value)}
                             onFocus={inputFocus}
                             onBlur={inputBlur}
                           />
@@ -539,6 +584,8 @@ export function ContactContent() {
                           placeholder={isAr ? "رقم الهاتف" : "+966 5X XXX XXXX"}
                           className="w-full h-11 px-4 rounded-xl text-sm outline-none"
                           style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                          value={formData.phone}
+                          onChange={(e) => updateField("phone", e.target.value)}
                           onFocus={inputFocus}
                           onBlur={inputBlur}
                         />
@@ -556,6 +603,8 @@ export function ContactContent() {
                           placeholder={isAr ? "موضوع الرسالة" : "What's this about?"}
                           className="w-full h-11 px-4 rounded-xl text-sm outline-none"
                           style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                          value={formData.subject}
+                          onChange={(e) => updateField("subject", e.target.value)}
                           onFocus={inputFocus}
                           onBlur={inputBlur}
                         />
@@ -572,6 +621,8 @@ export function ContactContent() {
                             required
                             className="w-full h-11 px-4 rounded-xl text-sm outline-none appearance-none cursor-pointer"
                             style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                            value={formData.service}
+                            onChange={(e) => updateField("service", e.target.value)}
                             onFocus={inputFocus}
                             onBlur={inputBlur}
                           >
@@ -590,6 +641,8 @@ export function ContactContent() {
                             required
                             className="w-full h-11 px-4 rounded-xl text-sm outline-none appearance-none cursor-pointer"
                             style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                            value={formData.budget}
+                            onChange={(e) => updateField("budget", e.target.value)}
                             onFocus={inputFocus}
                             onBlur={inputBlur}
                           >
@@ -613,29 +666,60 @@ export function ContactContent() {
                           placeholder={isAr ? "أخبرنا المزيد عن مشروعك..." : "Tell us more about your project..."}
                           className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
                           style={{ ...inputStyle, color: "var(--color-foreground)" }}
+                          value={formData.message}
+                          onChange={(e) => updateField("message", e.target.value)}
                           onFocus={inputFocus}
                           onBlur={inputBlur}
                         />
                       </div>
 
+                      {/* error message */}
+                      {formError && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="rounded-xl px-4 py-3 text-sm font-medium"
+                          style={{
+                            background: "rgba(220, 38, 38, 0.08)",
+                            color: "rgb(220, 38, 38)",
+                            border: "1px solid rgba(220, 38, 38, 0.15)",
+                          }}
+                        >
+                          {formError}
+                        </motion.div>
+                      )}
+
                       {/* submit button */}
                       <motion.button
                         type="submit"
-                        className="w-full h-12 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2.5 cursor-pointer"
+                        disabled={formLoading}
+                        className="w-full h-12 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         style={{
                           background: "var(--color-primary)",
                           boxShadow:
                             "0 4px 20px rgba(var(--color-primary-rgb) / 0.3), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.1)",
                           transition: "box-shadow 0.3s ease, transform 0.2s ease",
                         }}
-                        whileHover={{
+                        whileHover={formLoading ? {} : {
                           boxShadow:
                             "0 8px 32px rgba(var(--color-primary-rgb) / 0.4), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.2)",
                         }}
-                        whileTap={{ scale: 0.98 }}
+                        whileTap={formLoading ? {} : { scale: 0.98 }}
                       >
-                        {tc("sendMessage")}
-                        <Arrow className="h-4 w-4" />
+                        {formLoading ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            {isAr ? "جارٍ الإرسال..." : "Sending..."}
+                          </>
+                        ) : (
+                          <>
+                            {tc("sendMessage")}
+                            <Arrow className="h-4 w-4" />
+                          </>
+                        )}
                       </motion.button>
                     </motion.form>
                   )}

@@ -82,7 +82,24 @@ export function ThemeSwitcher() {
     return () => observer.disconnect();
   }, [mounted, current, customColor, applyTheme, applyCustomColor]);
 
-  const handleEnter = () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setOpen(true); };
+  const [dropPos, setDropPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0 });
+
+  const updateDropPos = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const btnCenter = rect.left + rect.width / 2;
+      if (btnCenter > vw / 2) {
+        // Button is on right half — anchor panel's right edge to viewport right
+        setDropPos({ top: rect.bottom + 10, right: Math.max(8, vw - rect.right), left: undefined });
+      } else {
+        // Button is on left half — anchor panel's left edge to button left
+        setDropPos({ top: rect.bottom + 10, left: Math.max(8, rect.left), right: undefined });
+      }
+    }
+  }, []);
+
+  const handleEnter = () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); updateDropPos(); setOpen(true); };
   const handleLeave = () => { timeoutRef.current = setTimeout(() => setOpen(false), 300); };
 
   if (!mounted) return <div className="h-[38px] w-[100px] rounded-xl" />;
@@ -101,8 +118,11 @@ export function ThemeSwitcher() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.96 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute top-full mt-2.5 start-0 z-[999] rounded-2xl overflow-hidden"
+          className="fixed z-[9999] rounded-2xl overflow-hidden"
           style={{
+            top: dropPos.top,
+            left: dropPos.left,
+            right: dropPos.right,
             width: "296px",
             background: "var(--color-card)",
             border: "1px solid rgba(var(--color-primary-rgb) / 0.08)",

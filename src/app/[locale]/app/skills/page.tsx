@@ -148,13 +148,13 @@ export default function SkillsPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'المهارات' : 'Skills'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">
             {isAr ? `${store.skills.filter(s => !s.archived).length} مهارة · ${totalHours} ساعة إجمالية` : `${store.skills.filter(s => !s.archived).length} skills · ${totalHours}h total`}
           </p>
         </div>
         <button
           onClick={() => { resetSkillForm(); setShowForm(true); }}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity shadow-sm"
+          className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2.5 text-sm font-medium shadow-sm"
         >
           <Plus className="h-4 w-4" /> {isAr ? 'مهارة جديدة' : 'New Skill'}
         </button>
@@ -167,13 +167,13 @@ export default function SkillsPage() {
           { labelEn: 'Total Hours', labelAr: 'ساعات التدريب', value: `${totalHours}h`, icon: Clock, color: 'text-purple-500 bg-purple-500/10' },
           { labelEn: 'Sessions', labelAr: 'الجلسات', value: store.skillSessions.length, icon: Timer, color: 'text-emerald-500 bg-emerald-500/10' },
         ].map((s, i) => (
-          <div key={i} className="rounded-xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-3 flex items-center gap-3">
+          <div key={i} className="rounded-xl app-stat-card p-3 flex items-center gap-3">
             <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', s.color.split(' ')[1])}>
               <s.icon className={cn('h-4 w-4', s.color.split(' ')[0])} />
             </div>
             <div>
               <p className="text-lg font-bold">{s.value}</p>
-              <p className="text-[10px] text-[var(--foreground)]/40">{isAr ? s.labelAr : s.labelEn}</p>
+              <p className="text-[10px] text-[var(--foreground)]/60">{isAr ? s.labelAr : s.labelEn}</p>
             </div>
           </div>
         ))}
@@ -187,13 +187,13 @@ export default function SkillsPage() {
             type="text" value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={isAr ? 'بحث...' : 'Search...'}
-            className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent ps-9 pe-3 py-2 text-sm placeholder:text-[var(--foreground)]/30 focus:outline-none focus:border-[var(--color-primary)]/40"
+            className="w-full rounded-xl app-input ps-9 pe-3 py-2 text-sm placeholder:text-[var(--foreground)]/30"
           />
         </div>
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]/40"
+          className="rounded-xl app-input px-3 py-2 text-sm"
         >
           <option value="all">{isAr ? 'كل الفئات' : 'All Categories'}</option>
           {SKILL_CATEGORIES.map(c => (
@@ -218,7 +218,7 @@ export default function SkillsPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="group rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden transition-all duration-300 hover:shadow-md hover:border-[var(--foreground)]/[0.12]"
+                className="group rounded-2xl app-card overflow-hidden"
               >
                 <div className="h-1 w-full" style={{ backgroundColor: skill.color }} />
                 <div className="p-4">
@@ -229,17 +229,17 @@ export default function SkillsPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold">{isAr ? skill.nameAr : skill.nameEn}</h3>
-                        <span className="text-[10px] text-[var(--foreground)]/40">
+                        <span className="text-[10px] text-[var(--foreground)]/60">
                           {isAr ? CATEGORY_LABELS[skill.category]?.ar : CATEGORY_LABELS[skill.category]?.en}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEditSkill(skill)} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
-                        <Edit3 className="h-3.5 w-3.5 text-[var(--foreground)]/40" />
+                        <Edit3 className="h-3.5 w-3.5 text-[var(--foreground)]/60" />
                       </button>
                       <button onClick={() => setDetailSkill(skill)} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
-                        <Eye className="h-3.5 w-3.5 text-[var(--foreground)]/40" />
+                        <Eye className="h-3.5 w-3.5 text-[var(--foreground)]/60" />
                       </button>
                     </div>
                   </div>
@@ -247,7 +247,7 @@ export default function SkillsPage() {
                   {/* Progress */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-[var(--foreground)]/40">
+                      <span className="text-[10px] text-[var(--foreground)]/60">
                         {isAr ? 'المستوى' : 'Level'} {skill.currentLevel}/{skill.targetLevel}
                       </span>
                       <span className="text-[10px] font-medium" style={{ color: skill.color }}>
@@ -266,7 +266,7 @@ export default function SkillsPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center gap-3 text-[10px] text-[var(--foreground)]/40 mb-3">
+                  <div className="flex items-center gap-3 text-[10px] text-[var(--foreground)]/60 mb-3">
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDuration(skill.totalMinutes)}</span>
                     <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3" /> {skill.totalSessions} {isAr ? 'جلسة' : 'sessions'}</span>
                     {todayMin > 0 && (
@@ -280,7 +280,7 @@ export default function SkillsPage() {
                   <div className="flex gap-2 pt-3 border-t border-[var(--foreground)]/[0.04]">
                     <button
                       onClick={() => setShowSessionForm(skill.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)]/[0.04] py-2 text-xs font-medium hover:bg-[var(--foreground)]/[0.08] transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)]/[0.06] py-2 text-xs font-medium hover:bg-[var(--foreground)]/[0.08] transition-colors"
                     >
                       <Plus className="h-3.5 w-3.5" /> {isAr ? 'جلسة' : 'Session'}
                     </button>
@@ -300,15 +300,15 @@ export default function SkillsPage() {
 
       {filteredSkills.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.04]">
-            <GraduationCap className="h-8 w-8 text-[var(--foreground)]/20" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+            <GraduationCap className="h-8 w-8 text-[var(--foreground)]/40" />
           </div>
-          <p className="text-sm text-[var(--foreground)]/40 mb-4">
+          <p className="text-sm text-[var(--foreground)]/60 mb-4">
             {isAr ? 'لا توجد مهارات بعد. أضف مهاراتك!' : 'No skills yet. Add your first skill!'}
           </p>
           <button
             onClick={() => { resetSkillForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-5 py-2.5 text-sm font-medium"
           >
             <Plus className="h-4 w-4" /> {isAr ? 'إضافة مهارة' : 'Add Skill'}
           </button>
@@ -321,13 +321,13 @@ export default function SkillsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); resetSkillForm(); }}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="sticky top-0 z-10 bg-[var(--background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+              <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{editingSkill ? (isAr ? 'تعديل المهارة' : 'Edit Skill') : (isAr ? 'مهارة جديدة' : 'New Skill')}</h2>
                 <button onClick={() => { setShowForm(false); resetSkillForm(); }} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
@@ -335,42 +335,42 @@ export default function SkillsPage() {
               <div className="p-5 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'الاسم (عربي)' : 'Name (Arabic)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الاسم (عربي)' : 'Name (Arabic)'}</label>
                     <input dir="rtl" value={skillForm.nameAr} onChange={e => setSkillForm(f => ({ ...f, nameAr: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" placeholder="مثال: البرمجة" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" placeholder="مثال: البرمجة" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'الاسم (إنجليزي)' : 'Name (English)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الاسم (إنجليزي)' : 'Name (English)'}</label>
                     <input dir="ltr" value={skillForm.nameEn} onChange={e => setSkillForm(f => ({ ...f, nameEn: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" placeholder="e.g., Programming" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" placeholder="e.g., Programming" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'الفئة' : 'Category'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الفئة' : 'Category'}</label>
                   <select value={skillForm.category} onChange={e => setSkillForm(f => ({ ...f, category: e.target.value as SkillCategory }))}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40">
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm">
                     {SKILL_CATEGORIES.map(c => (<option key={c} value={c}>{isAr ? CATEGORY_LABELS[c]?.ar : CATEGORY_LABELS[c]?.en}</option>))}
                   </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'المستوى الحالي' : 'Current Level'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'المستوى الحالي' : 'Current Level'}</label>
                     <input type="number" min={0} max={100} value={skillForm.currentLevel}
                       onChange={e => setSkillForm(f => ({ ...f, currentLevel: Number(e.target.value) }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'المستوى المستهدف' : 'Target Level'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'المستوى المستهدف' : 'Target Level'}</label>
                     <input type="number" min={1} max={100} value={skillForm.targetLevel}
                       onChange={e => setSkillForm(f => ({ ...f, targetLevel: Number(e.target.value) }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'اللون' : 'Color'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'اللون' : 'Color'}</label>
                   <div className="flex gap-2 flex-wrap">
                     {ITEM_COLORS.map(c => (
                       <button key={c} onClick={() => setSkillForm(f => ({ ...f, color: c }))}
@@ -381,7 +381,7 @@ export default function SkillsPage() {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-[var(--background)] flex items-center justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
+              <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
                 {editingSkill && (
                   <button onClick={() => { store.deleteSkill(editingSkill.id); setShowForm(false); resetSkillForm(); }}
                     className="me-auto text-xs text-red-500 hover:text-red-600 flex items-center gap-1">
@@ -389,9 +389,9 @@ export default function SkillsPage() {
                   </button>
                 )}
                 <button onClick={() => { setShowForm(false); resetSkillForm(); }}
-                  className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">{isAr ? 'إلغاء' : 'Cancel'}</button>
+                  className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">{isAr ? 'إلغاء' : 'Cancel'}</button>
                 <button onClick={handleSaveSkill}
-                  className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90">
+                  className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium">
                   {editingSkill ? (isAr ? 'تحديث' : 'Update') : (isAr ? 'إنشاء' : 'Create')}
                 </button>
               </div>
@@ -406,40 +406,40 @@ export default function SkillsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowSessionForm(null)}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="sticky top-0 z-10 bg-[var(--background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+              <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل جلسة' : 'Log Session'}</h2>
                 <button onClick={() => setShowSessionForm(null)} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
 
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'التاريخ' : 'Date'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'التاريخ' : 'Date'}</label>
                   <input type="date" value={sessionForm.date} onChange={e => setSessionForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'وقت البدء' : 'Start Time'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'وقت البدء' : 'Start Time'}</label>
                     <input type="time" value={sessionForm.startTime} onChange={e => setSessionForm(f => ({ ...f, startTime: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'وقت الانتهاء' : 'End Time'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'وقت الانتهاء' : 'End Time'}</label>
                     <input type="time" value={sessionForm.endTime} onChange={e => setSessionForm(f => ({ ...f, endTime: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'نوع الجلسة' : 'Session Type'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'نوع الجلسة' : 'Session Type'}</label>
                   <select value={sessionForm.sessionType} onChange={e => setSessionForm(f => ({ ...f, sessionType: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40">
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm">
                     <option value="practice">{isAr ? 'تدريب' : 'Practice'}</option>
                     <option value="study">{isAr ? 'دراسة' : 'Study'}</option>
                     <option value="project">{isAr ? 'مشروع' : 'Project'}</option>
@@ -449,12 +449,12 @@ export default function SkillsPage() {
 
                 {/* Quality Rating */}
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'جودة الجلسة' : 'Session Quality'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'جودة الجلسة' : 'Session Quality'}</label>
                   <div className="flex gap-1.5">
                     {[1, 2, 3, 4, 5].map(r => (
                       <button key={r} onClick={() => setSessionForm(f => ({ ...f, qualityRating: r as MoodLevel }))}
                         className="flex-1 flex items-center justify-center py-2 rounded-lg transition-all">
-                        <Star className={cn('h-5 w-5', r <= sessionForm.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/10')} />
+                        <Star className={cn('h-5 w-5', r <= sessionForm.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
                       </button>
                     ))}
                   </div>
@@ -462,12 +462,12 @@ export default function SkillsPage() {
 
                 {/* Focus Rating */}
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'مستوى التركيز' : 'Focus Level'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'مستوى التركيز' : 'Focus Level'}</label>
                   <div className="flex gap-1.5">
                     {[1, 2, 3, 4, 5].map(r => (
                       <button key={r} onClick={() => setSessionForm(f => ({ ...f, focusRating: r as MoodLevel }))}
                         className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
-                          r <= sessionForm.focusRating ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50')}>
+                          r <= sessionForm.focusRating ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
                         {r}
                       </button>
                     ))}
@@ -475,21 +475,21 @@ export default function SkillsPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'ما تعلمته' : 'What I learned'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'ما تعلمته' : 'What I learned'}</label>
                   <textarea value={sessionForm.whatLearned} onChange={e => setSessionForm(f => ({ ...f, whatLearned: e.target.value }))}
-                    rows={2} className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40 resize-none" />
+                    rows={2} className="w-full rounded-xl app-input px-3 py-2.5 text-sm resize-none" />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'ملاحظات' : 'Notes'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'ملاحظات' : 'Notes'}</label>
                   <textarea value={sessionForm.note} onChange={e => setSessionForm(f => ({ ...f, note: e.target.value }))}
-                    rows={2} className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40 resize-none" />
+                    rows={2} className="w-full rounded-xl app-input px-3 py-2.5 text-sm resize-none" />
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-[var(--background)] flex items-center justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
-                <button onClick={() => setShowSessionForm(null)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">{isAr ? 'إلغاء' : 'Cancel'}</button>
-                <button onClick={handleLogSession} className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90">{isAr ? 'حفظ' : 'Save'}</button>
+              <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
+                <button onClick={() => setShowSessionForm(null)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">{isAr ? 'إلغاء' : 'Cancel'}</button>
+                <button onClick={handleLogSession} className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium">{isAr ? 'حفظ' : 'Save'}</button>
               </div>
             </motion.div>
           </>
@@ -502,11 +502,11 @@ export default function SkillsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setDetailSkill(null)}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
               <SkillDetail skill={detailSkill} onClose={() => setDetailSkill(null)} />
             </motion.div>
@@ -526,7 +526,7 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
 
   return (
     <div>
-      <div className="p-5 border-b border-[var(--foreground)]/[0.06]">
+      <div className="p-5 border-b border-[var(--foreground)]/[0.1]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${skill.color}20` }}>
@@ -534,7 +534,7 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
             </div>
             <div>
               <h2 className="text-lg font-semibold">{isAr ? skill.nameAr : skill.nameEn}</h2>
-              <span className="text-xs text-[var(--foreground)]/40">{isAr ? CATEGORY_LABELS[skill.category]?.ar : CATEGORY_LABELS[skill.category]?.en}</span>
+              <span className="text-xs text-[var(--foreground)]/60">{isAr ? CATEGORY_LABELS[skill.category]?.ar : CATEGORY_LABELS[skill.category]?.en}</span>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
@@ -552,14 +552,14 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
             <div key={i} className="rounded-xl bg-[var(--foreground)]/[0.03] p-3 text-center">
               <s.icon className={cn('h-4 w-4 mx-auto mb-1', s.color)} />
               <p className="text-lg font-bold">{s.value}</p>
-              <p className="text-[10px] text-[var(--foreground)]/40">{isAr ? s.labelAr : s.labelEn}</p>
+              <p className="text-[10px] text-[var(--foreground)]/60">{isAr ? s.labelAr : s.labelEn}</p>
             </div>
           ))}
         </div>
 
         {/* Weekly hours chart */}
         <div>
-          <h3 className="text-xs font-medium text-[var(--foreground)]/50 mb-2">{isAr ? 'الساعات الأسبوعية (12 أسبوع)' : 'Weekly Hours (12 weeks)'}</h3>
+          <h3 className="text-xs font-medium text-[var(--foreground)]/70 mb-2">{isAr ? 'الساعات الأسبوعية (12 أسبوع)' : 'Weekly Hours (12 weeks)'}</h3>
           <div className="flex items-end gap-1 h-16">
             {stats.weeklyHours.map((h, i) => {
               const max = Math.max(...stats.weeklyHours, 1);
@@ -573,7 +573,7 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
 
         {/* Recent sessions */}
         <div>
-          <h3 className="text-xs font-medium text-[var(--foreground)]/50 mb-2">{isAr ? 'آخر الجلسات' : 'Recent Sessions'}</h3>
+          <h3 className="text-xs font-medium text-[var(--foreground)]/70 mb-2">{isAr ? 'آخر الجلسات' : 'Recent Sessions'}</h3>
           {sessions.length === 0 ? (
             <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'لا توجد جلسات' : 'No sessions yet'}</p>
           ) : (
@@ -582,13 +582,13 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
                 <div key={s.id} className="flex items-center justify-between rounded-lg bg-[var(--foreground)]/[0.03] px-3 py-2">
                   <div>
                     <p className="text-xs font-medium">{s.date}</p>
-                    <p className="text-[10px] text-[var(--foreground)]/40">{s.startTime} - {s.endTime}</p>
+                    <p className="text-[10px] text-[var(--foreground)]/60">{s.startTime} - {s.endTime}</p>
                   </div>
                   <div className="text-end">
                     <p className="text-xs font-semibold">{formatDuration(s.duration)}</p>
                     <div className="flex gap-0.5 justify-end">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={cn('h-2 w-2', i < s.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/10')} />
+                        <Star key={i} className={cn('h-2 w-2', i < s.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
                       ))}
                     </div>
                   </div>

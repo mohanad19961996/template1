@@ -27,21 +27,13 @@ import { Link } from "@/i18n/navigation";
 
 /* ───────────────── Types & Data ───────────────── */
 
-interface PricingTier {
-  key: string;
-  icon: typeof Zap;
-  nameEn: string;
-  nameAr: string;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  descEn: string;
-  descAr: string;
-  featuresEn: string[];
-  featuresAr: string[];
-  popular?: boolean;
-}
+const planIconMap: Record<number, typeof Zap> = {
+  0: Zap,
+  1: Crown,
+  2: Building2,
+};
 
-const tiers: PricingTier[] = [
+const _unused_tiers = [
   {
     key: "starter",
     icon: Zap,
@@ -217,6 +209,22 @@ export function PricingContent() {
   const Arrow = isAr ? ArrowLeft : ArrowRight;
   const { config } = useSiteConfig();
   const sections = config.pagesContent?.pricing?.sections ?? DEFAULT_PAGES_CONTENT.pricing.sections;
+  const pricingPlans = config.pricingPlans;
+  const tiers = pricingPlans.map((plan, i) => ({
+    key: plan.id,
+    icon: planIconMap[i] ?? Zap,
+    nameEn: plan.nameEn,
+    nameAr: plan.nameAr,
+    monthlyPrice: plan.priceMonthly,
+    yearlyPrice: plan.priceYearly,
+    descEn: plan.descriptionEn,
+    descAr: plan.descriptionAr,
+    featuresEn: plan.featuresEn,
+    featuresAr: plan.featuresAr,
+    popular: plan.popular,
+    ctaEn: plan.ctaEn,
+    ctaAr: plan.ctaAr,
+  }));
 
   const [isYearly, setIsYearly] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -494,7 +502,7 @@ export function PricingContent() {
                         lineHeight: 1.1,
                       }}
                     >
-                      ${price.toLocaleString()}
+                      {price}
                     </motion.span>
                     <span
                       className="text-sm"
@@ -572,7 +580,7 @@ export function PricingContent() {
                       onMouseEnter={() => setHoveredCta(tier.key)}
                       onMouseLeave={() => setHoveredCta(null)}
                     >
-                      {t("getStarted")}
+                      {(isAr ? tier.ctaAr : tier.ctaEn) || t("getStarted")}
                       <Arrow size={16} />
                     </Link>
                   )}

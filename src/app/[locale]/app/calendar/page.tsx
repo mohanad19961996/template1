@@ -64,15 +64,15 @@ export default function CalendarPage() {
     <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto">
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'التقويم والسجل' : 'Calendar & History'}</h1>
-        <p className="text-sm text-[var(--foreground)]/50 mt-1">{isAr ? 'مراجعة أنشطتك وتقدمك' : 'Review your activities and progress'}</p>
+        <p className="text-sm text-[var(--foreground)]/70 mt-1">{isAr ? 'مراجعة أنشطتك وتقدمك' : 'Review your activities and progress'}</p>
       </motion.div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="lg:col-span-2">
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden">
+          <div className="rounded-2xl app-card overflow-hidden">
             {/* Month navigation */}
-            <div className="flex items-center justify-between p-4 border-b border-[var(--foreground)]/[0.06]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--foreground)]/[0.1]">
               <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
                 {isAr ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </button>
@@ -85,7 +85,7 @@ export default function CalendarPage() {
             {/* Day names */}
             <div className="grid grid-cols-7 px-2">
               {dayNames.map(d => (
-                <div key={d} className="py-2 text-center text-[10px] font-medium text-[var(--foreground)]/30">{d}</div>
+                <div key={d} className="py-2 text-center text-[10px] font-medium text-[var(--foreground)]/50">{d}</div>
               ))}
             </div>
 
@@ -103,7 +103,7 @@ export default function CalendarPage() {
                       'relative flex flex-col items-center justify-center rounded-xl py-2 sm:py-3 text-sm transition-all',
                       isSelected ? 'bg-[var(--color-primary)] text-white' :
                       day.isToday ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold' :
-                      'hover:bg-[var(--foreground)]/[0.04]'
+                      'hover:bg-[var(--foreground)]/[0.08]'
                     )}
                   >
                     <span className="font-medium">{day.day}</span>
@@ -123,11 +123,11 @@ export default function CalendarPage() {
 
         {/* Day Details */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="space-y-4">
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-1">
               {new Date(selectedDate).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
-            <p className="text-xs text-[var(--foreground)]/40 mb-4">{selectedDate === today ? (isAr ? 'اليوم' : 'Today') : ''}</p>
+            <p className="text-xs text-[var(--foreground)]/60 mb-4">{selectedDate === today ? (isAr ? 'اليوم' : 'Today') : ''}</p>
 
             {/* Summary */}
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -140,7 +140,7 @@ export default function CalendarPage() {
                 <div key={i} className="rounded-lg bg-[var(--foreground)]/[0.03] p-2.5 text-center">
                   <s.icon className={cn('h-4 w-4 mx-auto mb-1', s.color)} />
                   <p className="text-sm font-bold">{s.value}</p>
-                  <p className="text-[9px] text-[var(--foreground)]/40">{isAr ? s.labelAr : s.labelEn}</p>
+                  <p className="text-[9px] text-[var(--foreground)]/60">{isAr ? s.labelAr : s.labelEn}</p>
                 </div>
               ))}
             </div>
@@ -152,8 +152,8 @@ export default function CalendarPage() {
                 return (
                   <div key={log.id} className="flex items-center gap-2 text-xs">
                     <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-                    <span className="text-[var(--foreground)]/60">{isAr ? habit?.nameAr : habit?.nameEn}</span>
-                    <span className="text-[var(--foreground)]/30 ms-auto">{log.time}</span>
+                    <span className="text-[var(--foreground)]/80">{isAr ? habit?.nameAr : habit?.nameEn}</span>
+                    <span className="text-[var(--foreground)]/50 ms-auto">{log.time}</span>
                   </div>
                 );
               })}
@@ -162,13 +162,13 @@ export default function CalendarPage() {
                 return (
                   <div key={session.id} className="flex items-center gap-2 text-xs">
                     <Clock className="h-3 w-3 text-blue-500 shrink-0" />
-                    <span className="text-[var(--foreground)]/60">{isAr ? skill?.nameAr : skill?.nameEn}</span>
-                    <span className="text-[var(--foreground)]/30 ms-auto">{formatDuration(session.duration)}</span>
+                    <span className="text-[var(--foreground)]/80">{isAr ? skill?.nameAr : skill?.nameEn}</span>
+                    <span className="text-[var(--foreground)]/50 ms-auto">{formatDuration(session.duration)}</span>
                   </div>
                 );
               })}
               {selectedData.habits.length === 0 && selectedData.skills.length === 0 && (
-                <p className="text-xs text-[var(--foreground)]/30 text-center py-4">
+                <p className="text-xs text-[var(--foreground)]/50 text-center py-4">
                   {isAr ? 'لا توجد أنشطة في هذا اليوم' : 'No activities on this day'}
                 </p>
               )}

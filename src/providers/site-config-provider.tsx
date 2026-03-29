@@ -5,10 +5,14 @@ import {
   DEFAULT_CONFIG, DEFAULT_NAVBAR, DEFAULT_HERO, DEFAULT_HERO_CONTENT,
   DEFAULT_LOGO_CLOUD, DEFAULT_FEATURES, DEFAULT_SERVICES, DEFAULT_STATS,
   DEFAULT_TESTIMONIALS, DEFAULT_CTA, DEFAULT_PROCESS, DEFAULT_PAGES_CONTENT,
+  DEFAULT_TEAM_MEMBERS, DEFAULT_TESTIMONIALS_ITEMS, DEFAULT_FAQ_ITEMS,
+  DEFAULT_PRICING_PLANS, DEFAULT_STAT_ITEMS, DEFAULT_FOOTER_CONTENT,
   STORAGE_KEY,
   type SiteConfig, type PageConfig, type NavbarConfig, type HeroConfig, type HeroContent,
   type LogoCloudConfig, type FeaturesConfig, type ServicesConfig, type StatsConfig,
   type TestimonialsConfig, type CtaConfig, type ProcessConfig, type PagesContent,
+  type TeamMember, type TestimonialItem, type FaqItem, type PricingPlan,
+  type StatItem, type FooterContent,
 } from "@/lib/site-config";
 
 interface SiteConfigContextValue {
@@ -25,7 +29,15 @@ interface SiteConfigContextValue {
   updateTestimonials: (partial: Partial<TestimonialsConfig>) => void;
   updateCta: (partial: Partial<CtaConfig>) => void;
   updateProcess: (partial: Partial<ProcessConfig>) => void;
+  updateTeamMembers: (members: TeamMember[]) => void;
+  updateTestimonialItems: (items: TestimonialItem[]) => void;
+  updateFaqItems: (items: FaqItem[]) => void;
+  updatePricingPlans: (plans: PricingPlan[]) => void;
+  updateStatItems: (items: StatItem[]) => void;
+  updateFooterContent: (partial: Partial<FooterContent>) => void;
   resetConfig: () => void;
+  exportConfig: () => void;
+  importConfig: (file: File) => Promise<void>;
   ready: boolean;
 }
 
@@ -43,7 +55,15 @@ const SiteConfigContext = createContext<SiteConfigContextValue>({
   updateTestimonials: () => {},
   updateCta: () => {},
   updateProcess: () => {},
+  updateTeamMembers: () => {},
+  updateTestimonialItems: () => {},
+  updateFaqItems: () => {},
+  updatePricingPlans: () => {},
+  updateStatItems: () => {},
+  updateFooterContent: () => {},
   resetConfig: () => {},
+  exportConfig: () => {},
+  importConfig: async () => {},
   ready: false,
 });
 
@@ -107,6 +127,14 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
           cta: { ...DEFAULT_CTA, ...(parsed.cta ?? {}) },
           process: { ...DEFAULT_PROCESS, ...(parsed.process ?? {}) },
           pagesContent: mergedPagesContent,
+          teamMembers: parsed.teamMembers ?? DEFAULT_TEAM_MEMBERS,
+          testimonialItems: parsed.testimonialItems ?? DEFAULT_TESTIMONIALS_ITEMS,
+          faqItems: parsed.faqItems ?? DEFAULT_FAQ_ITEMS,
+          pricingPlans: parsed.pricingPlans ?? DEFAULT_PRICING_PLANS,
+          statItems: parsed.statItems ?? DEFAULT_STAT_ITEMS,
+          footerContent: parsed.footerContent
+            ? { ...DEFAULT_FOOTER_CONTENT, ...parsed.footerContent }
+            : DEFAULT_FOOTER_CONTENT,
         });
       }
     } catch {
@@ -184,13 +212,56 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
     setConfig((prev) => ({ ...prev, process: { ...prev.process, ...partial } }));
   }, []);
 
+  const updateTeamMembers = useCallback((members: TeamMember[]) => {
+    setConfig((prev) => ({ ...prev, teamMembers: members }));
+  }, []);
+
+  const updateTestimonialItems = useCallback((items: TestimonialItem[]) => {
+    setConfig((prev) => ({ ...prev, testimonialItems: items }));
+  }, []);
+
+  const updateFaqItems = useCallback((items: FaqItem[]) => {
+    setConfig((prev) => ({ ...prev, faqItems: items }));
+  }, []);
+
+  const updatePricingPlans = useCallback((plans: PricingPlan[]) => {
+    setConfig((prev) => ({ ...prev, pricingPlans: plans }));
+  }, []);
+
+  const updateStatItems = useCallback((items: StatItem[]) => {
+    setConfig((prev) => ({ ...prev, statItems: items }));
+  }, []);
+
+  const updateFooterContent = useCallback((partial: Partial<FooterContent>) => {
+    setConfig((prev) => ({ ...prev, footerContent: { ...prev.footerContent, ...partial } }));
+  }, []);
+
   const resetConfig = useCallback(() => {
     setConfig(DEFAULT_CONFIG);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const exportConfig = useCallback(() => {
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "site-config.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [config]);
+
+  const importConfig = useCallback(async (file: File) => {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!parsed.pages || !Array.isArray(parsed.pages)) {
+      throw new Error("Invalid config file: missing pages array");
+    }
+    setConfig(parsed);
+  }, []);
+
   return (
-    <SiteConfigContext.Provider value={{ config, updateConfig, updatePage, updateNavbar, updateHero, updateHeroContent, updateLogoCloud, updateFeatures, updateServices, updateStats, updateTestimonials, updateCta, updateProcess, resetConfig, ready }}>
+    <SiteConfigContext.Provider value={{ config, updateConfig, updatePage, updateNavbar, updateHero, updateHeroContent, updateLogoCloud, updateFeatures, updateServices, updateStats, updateTestimonials, updateCta, updateProcess, updateTeamMembers, updateTestimonialItems, updateFaqItems, updatePricingPlans, updateStatItems, updateFooterContent, resetConfig, exportConfig, importConfig, ready }}>
       {children}
     </SiteConfigContext.Provider>
   );

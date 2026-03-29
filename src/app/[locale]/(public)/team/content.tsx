@@ -25,126 +25,7 @@ import Link from "next/link";
 
 /* ─────────────────────────── TEAM DATA ─────────────────────────── */
 
-interface TeamMember {
-  name: string;
-  nameEn: string;
-  role: string;
-  roleEn: string;
-  image: string;
-  bioAr: string;
-  bioEn: string;
-  skillsAr: string[];
-  skillsEn: string[];
-}
-
-const teamMembers: TeamMember[] = [
-  {
-    name: "محمد أحمد",
-    nameEn: "Mohammed Ahmed",
-    role: "المدير التنفيذي",
-    roleEn: "CEO & Founder",
-    image: "https://picsum.photos/seed/team1/400/400",
-    bioAr:
-      "قائد ذو رؤية مع أكثر من 15 عامًا من الخبرة في بناء الشركات التقنية الناشئة وقيادة الفرق الإبداعية. حاصل على ماجستير إدارة الأعمال ومتخصص في التحول الرقمي.",
-    bioEn:
-      "Visionary leader with 15+ years of experience building tech startups and leading creative teams. MBA graduate specializing in digital transformation and innovation strategy.",
-    skillsAr: ["القيادة الاستراتيجية", "التحول الرقمي", "إدارة الفرق", "تطوير الأعمال"],
-    skillsEn: ["Strategic Leadership", "Digital Transformation", "Team Management", "Business Development"],
-  },
-  {
-    name: "نورة السالم",
-    nameEn: "Noura Al-Salem",
-    role: "مديرة التصميم",
-    roleEn: "Design Director",
-    image: "https://picsum.photos/seed/team2/400/400",
-    bioAr:
-      "مصممة حائزة على جوائز متعددة مع شغف كبير بتجربة المستخدم والتصميم البصري. قادت مشاريع تصميم لعلامات تجارية عالمية.",
-    bioEn:
-      "Award-winning designer with a deep passion for user experience and visual design. Has led design projects for global brands across multiple industries.",
-    skillsAr: ["تصميم UX/UI", "الهوية البصرية", "التفكير التصميمي", "النماذج الأولية"],
-    skillsEn: ["UX/UI Design", "Brand Identity", "Design Thinking", "Prototyping"],
-  },
-  {
-    name: "فهد العمري",
-    nameEn: "Fahd Al-Omari",
-    role: "مدير التطوير",
-    roleEn: "Engineering Lead",
-    image: "https://picsum.photos/seed/team3/400/400",
-    bioAr:
-      "مطور متمرس في بناء أنظمة قابلة للتوسع باستخدام أحدث التقنيات. خبرة واسعة في البنية التحتية السحابية.",
-    bioEn:
-      "Experienced developer building scalable systems with cutting-edge technology. Extensive expertise in cloud infrastructure and microservices architecture.",
-    skillsAr: ["هندسة البرمجيات", "البنية السحابية", "قيادة الفرق التقنية", "DevOps"],
-    skillsEn: ["Software Engineering", "Cloud Architecture", "Tech Team Leadership", "DevOps"],
-  },
-  {
-    name: "ريم الحربي",
-    nameEn: "Reem Al-Harbi",
-    role: "مديرة التسويق",
-    roleEn: "Marketing Director",
-    image: "https://picsum.photos/seed/team4/400/400",
-    bioAr:
-      "خبيرة في التسويق الرقمي واستراتيجيات النمو مع نتائج مثبتة في زيادة الوعي بالعلامة التجارية والمبيعات.",
-    bioEn:
-      "Digital marketing expert with proven growth strategies and measurable results in brand awareness and revenue generation.",
-    skillsAr: ["التسويق الرقمي", "استراتيجية المحتوى", "تحليل البيانات", "إدارة الحملات"],
-    skillsEn: ["Digital Marketing", "Content Strategy", "Data Analytics", "Campaign Management"],
-  },
-  {
-    name: "عمر الشهري",
-    nameEn: "Omar Al-Shahri",
-    role: "مطور أول",
-    roleEn: "Senior Developer",
-    image: "https://picsum.photos/seed/team5/400/400",
-    bioAr:
-      "مطور متكامل يتقن تقنيات الواجهة الأمامية والخلفية مع خبرة 8 سنوات في تطوير تطبيقات الويب.",
-    bioEn:
-      "Full-stack developer proficient in frontend and backend technologies with 8 years of experience building web applications.",
-    skillsAr: ["React/Next.js", "Node.js", "قواعد البيانات", "API تطوير"],
-    skillsEn: ["React/Next.js", "Node.js", "Databases", "API Development"],
-  },
-  {
-    name: "سارة القحطاني",
-    nameEn: "Sarah Al-Qahtani",
-    role: "مصممة UI/UX",
-    roleEn: "UI/UX Designer",
-    image: "https://picsum.photos/seed/team6/400/400",
-    bioAr:
-      "مصممة مبدعة تركز على إنشاء تجارب مستخدم بديهية وجذابة بصريًا مع اهتمام كبير بالتفاصيل.",
-    bioEn:
-      "Creative designer focused on crafting intuitive and visually compelling user experiences with meticulous attention to detail.",
-    skillsAr: ["تصميم الواجهات", "بحث المستخدم", "Figma", "التصميم التفاعلي"],
-    skillsEn: ["Interface Design", "User Research", "Figma", "Interaction Design"],
-  },
-  {
-    name: "خالد المالكي",
-    nameEn: "Khalid Al-Malki",
-    role: "مدير المشاريع",
-    roleEn: "Project Manager",
-    image: "https://picsum.photos/seed/team7/400/400",
-    bioAr:
-      "مدير مشاريع معتمد PMP مع سجل حافل في تسليم المشاريع في الوقت المحدد وضمن الميزانية.",
-    bioEn:
-      "PMP-certified project manager with a proven track record of delivering projects on time and within budget.",
-    skillsAr: ["إدارة المشاريع", "Agile/Scrum", "إدارة المخاطر", "تخطيط الموارد"],
-    skillsEn: ["Project Management", "Agile/Scrum", "Risk Management", "Resource Planning"],
-  },
-  {
-    name: "لينا الدوسري",
-    nameEn: "Lina Al-Dosari",
-    role: "محللة بيانات",
-    roleEn: "Data Analyst",
-    image: "https://picsum.photos/seed/team8/400/400",
-    bioAr:
-      "محللة بيانات متميزة تحول البيانات الخام إلى رؤى قابلة للتنفيذ لدعم القرارات الاستراتيجية.",
-    bioEn:
-      "Distinguished data analyst transforming raw data into actionable insights to support strategic decision-making.",
-    skillsAr: ["تحليل البيانات", "Python", "التعلم الآلي", "تصور البيانات"],
-    skillsEn: ["Data Analysis", "Python", "Machine Learning", "Data Visualization"],
-  },
-];
-
-const leadershipMembers = teamMembers.slice(0, 4);
+import type { TeamMember as ConfigTeamMember } from "@/lib/site-config";
 
 /* ─────────────────────────── CULTURE DATA ─────────────────────────── */
 
@@ -229,8 +110,10 @@ export function TeamContent() {
   const isAr = locale === "ar";
   const { config } = useSiteConfig();
   const sections = config.pagesContent?.team?.sections ?? DEFAULT_PAGES_CONTENT.team.sections;
+  const teamMembers = config.teamMembers;
+  const leadershipMembers = teamMembers.slice(0, 4);
 
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [selectedMember, setSelectedMember] = useState<ConfigTeamMember | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const heroRef = useRef<HTMLDivElement>(null);
@@ -248,7 +131,7 @@ export function TeamContent() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const ctaInView = useInView(ctaRef, { once: true, margin: "-40px" });
 
-  const openMemberModal = (member: TeamMember) => {
+  const openMemberModal = (member: ConfigTeamMember) => {
     setSelectedMember(member);
     setModalOpen(true);
   };
@@ -416,7 +299,7 @@ export function TeamContent() {
                 <div className="relative aspect-square overflow-hidden">
                   <Image
                     src={member.image}
-                    alt={isAr ? member.name : member.nameEn}
+                    alt={isAr ? member.nameAr : member.nameEn}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -462,13 +345,13 @@ export function TeamContent() {
                     className="text-base font-bold mb-1"
                     style={{ color: "var(--color-foreground)" }}
                   >
-                    {isAr ? member.name : member.nameEn}
+                    {isAr ? member.nameAr : member.nameEn}
                   </h3>
                   <p
                     className="text-sm font-medium"
                     style={{ color: "var(--color-primary)" }}
                   >
-                    {isAr ? member.role : member.roleEn}
+                    {isAr ? member.roleAr : member.roleEn}
                   </p>
                   <p
                     className="text-xs mt-2 line-clamp-2 leading-relaxed"
@@ -538,7 +421,7 @@ export function TeamContent() {
                 <div className="relative aspect-square overflow-hidden">
                   <Image
                     src={member.image}
-                    alt={isAr ? member.name : member.nameEn}
+                    alt={isAr ? member.nameAr : member.nameEn}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                     sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
@@ -573,13 +456,13 @@ export function TeamContent() {
                     className="text-sm font-semibold truncate"
                     style={{ color: "var(--color-foreground)" }}
                   >
-                    {isAr ? member.name : member.nameEn}
+                    {isAr ? member.nameAr : member.nameEn}
                   </h4>
                   <p
                     className="text-xs mt-0.5"
                     style={{ color: "rgba(var(--color-primary-rgb) / 0.6)" }}
                   >
-                    {isAr ? member.role : member.roleEn}
+                    {isAr ? member.roleAr : member.roleEn}
                   </p>
                 </div>
               </motion.div>
@@ -846,7 +729,7 @@ export function TeamContent() {
         title={
           selectedMember
             ? isAr
-              ? selectedMember.name
+              ? selectedMember.nameAr
               : selectedMember.nameEn
             : ""
         }
@@ -863,7 +746,7 @@ export function TeamContent() {
               >
                 <Image
                   src={selectedMember.image}
-                  alt={isAr ? selectedMember.name : selectedMember.nameEn}
+                  alt={isAr ? selectedMember.nameAr : selectedMember.nameEn}
                   fill
                   className="object-cover"
                   sizes="80px"
@@ -874,13 +757,13 @@ export function TeamContent() {
                   className="text-lg font-bold"
                   style={{ color: "var(--color-foreground)" }}
                 >
-                  {isAr ? selectedMember.name : selectedMember.nameEn}
+                  {isAr ? selectedMember.nameAr : selectedMember.nameEn}
                 </h4>
                 <p
                   className="text-sm font-medium"
                   style={{ color: "var(--color-primary)" }}
                 >
-                  {isAr ? selectedMember.role : selectedMember.roleEn}
+                  {isAr ? selectedMember.roleAr : selectedMember.roleEn}
                 </p>
               </div>
             </div>
@@ -899,34 +782,6 @@ export function TeamContent() {
               >
                 {isAr ? selectedMember.bioAr : selectedMember.bioEn}
               </p>
-            </div>
-
-            {/* Skills */}
-            <div>
-              <h5
-                className="text-sm font-semibold mb-2"
-                style={{ color: "var(--color-foreground)" }}
-              >
-                {isAr ? "المهارات" : "Skills"}
-              </h5>
-              <div className="flex flex-wrap gap-2">
-                {(isAr ? selectedMember.skillsAr : selectedMember.skillsEn).map(
-                  (skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        background: "rgba(var(--color-primary-rgb) / 0.08)",
-                        color: "var(--color-primary)",
-                        border:
-                          "1px solid rgba(var(--color-primary-rgb) / 0.12)",
-                      }}
-                    >
-                      {skill}
-                    </span>
-                  )
-                )}
-              </div>
             </div>
 
             {/* Social links */}

@@ -64,10 +64,10 @@ export default function NutritionPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'التغذية' : 'Nutrition'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">{isAr ? 'تتبع وجباتك والترطيب' : 'Track meals and hydration'}</p>
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">{isAr ? 'تتبع وجباتك والترطيب' : 'Track meals and hydration'}</p>
         </div>
         <button onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 shadow-sm">
+          className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2.5 text-sm font-medium">
           <Plus className="h-4 w-4" /> {isAr ? 'وجبة جديدة' : 'Log Meal'}
         </button>
       </motion.div>
@@ -81,9 +81,9 @@ export default function NutritionPage() {
           { labelEn: 'Healthy %', labelAr: '% صحي', value: `${todayMeals.length ? Math.round(todayMeals.filter(m => m.healthy).length / todayMeals.length * 100) : 0}%`, icon: TrendingUp, color: 'text-purple-500 bg-purple-500/10' },
         ].map((s, i) => (
           <motion.div key={i} variants={fadeUp} custom={i + 1}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-4">
+            className="rounded-2xl app-stat-card p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-medium text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? s.labelAr : s.labelEn}</span>
+              <span className="text-[10px] font-medium text-[var(--foreground)]/60 uppercase tracking-wider">{isAr ? s.labelAr : s.labelEn}</span>
               <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg', s.color.split(' ')[1])}>
                 <s.icon className={cn('h-4 w-4', s.color.split(' ')[0])} />
               </div>
@@ -97,8 +97,8 @@ export default function NutritionPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Today's Meals */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden">
-            <div className="p-5 border-b border-[var(--foreground)]/[0.06]">
+            className="rounded-2xl app-card overflow-hidden">
+            <div className="p-5 border-b border-[var(--foreground)]/[0.1]">
               <h3 className="text-sm font-semibold">{isAr ? 'وجبات اليوم' : "Today's Meals"}</h3>
             </div>
             {todayMeals.length === 0 ? (
@@ -107,7 +107,7 @@ export default function NutritionPage() {
                 <p className="text-xs text-[var(--foreground)]/30">{isAr ? 'لم تسجل وجبات اليوم' : 'No meals logged today'}</p>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.04]">
+              <div className="divide-y divide-[var(--foreground)]/[0.08]">
                 {todayMeals.map(meal => {
                   const info = MEAL_LABELS[meal.mealType];
                   return (
@@ -117,12 +117,12 @@ export default function NutritionPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">{isAr ? (meal.nameAr || info.ar) : (meal.nameEn || info.en)}</p>
-                        <p className="text-[10px] text-[var(--foreground)]/40">{isAr ? info.ar : info.en}</p>
+                        <p className="text-[10px] text-[var(--foreground)]/60">{isAr ? info.ar : info.en}</p>
                       </div>
                       {meal.healthy && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                       <button onClick={() => store.deleteNutritionLog(meal.id)}
                         className="p-1 rounded hover:bg-[var(--foreground)]/[0.05]">
-                        <X className="h-3 w-3 text-[var(--foreground)]/20" />
+                        <X className="h-3 w-3 text-[var(--foreground)]/40" />
                       </button>
                     </div>
                   );
@@ -134,7 +134,7 @@ export default function NutritionPage() {
 
         {/* Hydration Tracker */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}>
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
               <Droplets className="h-4 w-4 text-blue-500" />
               {isAr ? 'الترطيب' : 'Hydration'}
@@ -150,7 +150,7 @@ export default function NutritionPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <Droplets className="h-5 w-5 text-blue-500 mb-1" />
                   <span className="text-xl font-bold">{glasses}</span>
-                  <span className="text-[10px] text-[var(--foreground)]/40">/ {target}</span>
+                  <span className="text-[10px] text-[var(--foreground)]/60">/ {target}</span>
                 </div>
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function NutritionPage() {
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => store.logHydration(today, Math.max(0, glasses - 1), target)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.04]">
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.08]">
                 <Minus className="h-4 w-4" />
               </button>
               <button
@@ -183,27 +183,27 @@ export default function NutritionPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowForm(false)}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[10%] z-[var(--z-modal)] sm:w-[420px] rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[420px] rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="p-5 border-b border-[var(--foreground)]/[0.06] flex items-center justify-between">
+              <div className="p-5 border-b border-[var(--foreground)]/[0.1] flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل وجبة' : 'Log Meal'}</h2>
                 <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
 
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'نوع الوجبة' : 'Meal Type'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'نوع الوجبة' : 'Meal Type'}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {(Object.keys(MEAL_LABELS) as MealType[]).map(t => {
                       const info = MEAL_LABELS[t];
                       return (
                         <button key={t} onClick={() => setForm(f => ({ ...f, mealType: t }))}
                           className={cn('flex flex-col items-center gap-1 rounded-xl py-2.5 text-[10px] font-medium transition-all border',
-                            form.mealType === t ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.08] text-[var(--foreground)]/50')}>
+                            form.mealType === t ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
                           <info.icon className="h-4 w-4" />
                           {isAr ? info.ar : info.en}
                         </button>
@@ -213,11 +213,11 @@ export default function NutritionPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'الوصف' : 'Description'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الوصف' : 'Description'}</label>
                   <input value={isAr ? form.nameAr : form.nameEn}
                     onChange={e => isAr ? setForm(f => ({ ...f, nameAr: e.target.value })) : setForm(f => ({ ...f, nameEn: e.target.value }))}
                     placeholder={isAr ? 'مثال: سلطة مع دجاج مشوي' : 'e.g., Grilled chicken salad'}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                 </div>
 
                 <div className="flex gap-2">
@@ -227,16 +227,16 @@ export default function NutritionPage() {
                   ].map(opt => (
                     <button key={String(opt.value)} onClick={() => setForm(f => ({ ...f, healthy: opt.value }))}
                       className={cn('flex-1 py-2.5 rounded-xl text-xs font-medium transition-all border',
-                        form.healthy === opt.value ? opt.color : 'border-[var(--foreground)]/[0.08] text-[var(--foreground)]/50')}>
+                        form.healthy === opt.value ? opt.color : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
                       {isAr ? opt.labelAr : opt.labelEn}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
-                <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50">{isAr ? 'إلغاء' : 'Cancel'}</button>
-                <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90">{isAr ? 'حفظ' : 'Save'}</button>
+              <div className="flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
+                <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70">{isAr ? 'إلغاء' : 'Cancel'}</button>
+                <button onClick={handleSave} className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium">{isAr ? 'حفظ' : 'Save'}</button>
               </div>
             </motion.div>
           </>

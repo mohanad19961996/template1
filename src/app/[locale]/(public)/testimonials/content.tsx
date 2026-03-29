@@ -7,7 +7,7 @@ import { SectionDivider } from "@/components/shared/section-divider";
 import { useSiteConfig } from "@/providers/site-config-provider";
 import { DEFAULT_PAGES_CONTENT } from "@/lib/site-config";
 import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import {
@@ -25,9 +25,25 @@ import {
   Sparkles,
 } from "lucide-react";
 
-/* ───────────────── Testimonial Data ───────────────── */
+/* ───────────────── Testimonial Data (now from config) ───────────────── */
 
-const testimonials = [
+function useTestimonials() {
+  const { config } = useSiteConfig();
+  return config.testimonialItems.map((item) => ({
+    nameEn: item.nameEn,
+    nameAr: item.nameAr,
+    roleEn: item.roleEn,
+    roleAr: item.roleAr,
+    image: item.image,
+    ratingStars: item.rating,
+    quoteEn: item.quoteEn,
+    quoteAr: item.quoteAr,
+    categoryEn: item.company,
+    categoryAr: item.company,
+  }));
+}
+
+const _legacyTestimonials = [
   {
     nameEn: "Ahmed Al-Rashid",
     nameAr: "أحمد الراشد",
@@ -300,6 +316,7 @@ function HeroSection({ isAr }: { isAr: boolean }) {
 function FeaturedTestimonial({ isAr }: { isAr: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const testimonials = useTestimonials();
   const featured = testimonials[0];
 
   return (
@@ -468,7 +485,21 @@ function TestimonialsGrid({ isAr }: { isAr: boolean }) {
   const t = useTranslations("testimonials");
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const testimonials = useTestimonials();
   const [activeCategory, setActiveCategory] = useState("All");
+
+  // Build dynamic categories from testimonials data
+  const dynamicCategories = useMemo(() => {
+    const cats = [{ en: "All", ar: "الكل" }];
+    const seen = new Set<string>();
+    for (const item of testimonials) {
+      if (item.categoryEn && !seen.has(item.categoryEn)) {
+        seen.add(item.categoryEn);
+        cats.push({ en: item.categoryEn, ar: item.categoryAr || item.categoryEn });
+      }
+    }
+    return cats;
+  }, [testimonials]);
 
   const filtered =
     activeCategory === "All"
@@ -496,7 +527,7 @@ function TestimonialsGrid({ isAr }: { isAr: boolean }) {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="flex flex-wrap justify-center gap-2 mb-10"
         >
-          {categories.map((cat) => {
+          {dynamicCategories.map((cat) => {
             const isActive = activeCategory === cat.en;
             return (
               <button

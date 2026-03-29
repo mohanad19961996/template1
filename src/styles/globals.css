@@ -918,24 +918,39 @@ h3 {
   transform: translateX(100%) skewX(-15deg);
 }
 
+/* ── App background — distinct from sidebar/navbar ── */
+.app-bg {
+  --app-surface: color-mix(in srgb, var(--color-background) 96%, var(--color-foreground));
+  background-color: var(--app-surface);
+  background-image:
+    radial-gradient(rgba(var(--color-primary-rgb) / 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 80% 20%, rgba(var(--color-primary-rgb) / 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(var(--color-primary-rgb) / 0.02) 0%, transparent 50%);
+  background-size:
+    20px 20px,
+    100% 100%,
+    100% 100%;
+  background-position: 0 0, 0 0, 0 0;
+}
+
 /* ── Icon button ── */
 .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.08);
-  background: transparent;
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.06);
+  background: rgba(var(--color-primary-rgb) / 0.02);
   transition-property: transform, box-shadow, border-color, background-color, color;
   transition-duration: var(--dur-base);
   transition-timing-function: var(--ease-out-expo);
 }
 .icon-btn:hover {
-  border-color: rgba(var(--color-primary-rgb) / 0.25);
-  background: rgba(var(--color-primary-rgb) / 0.06);
+  border-color: rgba(var(--color-primary-rgb) / 0.2);
+  background: rgba(var(--color-primary-rgb) / 0.08);
   color: var(--color-primary);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(var(--color-primary-rgb) / 0.08);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb) / 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .icon-btn:active {
   transform: translateY(0) scale(0.95);
@@ -979,6 +994,163 @@ h3 {
   background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
+}
+
+/* ── App: Primary action button ── */
+.app-btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 85%, black) 100%);
+  color: white;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb) / 0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.app-btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transform: translateX(-100%) skewX(-15deg);
+  transition: transform 0.5s ease;
+}
+.app-btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(var(--color-primary-rgb) / 0.35), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.1);
+}
+.app-btn-primary:hover::after {
+  transform: translateX(100%) skewX(-15deg);
+}
+.app-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 4px rgba(var(--color-primary-rgb) / 0.2);
+  transition-duration: 0.1s;
+}
+
+/* ── App: Secondary / outline button ── */
+.app-btn-secondary {
+  background: rgba(var(--color-primary-rgb) / 0.06);
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.12);
+  color: var(--color-primary);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-btn-secondary:hover {
+  background: rgba(var(--color-primary-rgb) / 0.12);
+  border-color: rgba(var(--color-primary-rgb) / 0.3);
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb) / 0.12);
+  transform: translateY(-1px);
+}
+.app-btn-secondary:active {
+  transform: translateY(0);
+  transition-duration: 0.1s;
+}
+
+/* ── App: Card with theme-aware hover ── */
+.app-card {
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.07);
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.02) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.03);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-card:hover {
+  border-color: rgba(var(--color-primary-rgb) / 0.22);
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-primary-rgb) / 0.02) 100%);
+  box-shadow:
+    0 12px 40px rgba(var(--color-primary-rgb) / 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-3px);
+}
+.app-card:active {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 16px rgba(var(--color-primary-rgb) / 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* ── App: Stat card ── */
+.app-stat-card {
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.08);
+  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.035) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-stat-card:hover {
+  border-color: rgba(var(--color-primary-rgb) / 0.22);
+  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.07) 0%, rgba(var(--color-primary-rgb) / 0.02) 100%);
+  box-shadow:
+    0 12px 40px rgba(var(--color-primary-rgb) / 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-3px);
+}
+
+/* ── App: Flip card hover ── */
+.habit-flip-wrap {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
+}
+.habit-flip-wrap:hover {
+  transform: translateY(-6px);
+  filter: drop-shadow(0 20px 40px rgba(var(--color-primary-rgb) / 0.12)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.08));
+}
+.habit-flip-wrap:hover .habit-flip-front {
+  border-color: rgba(var(--color-primary-rgb) / 0.2);
+}
+.habit-flip-wrap:hover .habit-flip-back {
+  border-color: rgba(var(--color-primary-rgb) / 0.2);
+}
+
+/* ── App: Input with theme focus ── */
+.app-input {
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.1);
+  background: rgba(var(--color-primary-rgb) / 0.015);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-input:focus {
+  outline: none;
+  border-color: rgba(var(--color-primary-rgb) / 0.4);
+  box-shadow:
+    0 0 0 3px rgba(var(--color-primary-rgb) / 0.1),
+    0 0 20px rgba(var(--color-primary-rgb) / 0.06),
+    inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  background: rgba(var(--color-primary-rgb) / 0.025);
+}
+select.app-input option {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* ── App: Nav link in sidebar ── */
+.app-nav-link {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-nav-link:hover {
+  background: rgba(var(--color-primary-rgb) / 0.06);
+  color: var(--color-primary);
+  transform: translateX(4px);
+}
+[dir="rtl"] .app-nav-link:hover {
+  transform: translateX(-4px);
+}
+
+/* ── App: Toggle / chip selectable ── */
+.app-toggle {
+  border: 1px solid rgba(var(--color-primary-rgb) / 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.app-toggle:hover {
+  border-color: rgba(var(--color-primary-rgb) / 0.2);
+  background: rgba(var(--color-primary-rgb) / 0.06);
+}
+.app-toggle-active {
+  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black)) !important;
+  border-color: var(--color-primary) !important;
+  color: white !important;
+  box-shadow: 0 2px 10px rgba(var(--color-primary-rgb) / 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 /* ── Link patterns ── */

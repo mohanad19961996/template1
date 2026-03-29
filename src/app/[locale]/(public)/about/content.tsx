@@ -40,46 +40,7 @@ const values = [
   { key: "values", icon: Heart },
 ];
 
-const team = [
-  {
-    name: "\u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f",
-    nameEn: "Mohammed Ahmed",
-    role: "\u0627\u0644\u0645\u062f\u064a\u0631 \u0627\u0644\u062a\u0646\u0641\u064a\u0630\u064a",
-    roleEn: "CEO",
-    image: "https://picsum.photos/seed/team1/400/400",
-    bioAr: "\u062e\u0628\u0631\u0629 +15 \u0633\u0646\u0629 \u0641\u064a \u0642\u064a\u0627\u062f\u0629 \u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u062a\u0642\u0646\u064a\u0629 \u0648\u0628\u0646\u0627\u0621 \u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a \u0627\u0644\u0631\u0642\u0645\u064a\u0629 \u0627\u0644\u0645\u0628\u062a\u0643\u0631\u0629",
-    bioEn:
-      "15+ years leading tech teams and building innovative digital products",
-  },
-  {
-    name: "\u0646\u0648\u0631\u0629 \u0627\u0644\u0633\u0627\u0644\u0645",
-    nameEn: "Noura Al-Salem",
-    role: "\u0645\u062f\u064a\u0631\u0629 \u0627\u0644\u062a\u0635\u0645\u064a\u0645",
-    roleEn: "Design Director",
-    image: "https://picsum.photos/seed/team2/400/400",
-    bioAr: "\u0645\u0635\u0645\u0645\u0629 \u062d\u0627\u0626\u0632\u0629 \u0639\u0644\u0649 \u062c\u0648\u0627\u0626\u0632 \u0645\u062a\u0639\u062f\u062f\u0629 \u0645\u0639 \u0634\u063a\u0641 \u0628\u062a\u062c\u0631\u0628\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u0628\u0635\u0631\u064a",
-    bioEn: "Award-winning designer with a passion for UX and visual design",
-  },
-  {
-    name: "\u0641\u0647\u062f \u0627\u0644\u0639\u0645\u0631\u064a",
-    nameEn: "Fahd Al-Omari",
-    role: "\u0645\u062f\u064a\u0631 \u0627\u0644\u062a\u0637\u0648\u064a\u0631",
-    roleEn: "Dev Lead",
-    image: "https://picsum.photos/seed/team3/400/400",
-    bioAr: "\u0645\u0637\u0648\u0631 \u0645\u062a\u0645\u0631\u0633 \u0641\u064a \u0628\u0646\u0627\u0621 \u0623\u0646\u0638\u0645\u0629 \u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u062a\u0648\u0633\u0639 \u0628\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0623\u062d\u062f\u062b \u0627\u0644\u062a\u0642\u0646\u064a\u0627\u062a",
-    bioEn:
-      "Experienced developer building scalable systems with cutting-edge tech",
-  },
-  {
-    name: "\u0631\u064a\u0645 \u0627\u0644\u062d\u0631\u0628\u064a",
-    nameEn: "Reem Al-Harbi",
-    role: "\u0645\u062f\u064a\u0631\u0629 \u0627\u0644\u062a\u0633\u0648\u064a\u0642",
-    roleEn: "Marketing Lead",
-    image: "https://picsum.photos/seed/team4/400/400",
-    bioAr: "\u062e\u0628\u064a\u0631\u0629 \u0641\u064a \u0627\u0644\u062a\u0633\u0648\u064a\u0642 \u0627\u0644\u0631\u0642\u0645\u064a \u0648\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0627\u062a \u0627\u0644\u0646\u0645\u0648 \u0645\u0639 \u0646\u062a\u0627\u0626\u062c \u0645\u062b\u0628\u062a\u0629",
-    bioEn: "Digital marketing expert with proven growth strategies and results",
-  },
-];
+/* team data now comes from config.teamMembers */
 
 const awards = [
   { year: "2024", titleEn: "Best Digital Agency", titleAr: "\u0623\u0641\u0636\u0644 \u0648\u0643\u0627\u0644\u0629 \u0631\u0642\u0645\u064a\u0629" },
@@ -189,6 +150,7 @@ export function AboutContent() {
 
   const { config } = useSiteConfig();
   const sections = config.pagesContent?.about?.sections ?? DEFAULT_PAGES_CONTENT.about.sections;
+  const team = config.teamMembers;
 
   const [modalMember, setModalMember] = useState<(typeof team)[0] | null>(
     null,
@@ -213,12 +175,20 @@ export function AboutContent() {
   const partnersInView = useInView(partnersRef, { once: true, margin: "-80px" });
   const ctaInView = useInView(ctaRef, { once: true, margin: "-80px" });
 
-  const stats = [
-    { value: "500+", icon: Users, label: isAr ? "\u0639\u0645\u064a\u0644 \u0633\u0639\u064a\u062f" : "Happy Clients" },
-    { value: "15+", icon: Clock, label: isAr ? "\u0633\u0646\u0629 \u062e\u0628\u0631\u0629" : "Years Experience" },
-    { value: "50+", icon: Award, label: isAr ? "\u062c\u0627\u0626\u0632\u0629" : "Awards" },
-    { value: "12", icon: Globe, label: isAr ? "\u062f\u0648\u0644\u0629" : "Countries" },
-  ];
+  const statIconMap: Record<string, typeof Users> = {
+    users: Users,
+    calendar: Clock,
+    trophy: Award,
+    globe: Globe,
+    clock: Clock,
+    award: Award,
+  };
+
+  const stats = config.statItems.map((item) => ({
+    value: item.value,
+    icon: statIconMap[item.icon.toLowerCase()] ?? Users,
+    label: isAr ? item.labelAr : item.labelEn,
+  }));
 
   return (
     <>
@@ -318,11 +288,11 @@ export function AboutContent() {
             >
               {isAr ? (
                 <>
-                  \u0646\u0635\u0646\u0639{" "}
+                  {"نصنع"}{" "}
                   <span style={{ color: "var(--color-primary)" }}>
-                    \u0627\u0644\u0645\u0633\u062a\u0642\u0628\u0644
+                    {"المستقبل"}
                   </span>{" "}
-                  \u0627\u0644\u0631\u0642\u0645\u064a
+                  {"الرقمي"}
                 </>
               ) : (
                 <>
@@ -914,7 +884,7 @@ export function AboutContent() {
                     />
                     <Image
                       src={member.image}
-                      alt={isAr ? member.name : member.nameEn}
+                      alt={isAr ? member.nameAr : member.nameEn}
                       width={400}
                       height={400}
                       className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
@@ -942,7 +912,7 @@ export function AboutContent() {
                       transition: "color 0.3s ease",
                     }}
                   >
-                    {isAr ? member.name : member.nameEn}
+                    {isAr ? member.nameAr : member.nameEn}
                   </h3>
                   <p
                     className="text-[11px] mt-0.5 mb-4"
@@ -951,7 +921,7 @@ export function AboutContent() {
                       opacity: 0.8,
                     }}
                   >
-                    {isAr ? member.role : member.roleEn}
+                    {isAr ? member.roleAr : member.roleEn}
                   </p>
 
                   {/* Social icons — appear on hover */}
@@ -1011,7 +981,7 @@ export function AboutContent() {
         title={
           modalMember
             ? isAr
-              ? modalMember.name
+              ? modalMember.nameAr
               : modalMember.nameEn
             : ""
         }
@@ -1037,7 +1007,7 @@ export function AboutContent() {
                 <Image
                   src={modalMember.image}
                   alt={
-                    isAr ? modalMember.name : modalMember.nameEn
+                    isAr ? modalMember.nameAr : modalMember.nameEn
                   }
                   width={400}
                   height={400}
@@ -1046,13 +1016,13 @@ export function AboutContent() {
               </div>
               <div>
                 <h3 className="text-base font-semibold">
-                  {isAr ? modalMember.name : modalMember.nameEn}
+                  {isAr ? modalMember.nameAr : modalMember.nameEn}
                 </h3>
                 <p
                   className="text-xs mt-0.5"
                   style={{ color: "var(--color-primary)" }}
                 >
-                  {isAr ? modalMember.role : modalMember.roleEn}
+                  {isAr ? modalMember.roleAr : modalMember.roleEn}
                 </p>
               </div>
             </div>

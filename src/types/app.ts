@@ -16,11 +16,11 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type Urgency = 'low' | 'normal' | 'high';
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export const HABIT_CATEGORIES = [
+export const DEFAULT_HABIT_CATEGORIES = [
   'health', 'fitness', 'learning', 'productivity', 'mindfulness',
   'social', 'creativity', 'finance', 'nutrition', 'sleep', 'other'
 ] as const;
-export type HabitCategory = typeof HABIT_CATEGORIES[number];
+export type HabitCategory = string;
 
 export const SKILL_CATEGORIES = [
   'programming', 'languages', 'design', 'writing', 'music',
@@ -80,6 +80,21 @@ export interface Habit {
   reminderTime?: string;
   reminderDays?: WeekDay[];
   targetPerDay?: number;
+  image?: string;
+  // Habit loop (Cue → Routine → Reward)
+  cueEn?: string;
+  cueAr?: string;
+  routineEn?: string;
+  routineAr?: string;
+  rewardEn?: string;
+  rewardAr?: string;
+  // Context
+  placeEn?: string;
+  placeAr?: string;
+  preferredTime?: string; // HH:mm — when to do this habit
+  expectedDuration?: number; // minutes — expected time to complete this habit
+  windowStart?: string; // HH:mm — ideal window start (optional)
+  windowEnd?: string;   // HH:mm — ideal window end (optional)
   createdAt: string;
   archived: boolean;
   order: number;
@@ -144,9 +159,10 @@ export interface SkillSession {
 
 export interface TimerSession {
   id: string;
-  type: 'independent' | 'skill-linked';
+  type: 'independent' | 'skill-linked' | 'habit-linked';
   mode: TimerMode;
   skillId?: string;
+  habitId?: string;
   labelEn: string;
   labelAr: string;
   startedAt: string;
@@ -293,6 +309,7 @@ export interface AppState {
   hydrationLogs: HydrationLog[];
   goals: Goal[];
   moodEntries: MoodEntry[];
+  customCategories: string[];
   settings: UserSettings;
   activeTimer: ActiveTimer | null;
 }
@@ -415,6 +432,7 @@ export const DEFAULT_APP_STATE: AppState = {
   hydrationLogs: [],
   goals: [],
   moodEntries: [],
+  customCategories: [],
   settings: DEFAULT_SETTINGS,
   activeTimer: null,
 };

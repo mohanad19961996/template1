@@ -150,12 +150,12 @@ export default function HormonesPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'الهرمونات والعافية' : 'Hormones & Wellness'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">
             {isAr ? 'فهم ودعم كيمياء جسمك بطرق صحية' : 'Understand and support your body chemistry in healthy ways'}
           </p>
         </div>
         <button onClick={() => setShowTracker(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 shadow-sm">
+          className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2.5 text-sm font-medium">
           <Plus className="h-4 w-4" /> {isAr ? 'تسجيل نشاط' : 'Log Activity'}
         </button>
       </motion.div>
@@ -179,14 +179,14 @@ export default function HormonesPage() {
           const weekCount = weekLogs.filter(l => l.type === type).length;
           return (
             <div key={type}
-              className="rounded-xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-3 text-center cursor-pointer hover:border-[var(--foreground)]/[0.12] transition-all"
+              className="rounded-xl app-stat-card p-3 text-center cursor-pointer"
               onClick={() => setSelectedHormone(selectedHormone === type ? null : type)}
             >
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${info.color}20` }}>
                 <info.icon className="h-5 w-5" style={{ color: info.color }} />
               </div>
               <p className="text-xs font-semibold">{isAr ? info.nameAr : info.nameEn}</p>
-              <p className="text-[10px] text-[var(--foreground)]/40 mt-0.5">
+              <p className="text-[10px] text-[var(--foreground)]/60 mt-0.5">
                 {count} {isAr ? 'اليوم' : 'today'} · {weekCount} {isAr ? 'هذا الأسبوع' : 'this week'}
               </p>
             </div>
@@ -201,8 +201,8 @@ export default function HormonesPage() {
           const isExpanded = selectedHormone === type;
           return (
             <motion.div key={type} variants={fadeUp} custom={i + 3}
-              className={cn('rounded-2xl border overflow-hidden transition-all duration-300',
-                isExpanded ? 'border-[var(--foreground)]/[0.12] shadow-lg' : 'border-[var(--foreground)]/[0.06]')}>
+              className={cn('rounded-2xl app-card overflow-hidden',
+                isExpanded && 'shadow-lg')}>
               {/* Header gradient */}
               <div className={cn('h-1.5 bg-gradient-to-r', info.gradient)} />
               <div className="p-5">
@@ -220,7 +220,7 @@ export default function HormonesPage() {
                   </button>
                 </div>
 
-                <p className="text-xs text-[var(--foreground)]/60 leading-relaxed mb-4">
+                <p className="text-xs text-[var(--foreground)]/80 leading-relaxed mb-4">
                   {isAr ? info.descAr : info.descEn}
                 </p>
 
@@ -235,7 +235,7 @@ export default function HormonesPage() {
                         {(isAr ? info.tipsAr : info.tipsEn).map((tip, j) => (
                           <div key={j} className="flex items-center gap-2">
                             <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: info.color }} />
-                            <span className="text-xs text-[var(--foreground)]/50">{tip}</span>
+                            <span className="text-xs text-[var(--foreground)]/70">{tip}</span>
                           </div>
                         ))}
                       </div>
@@ -262,27 +262,27 @@ export default function HormonesPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowTracker(false)}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="sticky top-0 z-10 bg-[var(--background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+              <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل نشاط العافية' : 'Log Wellness Activity'}</h2>
                 <button onClick={() => setShowTracker(false)} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
 
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'النوع' : 'Type'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'النوع' : 'Type'}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {(Object.keys(HORMONE_INFO) as HormoneType[]).map(t => {
                       const info = HORMONE_INFO[t];
                       return (
                         <button key={t} onClick={() => { setTrackerType(t); setSelectedActivities([]); }}
                           className={cn('flex flex-col items-center gap-1 rounded-xl py-2.5 text-[10px] font-medium transition-all border',
-                            trackerType === t ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.04]' : 'border-transparent')}>
+                            trackerType === t ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.06]' : 'border-transparent')}>
                           <info.icon className="h-4 w-4" style={{ color: info.color }} />
                           {isAr ? info.nameAr : info.nameEn}
                         </button>
@@ -292,7 +292,7 @@ export default function HormonesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'الأنشطة' : 'Activities'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'الأنشطة' : 'Activities'}</label>
                   <div className="flex flex-wrap gap-1.5">
                     {HORMONE_ACTIVITIES[trackerType].map(act => {
                       const label = ACTIVITY_LABELS[act];
@@ -301,7 +301,7 @@ export default function HormonesPage() {
                         <button key={act}
                           onClick={() => setSelectedActivities(prev => selected ? prev.filter(a => a !== act) : [...prev, act])}
                           className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all border',
-                            selected ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.08] text-[var(--foreground)]/50')}>
+                            selected ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
                           {label && <label.icon className="h-3 w-3" />}
                           {label ? (isAr ? label.ar : label.en) : act}
                         </button>
@@ -311,27 +311,27 @@ export default function HormonesPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'التقييم' : 'Rating'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'التقييم' : 'Rating'}</label>
                   <div className="flex gap-2 justify-center">
                     {[1, 2, 3, 4, 5].map(r => (
                       <button key={r} onClick={() => setTrackerRating(r as MoodLevel)}>
-                        <Star className={cn('h-6 w-6', r <= trackerRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/10')} />
+                        <Star className={cn('h-6 w-6', r <= trackerRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'ملاحظات' : 'Notes'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'ملاحظات' : 'Notes'}</label>
                   <textarea value={trackerNote} onChange={e => setTrackerNote(e.target.value)} rows={2}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40 resize-none" />
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm resize-none" />
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-[var(--background)] flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
-                <button onClick={() => setShowTracker(false)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50">{isAr ? 'إلغاء' : 'Cancel'}</button>
+              <div className="sticky bottom-0 bg-[var(--color-background)] flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
+                <button onClick={() => setShowTracker(false)} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70">{isAr ? 'إلغاء' : 'Cancel'}</button>
                 <button onClick={handleLog} disabled={selectedActivities.length === 0}
-                  className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90 disabled:opacity-40">
+                  className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium disabled:opacity-40">
                   {isAr ? 'حفظ' : 'Save'}
                 </button>
               </div>

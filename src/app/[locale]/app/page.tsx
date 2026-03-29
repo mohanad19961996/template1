@@ -95,7 +95,7 @@ export default function DashboardPage() {
             {isAr ? greetingAr : greetingEn}{store.settings.displayName ? `, ${store.settings.displayName}` : ''} 👋
           </h1>
         </div>
-        <p className="text-[var(--foreground)]/50 text-sm mt-1">
+        <p className="text-[var(--foreground)]/70 text-sm mt-1">
           {isAr
             ? `${new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
             : `${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
@@ -135,10 +135,10 @@ export default function DashboardPage() {
             key={i}
             variants={fadeUp}
             custom={i + 1}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-4 sm:p-5 hover:border-[var(--foreground)]/[0.12] transition-all duration-300"
+            className="rounded-2xl app-stat-card p-4 sm:p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-[var(--foreground)]/40 uppercase tracking-wider">
+              <span className="text-xs font-medium text-[var(--foreground)]/60 uppercase tracking-wider">
                 {isAr ? stat.labelAr : stat.labelEn}
               </span>
               <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg', stat.bg)}>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-2xl sm:text-3xl font-bold tracking-tight">{stat.value}</p>
-            <p className="text-xs text-[var(--foreground)]/40 mt-1">{isAr ? stat.subAr : stat.subEn}</p>
+            <p className="text-xs text-[var(--foreground)]/60 mt-1">{isAr ? stat.subAr : stat.subEn}</p>
           </motion.div>
         ))}
       </motion.div>
@@ -158,15 +158,15 @@ export default function DashboardPage() {
           className="lg:col-span-2 space-y-6"
         >
           {/* Today's Habits */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+          <div className="rounded-2xl app-card overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)]/10">
                   <ListChecks className="h-5 w-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">{isAr ? 'عادات اليوم' : "Today's Habits"}</h2>
-                  <p className="text-xs text-[var(--foreground)]/40">
+                  <p className="text-xs text-[var(--foreground)]/60">
                     {completedToday.length}/{todayHabits.length} {isAr ? 'مكتملة' : 'completed'}
                   </p>
                 </div>
@@ -178,21 +178,21 @@ export default function DashboardPage() {
 
             {todayHabits.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.04]">
-                  <Sparkles className="h-6 w-6 text-[var(--foreground)]/20" />
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+                  <Sparkles className="h-6 w-6 text-[var(--foreground)]/40" />
                 </div>
-                <p className="text-sm text-[var(--foreground)]/40 mb-3">
+                <p className="text-sm text-[var(--foreground)]/60 mb-3">
                   {isAr ? 'لا توجد عادات بعد. ابدأ رحلتك!' : 'No habits yet. Start your journey!'}
                 </p>
                 <Link
                   href="/app/habits"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2 text-sm font-medium"
                 >
                   <Plus className="h-4 w-4" /> {isAr ? 'إضافة عادة' : 'Add Habit'}
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.04]">
+              <div className="divide-y divide-[var(--foreground)]/[0.08]">
                 {todayHabits.slice(0, 6).map((habit) => {
                   const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
                   return (
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                       key={habit.id}
                       className={cn(
                         'flex items-center gap-3 px-5 py-3.5 transition-all duration-200',
-                        done ? 'opacity-60' : 'hover:bg-[var(--foreground)]/[0.02]'
+                        done ? 'opacity-60' : 'hover:bg-[var(--foreground)]/[0.06]'
                       )}
                     >
                       <button
@@ -222,14 +222,14 @@ export default function DashboardPage() {
                         {done ? (
                           <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                         ) : (
-                          <Circle className="h-5 w-5 text-[var(--foreground)]/20 hover:text-[var(--color-primary)] transition-colors" />
+                          <Circle className="h-5 w-5 text-[var(--foreground)]/40 hover:text-[var(--color-primary)] transition-colors" />
                         )}
                       </button>
                       <div
                         className="h-2 w-2 rounded-full shrink-0"
                         style={{ backgroundColor: habit.color }}
                       />
-                      <span className={cn('text-sm flex-1', done && 'line-through text-[var(--foreground)]/40')}>
+                      <span className={cn('text-sm flex-1', done && 'line-through text-[var(--foreground)]/60')}>
                         {isAr ? habit.nameAr : habit.nameEn}
                       </span>
                       {!done && (
@@ -252,9 +252,9 @@ export default function DashboardPage() {
 
             {/* Completion bar */}
             {todayHabits.length > 0 && (
-              <div className="px-5 py-3 border-t border-[var(--foreground)]/[0.06]">
+              <div className="px-5 py-3 border-t border-[var(--foreground)]/[0.1]">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-medium text-[var(--foreground)]/40 uppercase tracking-wider">
+                  <span className="text-[10px] font-medium text-[var(--foreground)]/60 uppercase tracking-wider">
                     {isAr ? 'التقدم' : 'Progress'}
                   </span>
                   <span className="text-xs font-bold text-[var(--color-primary)]">{completionRate}%</span>
@@ -272,15 +272,15 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Sessions */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+          <div className="rounded-2xl app-card overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10">
                   <Clock className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">{isAr ? 'الجلسات الأخيرة' : 'Recent Sessions'}</h2>
-                  <p className="text-xs text-[var(--foreground)]/40">
+                  <p className="text-xs text-[var(--foreground)]/60">
                     {isAr ? 'آخر جلسات المهارات' : 'Latest skill sessions'}
                   </p>
                 </div>
@@ -292,10 +292,10 @@ export default function DashboardPage() {
 
             {recentSessions.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.04]">
-                  <GraduationCap className="h-6 w-6 text-[var(--foreground)]/20" />
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+                  <GraduationCap className="h-6 w-6 text-[var(--foreground)]/40" />
                 </div>
-                <p className="text-sm text-[var(--foreground)]/40 mb-3">
+                <p className="text-sm text-[var(--foreground)]/60 mb-3">
                   {isAr ? 'لا توجد جلسات بعد. ابدأ التعلم!' : 'No sessions yet. Start learning!'}
                 </p>
                 <Link
@@ -306,23 +306,23 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.04]">
+              <div className="divide-y divide-[var(--foreground)]/[0.08]">
                 {recentSessions.map((session) => {
                   const skill = store.skills.find(s => s.id === session.skillId);
                   return (
-                    <div key={session.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[var(--foreground)]/[0.02] transition-all">
+                    <div key={session.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[var(--foreground)]/[0.06] transition-all">
                       <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${skill?.color ?? '#3B82F6'}20` }}>
                         <GraduationCap className="h-4 w-4" style={{ color: skill?.color ?? '#3B82F6' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{isAr ? skill?.nameAr : skill?.nameEn}</p>
-                        <p className="text-xs text-[var(--foreground)]/40">{session.date} · {session.startTime}</p>
+                        <p className="text-xs text-[var(--foreground)]/60">{session.date} · {session.startTime}</p>
                       </div>
                       <div className="text-end">
                         <p className="text-sm font-semibold">{formatDuration(session.duration)}</p>
                         <div className="flex items-center gap-0.5 justify-end">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={cn('h-2.5 w-2.5', i < session.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/10')} />
+                            <Star key={i} className={cn('h-2.5 w-2.5', i < session.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
                           ))}
                         </div>
                       </div>
@@ -337,7 +337,7 @@ export default function DashboardPage() {
         {/* Right Column */}
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} className="space-y-6">
           {/* Quick Actions */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <h3 className="font-semibold text-sm mb-4">{isAr ? 'إجراءات سريعة' : 'Quick Actions'}</h3>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-[var(--foreground)]/[0.06] p-3 hover:border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.02] transition-all duration-200"
+                  className="flex flex-col items-center gap-2 rounded-xl app-card p-3"
                 >
                   <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', action.color.split(' ')[1])}>
                     <action.icon className={cn('h-5 w-5', action.color.split(' ')[0])} />
@@ -361,13 +361,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Active Streaks */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'السلاسل النشطة' : 'Active Streaks'}</h3>
               <Flame className="h-4 w-4 text-orange-500" />
             </div>
             {currentStreaks.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/40 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
                 {isAr ? 'ابدأ بإكمال عاداتك لبناء سلاسل!' : 'Complete habits to build streaks!'}
               </p>
             ) : (
@@ -387,13 +387,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Top Skills */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'أفضل المهارات' : 'Top Skills'}</h3>
               <TrendingUp className="h-4 w-4 text-[var(--color-primary)]" />
             </div>
             {topSkills.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/40 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
                 {isAr ? 'أضف مهاراتك وابدأ التتبع!' : 'Add skills and start tracking!'}
               </p>
             ) : (
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                   <div key={skill.id}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium truncate">{isAr ? skill.nameAr : skill.nameEn}</span>
-                      <span className="text-[10px] text-[var(--foreground)]/40">{formatDuration(skill.totalMinutes)}</span>
+                      <span className="text-[10px] text-[var(--foreground)]/60">{formatDuration(skill.totalMinutes)}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
                       <div
@@ -420,13 +420,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Goals */}
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+          <div className="rounded-2xl app-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'الأهداف النشطة' : 'Active Goals'}</h3>
               <Target className="h-4 w-4 text-emerald-500" />
             </div>
             {activeGoals.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/40 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
                 {isAr ? 'حدد أهدافك وحققها!' : 'Set your goals and achieve them!'}
               </p>
             ) : (
@@ -444,7 +444,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{isAr ? goal.titleAr : goal.titleEn}</p>
-                      <p className="text-[10px] text-[var(--foreground)]/40">
+                      <p className="text-[10px] text-[var(--foreground)]/60">
                         {goal.milestones.filter(m => m.completed).length}/{goal.milestones.length} {isAr ? 'مراحل' : 'milestones'}
                       </p>
                     </div>

@@ -63,24 +63,24 @@ export default function RemindersPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'التذكيرات' : 'Reminders'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">
             {isAr ? `${activeReminders.length} تذكير نشط` : `${activeReminders.length} active reminders`}
           </p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 shadow-sm">
+          className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2.5 text-sm font-medium">
           <Plus className="h-4 w-4" /> {isAr ? 'تذكير جديد' : 'New Reminder'}
         </button>
       </motion.div>
 
       {store.reminders.length === 0 ? (
         <div className="text-center py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.04]">
-            <Bell className="h-8 w-8 text-[var(--foreground)]/20" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+            <Bell className="h-8 w-8 text-[var(--foreground)]/40" />
           </div>
-          <p className="text-sm text-[var(--foreground)]/40 mb-4">{isAr ? 'لا توجد تذكيرات' : 'No reminders yet'}</p>
+          <p className="text-sm text-[var(--foreground)]/60 mb-4">{isAr ? 'لا توجد تذكيرات' : 'No reminders yet'}</p>
           <button onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90">
+            className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-5 py-2.5 text-sm font-medium">
             <Plus className="h-4 w-4" /> {isAr ? 'إضافة تذكير' : 'Add Reminder'}
           </button>
         </div>
@@ -88,7 +88,7 @@ export default function RemindersPage() {
         <motion.div initial="hidden" animate="visible" className="space-y-3">
           {activeReminders.map((reminder, i) => (
             <motion.div key={reminder.id} variants={fadeUp} custom={i + 1}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] px-5 py-4 hover:border-[var(--foreground)]/[0.12] transition-all">
+              className="flex items-center gap-4 rounded-2xl app-card px-5 py-4">
               <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl shrink-0',
                 reminder.urgency === 'high' ? 'bg-red-500/10' : reminder.urgency === 'normal' ? 'bg-blue-500/10' : 'bg-gray-500/10')}>
                 <BellRing className={cn('h-5 w-5',
@@ -97,10 +97,10 @@ export default function RemindersPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold">{isAr ? reminder.titleAr : reminder.titleEn}</h3>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-[var(--foreground)]/40 flex items-center gap-1">
+                  <span className="text-[10px] text-[var(--foreground)]/60 flex items-center gap-1">
                     <Clock className="h-3 w-3" /> {reminder.time}
                   </span>
-                  <span className="text-[10px] text-[var(--foreground)]/40">
+                  <span className="text-[10px] text-[var(--foreground)]/60">
                     {reminder.days.map(d => isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]).join(', ')}
                   </span>
                 </div>
@@ -152,13 +152,13 @@ export default function RemindersPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[10%] z-[var(--z-modal)] sm:w-[460px] max-h-[80vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[460px] max-h-[80vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="p-5 border-b border-[var(--foreground)]/[0.06] flex items-center justify-between">
+              <div className="p-5 border-b border-[var(--foreground)]/[0.1] flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{editingId ? (isAr ? 'تعديل التذكير' : 'Edit Reminder') : (isAr ? 'تذكير جديد' : 'New Reminder')}</h2>
                 <button onClick={() => { setShowForm(false); resetForm(); }} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
@@ -166,25 +166,25 @@ export default function RemindersPage() {
               <div className="p-5 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'العنوان (عربي)' : 'Title (Arabic)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'العنوان (عربي)' : 'Title (Arabic)'}</label>
                     <input dir="rtl" value={form.titleAr} onChange={e => setForm(f => ({ ...f, titleAr: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'العنوان (إنجليزي)' : 'Title (English)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'العنوان (إنجليزي)' : 'Title (English)'}</label>
                     <input dir="ltr" value={form.titleEn} onChange={e => setForm(f => ({ ...f, titleEn: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'الوقت' : 'Time'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الوقت' : 'Time'}</label>
                   <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'الأيام' : 'Days'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'الأيام' : 'Days'}</label>
                   <div className="flex gap-1.5">
                     {[0, 1, 2, 3, 4, 5, 6].map(d => (
                       <button key={d}
@@ -197,7 +197,7 @@ export default function RemindersPage() {
                         className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
                           form.days.includes(d as WeekDay)
                             ? 'bg-[var(--color-primary)] text-white'
-                            : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50')}>
+                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
                         {isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]}
                       </button>
                     ))}
@@ -205,14 +205,14 @@ export default function RemindersPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'الأهمية' : 'Urgency'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'الأهمية' : 'Urgency'}</label>
                   <div className="flex gap-2">
                     {(['low', 'normal', 'high'] as Urgency[]).map(u => (
                       <button key={u} onClick={() => setForm(f => ({ ...f, urgency: u }))}
                         className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
                           form.urgency === u
                             ? (u === 'high' ? 'bg-red-500 text-white' : u === 'normal' ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white')
-                            : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50')}>
+                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
                         {isAr ? (u === 'high' ? 'عالية' : u === 'normal' ? 'عادية' : 'منخفضة') : u}
                       </button>
                     ))}
@@ -220,13 +220,13 @@ export default function RemindersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
+              <div className="flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
                 {editingId && (
                   <button onClick={() => { store.deleteReminder(editingId); setShowForm(false); resetForm(); }}
                     className="me-auto text-xs text-red-500 flex items-center gap-1"><Trash2 className="h-3.5 w-3.5" /> {isAr ? 'حذف' : 'Delete'}</button>
                 )}
-                <button onClick={() => { setShowForm(false); resetForm(); }} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50">{isAr ? 'إلغاء' : 'Cancel'}</button>
-                <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90">
+                <button onClick={() => { setShowForm(false); resetForm(); }} className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70">{isAr ? 'إلغاء' : 'Cancel'}</button>
+                <button onClick={handleSave} className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium">
                   {editingId ? (isAr ? 'تحديث' : 'Update') : (isAr ? 'إنشاء' : 'Create')}
                 </button>
               </div>

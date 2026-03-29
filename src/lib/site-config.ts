@@ -173,6 +173,78 @@ export interface PageContentConfig {
 
 export type PagesContent = Record<string, PageContentConfig>;
 
+// ═══ EDITABLE CONTENT TYPES ═══
+
+export interface TeamMember {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  roleEn: string;
+  roleAr: string;
+  image: string;
+  bioEn: string;
+  bioAr: string;
+}
+
+export interface TestimonialItem {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  roleEn: string;
+  roleAr: string;
+  company: string;
+  quoteEn: string;
+  quoteAr: string;
+  rating: number;
+  image: string;
+}
+
+export interface FaqItem {
+  id: string;
+  questionEn: string;
+  questionAr: string;
+  answerEn: string;
+  answerAr: string;
+  category: string;
+}
+
+export interface PricingPlan {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  priceMonthly: string;
+  priceYearly: string;
+  descriptionEn: string;
+  descriptionAr: string;
+  featuresEn: string[];
+  featuresAr: string[];
+  popular: boolean;
+  ctaEn: string;
+  ctaAr: string;
+}
+
+export interface StatItem {
+  id: string;
+  value: string;
+  labelEn: string;
+  labelAr: string;
+  icon: string;
+}
+
+export interface SocialLink {
+  platform: string;
+  url: string;
+  visible: boolean;
+}
+
+export interface FooterContent {
+  descriptionEn: string;
+  descriptionAr: string;
+  copyrightEn: string;
+  copyrightAr: string;
+  socialLinks: SocialLink[];
+}
+
 export interface SiteConfig {
   pages: PageConfig[];
   hero: HeroConfig;
@@ -186,6 +258,12 @@ export interface SiteConfig {
   cta: CtaConfig;
   process: ProcessConfig;
   pagesContent: PagesContent;
+  teamMembers: TeamMember[];
+  testimonialItems: TestimonialItem[];
+  faqItems: FaqItem[];
+  pricingPlans: PricingPlan[];
+  statItems: StatItem[];
+  footerContent: FooterContent;
 }
 
 export const DEFAULT_HERO_CONTENT: HeroContent = {
@@ -468,6 +546,220 @@ export const DEFAULT_PAGES_CONTENT: PagesContent = {
   },
 };
 
+// ═══ DEFAULT EDITABLE CONTENT ═══
+
+export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
+  {
+    id: "tm-1",
+    nameEn: "Mohammed Ahmed",
+    nameAr: "محمد أحمد",
+    roleEn: "CEO & Founder",
+    roleAr: "الرئيس التنفيذي والمؤسس",
+    image: "https://picsum.photos/seed/team1/400/400",
+    bioEn: "With over 20 years of experience in digital innovation, Mohammed leads the company vision and strategy.",
+    bioAr: "مع أكثر من 20 عامًا من الخبرة في الابتكار الرقمي، يقود محمد رؤية الشركة واستراتيجيتها.",
+  },
+  {
+    id: "tm-2",
+    nameEn: "Noura Al-Salem",
+    nameAr: "نورة السالم",
+    roleEn: "Design Director",
+    roleAr: "مديرة التصميم",
+    image: "https://picsum.photos/seed/team2/400/400",
+    bioEn: "Noura brings creative excellence to every project, crafting stunning visual experiences that captivate audiences.",
+    bioAr: "تضفي نورة التميز الإبداعي على كل مشروع، وتصمم تجارب بصرية مذهلة تأسر الجمهور.",
+  },
+  {
+    id: "tm-3",
+    nameEn: "Fahd Al-Omari",
+    nameAr: "فهد العمري",
+    roleEn: "Development Lead",
+    roleAr: "رئيس قسم التطوير",
+    image: "https://picsum.photos/seed/team3/400/400",
+    bioEn: "Fahd architects scalable solutions using cutting-edge technologies, ensuring performance and reliability.",
+    bioAr: "يصمم فهد حلولاً قابلة للتوسع باستخدام أحدث التقنيات، مع ضمان الأداء والموثوقية.",
+  },
+  {
+    id: "tm-4",
+    nameEn: "Reem Al-Harbi",
+    nameAr: "ريم الحربي",
+    roleEn: "Marketing Lead",
+    roleAr: "رئيسة قسم التسويق",
+    image: "https://picsum.photos/seed/team4/400/400",
+    bioEn: "Reem drives brand growth through data-driven marketing strategies and compelling storytelling.",
+    bioAr: "تقود ريم نمو العلامة التجارية من خلال استراتيجيات تسويق مبنية على البيانات وسرد قصصي مقنع.",
+  },
+];
+
+export const DEFAULT_TESTIMONIALS_ITEMS: TestimonialItem[] = [
+  {
+    id: "tst-1",
+    nameEn: "Khalid Al-Rashidi",
+    nameAr: "خالد الرشيدي",
+    roleEn: "CEO",
+    roleAr: "الرئيس التنفيذي",
+    company: "TechVision",
+    quoteEn: "Working with this team transformed our digital presence entirely. Their attention to detail and innovative approach exceeded all our expectations.",
+    quoteAr: "العمل مع هذا الفريق حوّل حضورنا الرقمي بالكامل. اهتمامهم بالتفاصيل ونهجهم المبتكر فاق كل توقعاتنا.",
+    rating: 5,
+    image: "https://picsum.photos/seed/review1/200/200",
+  },
+  {
+    id: "tst-2",
+    nameEn: "Sara Al-Dosari",
+    nameAr: "سارة الدوسري",
+    roleEn: "Marketing Director",
+    roleAr: "مديرة التسويق",
+    company: "GrowthHub",
+    quoteEn: "The results speak for themselves — a 200% increase in engagement and a brand identity that truly represents who we are.",
+    quoteAr: "النتائج تتحدث عن نفسها — زيادة بنسبة 200% في التفاعل وهوية علامة تجارية تمثل حقًا من نحن.",
+    rating: 5,
+    image: "https://picsum.photos/seed/review2/200/200",
+  },
+  {
+    id: "tst-3",
+    nameEn: "Omar Al-Faisal",
+    nameAr: "عمر الفيصل",
+    roleEn: "CTO",
+    roleAr: "المدير التقني",
+    company: "DataFlow",
+    quoteEn: "Their technical expertise is outstanding. They delivered a complex platform on time and with exceptional quality.",
+    quoteAr: "خبرتهم التقنية متميزة. قدموا منصة معقدة في الوقت المحدد وبجودة استثنائية.",
+    rating: 4,
+    image: "https://picsum.photos/seed/review3/200/200",
+  },
+  {
+    id: "tst-4",
+    nameEn: "Lina Al-Mutairi",
+    nameAr: "لينا المطيري",
+    roleEn: "Founder",
+    roleAr: "المؤسسة",
+    company: "CreativeSpace",
+    quoteEn: "From concept to launch, they guided us every step of the way. Professional, creative, and truly dedicated to our success.",
+    quoteAr: "من الفكرة إلى الإطلاق، أرشدونا في كل خطوة. محترفون ومبدعون وملتزمون حقًا بنجاحنا.",
+    rating: 5,
+    image: "https://picsum.photos/seed/review4/200/200",
+  },
+];
+
+export const DEFAULT_FAQ_ITEMS: FaqItem[] = [
+  {
+    id: "faq-1",
+    questionEn: "What services do you offer?",
+    questionAr: "ما هي الخدمات التي تقدمونها؟",
+    answerEn: "We offer a comprehensive range of digital services including web development, mobile app development, UI/UX design, branding, and digital marketing strategies.",
+    answerAr: "نقدم مجموعة شاملة من الخدمات الرقمية تشمل تطوير المواقع، تطوير تطبيقات الجوال، تصميم واجهات المستخدم، الهوية البصرية، واستراتيجيات التسويق الرقمي.",
+    category: "general",
+  },
+  {
+    id: "faq-2",
+    questionEn: "How long does a typical project take?",
+    questionAr: "كم يستغرق المشروع النموذجي؟",
+    answerEn: "Project timelines vary based on scope and complexity. A typical website takes 4-8 weeks, while larger platforms may take 3-6 months. We provide detailed timelines during the proposal phase.",
+    answerAr: "تختلف الجداول الزمنية للمشاريع بناءً على النطاق والتعقيد. يستغرق الموقع النموذجي 4-8 أسابيع، بينما قد تستغرق المنصات الأكبر 3-6 أشهر. نقدم جداول زمنية مفصلة خلال مرحلة العرض.",
+    category: "services",
+  },
+  {
+    id: "faq-3",
+    questionEn: "Do you offer ongoing support after launch?",
+    questionAr: "هل تقدمون دعمًا مستمرًا بعد الإطلاق؟",
+    answerEn: "Yes, we offer maintenance and support packages to ensure your project continues to perform optimally. This includes bug fixes, updates, and performance monitoring.",
+    answerAr: "نعم، نقدم حزم صيانة ودعم لضمان استمرار مشروعك في الأداء بشكل مثالي. يشمل ذلك إصلاح الأخطاء والتحديثات ومراقبة الأداء.",
+    category: "services",
+  },
+  {
+    id: "faq-4",
+    questionEn: "What is your pricing model?",
+    questionAr: "ما هو نموذج التسعير لديكم؟",
+    answerEn: "We offer flexible pricing including fixed-price projects, monthly retainers, and hourly rates. We tailor our pricing to match your budget and project requirements.",
+    answerAr: "نقدم أسعارًا مرنة تشمل مشاريع بسعر ثابت، اشتراكات شهرية، وأسعار بالساعة. نخصص أسعارنا لتتناسب مع ميزانيتك ومتطلبات مشروعك.",
+    category: "pricing",
+  },
+  {
+    id: "faq-5",
+    questionEn: "Can I upgrade my plan later?",
+    questionAr: "هل يمكنني ترقية خطتي لاحقًا؟",
+    answerEn: "Absolutely! You can upgrade or adjust your plan at any time. We make transitions seamless so you never experience downtime or disruption.",
+    answerAr: "بالتأكيد! يمكنك ترقية أو تعديل خطتك في أي وقت. نجعل الانتقال سلسًا حتى لا تواجه أي توقف أو انقطاع.",
+    category: "pricing",
+  },
+  {
+    id: "faq-6",
+    questionEn: "How do I get started?",
+    questionAr: "كيف أبدأ؟",
+    answerEn: "Simply reach out through our contact form or schedule a free consultation. We'll discuss your goals, provide a proposal, and begin bringing your vision to life.",
+    answerAr: "ما عليك سوى التواصل من خلال نموذج الاتصال أو حجز استشارة مجانية. سنناقش أهدافك ونقدم عرضًا ونبدأ في تحويل رؤيتك إلى واقع.",
+    category: "general",
+  },
+];
+
+export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "plan-1",
+    nameEn: "Basic",
+    nameAr: "أساسي",
+    priceMonthly: "$29",
+    priceYearly: "$290",
+    descriptionEn: "Perfect for small businesses and startups getting started online.",
+    descriptionAr: "مثالي للشركات الصغيرة والناشئة التي تبدأ حضورها الرقمي.",
+    featuresEn: ["5 Pages Website", "Basic SEO Setup", "Mobile Responsive", "Contact Form"],
+    featuresAr: ["موقع 5 صفحات", "إعداد SEO أساسي", "متجاوب مع الجوال", "نموذج تواصل"],
+    popular: false,
+    ctaEn: "Get Started",
+    ctaAr: "ابدأ الآن",
+  },
+  {
+    id: "plan-2",
+    nameEn: "Pro",
+    nameAr: "احترافي",
+    priceMonthly: "$79",
+    priceYearly: "$790",
+    descriptionEn: "Ideal for growing businesses that need advanced features and support.",
+    descriptionAr: "مثالي للشركات النامية التي تحتاج ميزات متقدمة ودعم.",
+    featuresEn: ["15 Pages Website", "Advanced SEO", "CMS Integration", "Analytics Dashboard", "Priority Support"],
+    featuresAr: ["موقع 15 صفحة", "SEO متقدم", "نظام إدارة محتوى", "لوحة تحليلات", "دعم ذو أولوية"],
+    popular: true,
+    ctaEn: "Go Pro",
+    ctaAr: "انتقل للاحترافي",
+  },
+  {
+    id: "plan-3",
+    nameEn: "Enterprise",
+    nameAr: "مؤسسات",
+    priceMonthly: "$199",
+    priceYearly: "$1,990",
+    descriptionEn: "Full-scale solution for large organizations with custom requirements.",
+    descriptionAr: "حل شامل للمؤسسات الكبيرة ذات المتطلبات المخصصة.",
+    featuresEn: ["Unlimited Pages", "Custom Development", "Dedicated Account Manager", "24/7 Support", "Performance Optimization", "Security Audit"],
+    featuresAr: ["صفحات غير محدودة", "تطوير مخصص", "مدير حساب مخصص", "دعم على مدار الساعة", "تحسين الأداء", "تدقيق أمني"],
+    popular: false,
+    ctaEn: "Contact Sales",
+    ctaAr: "تواصل مع المبيعات",
+  },
+];
+
+export const DEFAULT_STAT_ITEMS: StatItem[] = [
+  { id: "stat-1", value: "500+", labelEn: "Clients Served", labelAr: "عميل تمت خدمتهم", icon: "users" },
+  { id: "stat-2", value: "15+", labelEn: "Years Experience", labelAr: "سنوات خبرة", icon: "calendar" },
+  { id: "stat-3", value: "50+", labelEn: "Awards Won", labelAr: "جائزة محققة", icon: "trophy" },
+  { id: "stat-4", value: "12", labelEn: "Countries", labelAr: "دولة", icon: "globe" },
+];
+
+export const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
+  { platform: "twitter", url: "https://twitter.com", visible: true },
+  { platform: "linkedin", url: "https://linkedin.com", visible: true },
+  { platform: "github", url: "https://github.com", visible: true },
+  { platform: "instagram", url: "https://instagram.com", visible: true },
+];
+
+export const DEFAULT_FOOTER_CONTENT: FooterContent = {
+  descriptionEn: "We craft exceptional digital experiences that help businesses grow and thrive in the modern world.",
+  descriptionAr: "نصنع تجارب رقمية استثنائية تساعد الشركات على النمو والازدهار في العالم الحديث.",
+  copyrightEn: "All rights reserved.",
+  copyrightAr: "جميع الحقوق محفوظة.",
+  socialLinks: DEFAULT_SOCIAL_LINKS,
+};
+
 export const DEFAULT_CONFIG: SiteConfig = {
   pages: ALL_PAGES,
   hero: DEFAULT_HERO,
@@ -481,6 +773,12 @@ export const DEFAULT_CONFIG: SiteConfig = {
   cta: DEFAULT_CTA,
   process: DEFAULT_PROCESS,
   pagesContent: DEFAULT_PAGES_CONTENT,
+  teamMembers: DEFAULT_TEAM_MEMBERS,
+  testimonialItems: DEFAULT_TESTIMONIALS_ITEMS,
+  faqItems: DEFAULT_FAQ_ITEMS,
+  pricingPlans: DEFAULT_PRICING_PLANS,
+  statItems: DEFAULT_STAT_ITEMS,
+  footerContent: DEFAULT_FOOTER_CONTENT,
 };
 
-export const STORAGE_KEY = "site-config-v11";
+export const STORAGE_KEY = "site-config-v12";

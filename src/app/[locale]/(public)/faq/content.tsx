@@ -28,24 +28,35 @@ import { useRef, useState, useMemo } from "react";
 
 /* ───────────────── Types ───────────────── */
 
-interface FaqItem {
-  questionEn: string;
-  questionAr: string;
-  answerEn: string;
-  answerAr: string;
-}
-
 interface FaqCategory {
   key: string;
   labelEn: string;
   labelAr: string;
   icon: typeof HelpCircle;
-  items: FaqItem[];
+  items: { questionEn: string; questionAr: string; answerEn: string; answerAr: string }[];
 }
 
-/* ───────────────── FAQ Data ───────────────── */
+const categoryIconMap: Record<string, typeof HelpCircle> = {
+  general: HelpCircle,
+  services: Code,
+  projects: Code,
+  pricing: CreditCard,
+  technical: Shield,
+  support: Headphones,
+};
 
-const faqCategories: FaqCategory[] = [
+const categoryLabelMap: Record<string, { labelEn: string; labelAr: string }> = {
+  general: { labelEn: "General", labelAr: "عام" },
+  services: { labelEn: "Services", labelAr: "الخدمات" },
+  projects: { labelEn: "Projects", labelAr: "المشاريع" },
+  pricing: { labelEn: "Pricing", labelAr: "الأسعار" },
+  technical: { labelEn: "Technical", labelAr: "تقني" },
+  support: { labelEn: "Support", labelAr: "الدعم" },
+};
+
+/* ───────────────── FAQ Data (legacy fallback, now from config) ───────────────── */
+
+const _legacyFaqCategories: FaqCategory[] = [
   {
     key: "general",
     labelEn: "General",
@@ -232,6 +243,31 @@ export function FaqContent() {
   const t = useTranslations("faq");
   const { config } = useSiteConfig();
   const sections = config.pagesContent?.faq?.sections ?? DEFAULT_PAGES_CONTENT.faq.sections;
+
+  // Build categories from config faqItems
+  const faqCategories = useMemo(() => {
+    const categoryMap = new Map<string, FaqCategory>();
+    for (const item of config.faqItems) {
+      const cat = item.category || "general";
+      if (!categoryMap.has(cat)) {
+        const meta = categoryLabelMap[cat] ?? { labelEn: cat, labelAr: cat };
+        categoryMap.set(cat, {
+          key: cat,
+          labelEn: meta.labelEn,
+          labelAr: meta.labelAr,
+          icon: categoryIconMap[cat] ?? HelpCircle,
+          items: [],
+        });
+      }
+      categoryMap.get(cat)!.items.push({
+        questionEn: item.questionEn,
+        questionAr: item.questionAr,
+        answerEn: item.answerEn,
+        answerAr: item.answerAr,
+      });
+    }
+    return Array.from(categoryMap.values());
+  }, [config.faqItems]);
 
   const [activeCategory, setActiveCategory] = useState("general");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -687,7 +723,7 @@ function AccordionItem({
   categoryLabel,
   index,
 }: {
-  item: FaqItem;
+  item: { questionEn: string; questionAr: string; answerEn: string; answerAr: string };
   isOpen: boolean;
   onToggle: () => void;
   isAr: boolean;

@@ -30,26 +30,28 @@ function AnimatedCounter({ value, suffix, id }: { value: number; suffix: string;
   return <span>{count}{suffix}</span>;
 }
 
-const statRows = [
-  [
-    { icon: Users, value: 500, suffix: "+", labelEn: "Happy Clients", labelAr: "عميل سعيد", descEn: "Trusted worldwide", descAr: "موثوق عالمياً" },
-    { icon: Briefcase, value: 200, suffix: "+", labelEn: "Projects Completed", labelAr: "مشروع مكتمل", descEn: "Successfully delivered", descAr: "تم التسليم بنجاح" },
-    { icon: Clock, value: 15, suffix: "+", labelEn: "Years Experience", labelAr: "سنة خبرة", descEn: "Industry expertise", descAr: "خبرة في المجال" },
-    { icon: Server, value: 99.9, suffix: "%", labelEn: "Uptime Guaranteed", labelAr: "ضمان التشغيل", descEn: "Reliable infrastructure", descAr: "بنية تحتية موثوقة" },
-  ],
-  [
-    { icon: Star, value: 50, suffix: "+", labelEn: "Awards Won", labelAr: "جائزة", descEn: "Industry recognition", descAr: "تقدير المجال" },
-    { icon: Globe, value: 30, suffix: "+", labelEn: "Countries Served", labelAr: "دولة", descEn: "Global presence", descAr: "حضور عالمي" },
-    { icon: Zap, value: 99, suffix: "%", labelEn: "Client Satisfaction", labelAr: "رضا العملاء", descEn: "5-star rated", descAr: "تقييم 5 نجوم" },
-    { icon: Award, value: 40, suffix: "+", labelEn: "Team Members", labelAr: "عضو فريق", descEn: "Expert professionals", descAr: "محترفون خبراء" },
-  ],
-  [
-    { icon: Code, value: 10, suffix: "M+", labelEn: "Lines of Code", labelAr: "سطر برمجي", descEn: "Clean & scalable", descAr: "نظيف وقابل للتوسع" },
-    { icon: Coffee, value: 1200, suffix: "+", labelEn: "Cups of Coffee", labelAr: "كوب قهوة", descEn: "Fueling innovation", descAr: "وقود الابتكار" },
-    { icon: Heart, value: 98, suffix: "%", labelEn: "Retention Rate", labelAr: "معدل الاحتفاظ", descEn: "Clients stay with us", descAr: "العملاء يبقون معنا" },
-    { icon: Rocket, value: 150, suffix: "+", labelEn: "Products Launched", labelAr: "منتج أُطلق", descEn: "From idea to market", descAr: "من الفكرة للسوق" },
-  ],
-];
+const statIconMap: Record<string, typeof Users> = {
+  users: Users,
+  briefcase: Briefcase,
+  clock: Clock,
+  server: Server,
+  star: Star,
+  globe: Globe,
+  zap: Zap,
+  award: Award,
+  code: Code,
+  coffee: Coffee,
+  heart: Heart,
+  rocket: Rocket,
+  calendar: Clock,
+  trophy: Award,
+};
+
+function parseStatValue(value: string): { num: number; suffix: string } {
+  const match = value.match(/^([0-9.]+)(.*)$/);
+  if (match) return { num: parseFloat(match[1]), suffix: match[2] };
+  return { num: 0, suffix: value };
+}
 
 export function StatsSection() {
   const locale = useLocale();
@@ -60,6 +62,27 @@ export function StatsSection() {
   const [direction, setDirection] = useState(1); // 1 = down, -1 = up
   const { config } = useSiteConfig();
   const stc = config.stats;
+
+  // Build stat rows from config statItems (4 items per row)
+  const statRows = (() => {
+    const items = config.statItems.map((item) => {
+      const { num, suffix } = parseStatValue(item.value);
+      return {
+        icon: statIconMap[item.icon.toLowerCase()] ?? Users,
+        value: num,
+        suffix,
+        labelEn: item.labelEn,
+        labelAr: item.labelAr,
+        descEn: "",
+        descAr: "",
+      };
+    });
+    const rows: typeof items[] = [];
+    for (let i = 0; i < items.length; i += 4) {
+      rows.push(items.slice(i, i + 4));
+    }
+    return rows.length > 0 ? rows : [[{ icon: Users, value: 0, suffix: "", labelEn: "-", labelAr: "-", descEn: "", descAr: "" }]];
+  })();
 
   const goNext = () => {
     setDirection(1);

@@ -1,14 +1,10 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { useSiteConfig } from "@/providers/site-config-provider";
 import {
-  ArrowLeft,
-  ArrowRight,
   ToggleLeft,
   ToggleRight,
-  Megaphone,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -72,58 +68,11 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export function CtaDashboard() {
   const locale = useLocale();
   const isAr = locale === "ar";
-  const Arrow = isAr ? ArrowRight : ArrowLeft;
-
   const { config, updateCta } = useSiteConfig();
   const cta = config.cta;
 
   return (
-    <div className="min-h-screen p-6 space-y-6" style={{ background: "var(--color-background)" }}>
-      {/* ── Top bar ── */}
-      <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-[12px] font-semibold px-4 py-1.5 rounded-lg cursor-pointer"
-          style={{ color: "var(--color-primary)", border: "1px solid rgba(var(--color-primary-rgb) / 0.15)", transition: "all 0.3s ease" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--color-primary)"; e.currentTarget.style.color = "white"; e.currentTarget.style.borderColor = "var(--color-primary)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--color-primary)"; e.currentTarget.style.borderColor = "rgba(var(--color-primary-rgb) / 0.15)"; }}
-        >
-          <Arrow className="h-3 w-3" />
-          {isAr ? "لوحة التحكم" : "Dashboard"}
-        </Link>
-        <div className="flex items-center gap-2">
-          <Megaphone className="h-4 w-4" style={{ color: "var(--color-primary)" }} />
-          <h1 className="text-[15px] font-bold tracking-tight">{isAr ? "دعوة للعمل" : "Call to Action"}</h1>
-        </div>
-      </div>
-
-      {/* ── Live preview ── */}
-      <div className="rounded-2xl p-6" style={{ border: "2px solid rgba(var(--color-primary-rgb) / 0.1)", background: "var(--color-card)" }}>
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-4" style={{ opacity: 0.4 }}>{isAr ? "معاينة مباشرة" : "Live Preview"}</p>
-        <div className="rounded-xl p-6 text-center space-y-3" style={{ background: "rgba(var(--color-primary-rgb) / 0.05)", border: "1.5px solid rgba(var(--color-primary-rgb) / 0.12)" }}>
-          {cta.showBadge && (
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ background: "rgba(var(--color-primary-rgb) / 0.1)", color: "var(--color-primary)" }}>
-              {isAr ? cta.badgeAr : cta.badgeEn}
-            </span>
-          )}
-          <h2 className="text-[16px] font-bold tracking-tight">{isAr ? cta.titleAr : cta.titleEn}</h2>
-          <p className="text-[12px] font-medium" style={{ opacity: 0.6 }}>{isAr ? cta.descAr : cta.descEn}</p>
-          {cta.showCountdown && (
-            <div className="flex justify-center gap-3 py-2">
-              {["00", "00", "00", "00"].map((v, i) => (
-                <div key={i} className="w-10 h-10 rounded-lg flex items-center justify-center text-[14px] font-bold"
-                  style={{ background: "rgba(var(--color-primary-rgb) / 0.1)", color: "var(--color-primary)" }}>
-                  {v}
-                </div>
-              ))}
-            </div>
-          )}
-          <button className="px-5 py-2 rounded-lg text-[12px] font-bold text-white"
-            style={{ background: "var(--color-primary)" }}>
-            {isAr ? cta.buttonAr : cta.buttonEn}
-          </button>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* ── Controls ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SectionCard title={isAr ? "النصوص (إنجليزي)" : "Text (English)"}>

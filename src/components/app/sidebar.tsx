@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
@@ -8,9 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ListChecks, GraduationCap, Timer, BarChart3,
-  Calendar, Bell, Brain, Apple, Target, Settings, ChevronLeft,
-  ChevronRight, Sparkles, Menu, X, Heart, Zap, Sun, Smile,
-  Dumbbell,
+  Calendar, Bell, Brain, Apple, Target, Settings,
+  Sparkles, X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -62,12 +61,16 @@ const BOTTOM_ITEMS: NavItem[] = [
   { href: '/app/settings', labelEn: 'Settings', labelAr: 'الإعدادات', icon: Settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}
+
+export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarProps) {
   const pathname = usePathname();
   const locale = useLocale();
   const isAr = locale === 'ar';
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) => {
     const localePath = `/${locale}${href}`;
@@ -81,20 +84,22 @@ export function AppSidebar() {
     return (
       <Link
         href={item.href}
-        onClick={() => setMobileOpen(false)}
+        onClick={() => onCloseMobile()}
         className={cn(
-          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium app-nav-link',
           active
-            ? 'bg-[rgb(var(--color-primary-rgb))/0.12] text-[var(--color-primary)]'
-            : 'text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/[0.04] hover:text-[var(--foreground)]',
+            ? 'bg-[rgba(var(--color-primary-rgb)/0.12)] text-[var(--color-primary)]'
+            : 'text-[var(--foreground)]/80',
           !showLabel && 'justify-center px-2.5',
         )}
       >
         {active && (
-          <motion.div
-            layoutId="sidebar-active"
-            className="absolute inset-0 rounded-xl bg-[rgb(var(--color-primary-rgb))/0.1]"
-            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+          <div
+            className="absolute inset-0 rounded-xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.12), rgba(var(--color-primary-rgb) / 0.06))',
+              boxShadow: 'inset 0 1px 0 rgba(var(--color-primary-rgb) / 0.1)',
+            }}
           />
         )}
         <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0', active && 'text-[var(--color-primary)]')} />
@@ -113,15 +118,17 @@ export function AppSidebar() {
   const sidebarContent = (showLabel: boolean) => (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className={cn('flex items-center gap-3 border-b border-[var(--foreground)]/[0.06] px-4 py-5', !showLabel && 'justify-center px-2')}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)] shadow-md">
+      <div className={cn('flex items-center gap-3 border-b border-[var(--foreground)]/[0.12] px-4 py-5', !showLabel && 'justify-center px-2')}
+        style={{ background: 'linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.04) 0%, transparent 100%)' }}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-lg"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 80%, black))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.35)' }}>
           <Sparkles className="h-5 w-5 text-white" />
         </div>
         {showLabel && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div>
             <h1 className="text-base font-bold tracking-tight">{isAr ? 'عاداتي' : 'Habits'}</h1>
-            <p className="text-[10px] text-[var(--foreground)]/40 font-medium">{isAr ? 'منصة التطوير الذاتي' : 'Self-improvement OS'}</p>
-          </motion.div>
+            <p className="text-[10px] text-[var(--foreground)]/60 font-medium">{isAr ? 'منصة التطوير الذاتي' : 'Self-improvement OS'}</p>
+          </div>
         )}
       </div>
 
@@ -130,7 +137,7 @@ export function AppSidebar() {
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi}>
             {showLabel && (
-              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--foreground)]/30">
+              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--foreground)]/50">
                 {isAr ? group.titleAr : group.titleEn}
               </p>
             )}
@@ -144,7 +151,8 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-[var(--foreground)]/[0.06] px-3 py-3 space-y-0.5">
+      <div className="border-t border-[var(--foreground)]/[0.12] px-3 py-3 space-y-0.5"
+        style={{ background: 'linear-gradient(0deg, rgba(var(--color-primary-rgb) / 0.03) 0%, transparent 100%)' }}>
         {BOTTOM_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} showLabel={showLabel} />
         ))}
@@ -154,15 +162,6 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile trigger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 start-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--background)] shadow-lg border border-[var(--foreground)]/[0.08] lg:hidden"
-        aria-label="Open menu"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
       {/* Mobile overlay */}
       <AnimatePresence>
         {mobileOpen && (
@@ -171,7 +170,7 @@ export function AppSidebar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
+              onClick={onCloseMobile}
               className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm lg:hidden"
             />
             <motion.aside
@@ -179,11 +178,11 @@ export function AppSidebar() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: isAr ? 280 : -280, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 start-0 z-[var(--z-modal)] w-[280px] bg-[var(--background)] shadow-2xl lg:hidden"
+              className="fixed inset-y-0 start-0 z-[var(--z-modal)] w-[280px] bg-[var(--color-background)] shadow-2xl lg:hidden"
             >
               <button
-                onClick={() => setMobileOpen(false)}
-                className="absolute top-4 end-4 flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.05]"
+                onClick={onCloseMobile}
+                className="absolute top-4 end-4 flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.08]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -194,33 +193,20 @@ export function AppSidebar() {
       </AnimatePresence>
 
       {/* Desktop sidebar */}
-      <motion.aside
-        animate={{ width: collapsed ? 72 : 260 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      <aside
         className={cn(
           'hidden lg:flex flex-col fixed inset-y-0 start-0 z-[var(--z-sticky)]',
-          'bg-[var(--background)] border-e border-[var(--foreground)]/[0.06]',
+          'border-e border-[var(--foreground)]/[0.12]',
         )}
+        style={{
+          width: collapsed ? 72 : 260,
+          transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          background: 'var(--color-background)',
+          boxShadow: '2px 0 20px rgba(0,0,0,0.06), 1px 0 0 rgba(var(--color-primary-rgb) / 0.05)',
+        }}
       >
         {sidebarContent(!collapsed)}
-
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className={cn(
-            'absolute top-1/2 -translate-y-1/2 -end-3 z-10',
-            'flex h-6 w-6 items-center justify-center rounded-full',
-            'bg-[var(--background)] border border-[var(--foreground)]/[0.1]',
-            'shadow-sm hover:shadow-md transition-all duration-200',
-            'text-[var(--foreground)]/50 hover:text-[var(--foreground)]',
-          )}
-        >
-          {collapsed
-            ? (isAr ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />)
-            : (isAr ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />)
-          }
-        </button>
-      </motion.aside>
+      </aside>
     </>
   );
 }

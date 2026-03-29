@@ -63,12 +63,12 @@ export default function GoalsPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'الأهداف والمراحل' : 'Goals & Milestones'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">
             {isAr ? `${activeGoals.length} أهداف نشطة · ${completedGoals.length} مكتملة` : `${activeGoals.length} active · ${completedGoals.length} completed`}
           </p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true); }}
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 shadow-sm">
+          className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-4 py-2.5 text-sm font-medium">
           <Plus className="h-4 w-4" /> {isAr ? 'هدف جديد' : 'New Goal'}
         </button>
       </motion.div>
@@ -77,12 +77,12 @@ export default function GoalsPage() {
       <motion.div initial="hidden" animate="visible" className="space-y-4 mb-8">
         {activeGoals.length === 0 && completedGoals.length === 0 && (
           <div className="text-center py-16">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.04]">
-              <Target className="h-8 w-8 text-[var(--foreground)]/20" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+              <Target className="h-8 w-8 text-[var(--foreground)]/40" />
             </div>
-            <p className="text-sm text-[var(--foreground)]/40 mb-4">{isAr ? 'لا توجد أهداف بعد' : 'No goals yet'}</p>
+            <p className="text-sm text-[var(--foreground)]/60 mb-4">{isAr ? 'لا توجد أهداف بعد' : 'No goals yet'}</p>
             <button onClick={() => { resetForm(); setShowForm(true); }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90">
+              className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-5 py-2.5 text-sm font-medium">
               <Plus className="h-4 w-4" /> {isAr ? 'إضافة هدف' : 'Add Goal'}
             </button>
           </div>
@@ -90,14 +90,14 @@ export default function GoalsPage() {
 
         {activeGoals.map((goal, i) => (
           <motion.div key={goal.id} variants={fadeUp} custom={i + 1}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] overflow-hidden">
+            className="rounded-2xl app-card overflow-hidden">
             <div className="h-1" style={{ backgroundColor: goal.color }} />
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="text-base font-semibold">{isAr ? goal.titleAr : goal.titleEn}</h3>
                   {(goal.descriptionEn || goal.descriptionAr) && (
-                    <p className="text-xs text-[var(--foreground)]/40 mt-0.5">{isAr ? goal.descriptionAr : goal.descriptionEn}</p>
+                    <p className="text-xs text-[var(--foreground)]/60 mt-0.5">{isAr ? goal.descriptionAr : goal.descriptionEn}</p>
                   )}
                 </div>
                 <div className="flex gap-1">
@@ -112,7 +112,7 @@ export default function GoalsPage() {
                     setEditingGoal(goal.id);
                     setShowForm(true);
                   }} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
-                    <Edit3 className="h-3.5 w-3.5 text-[var(--foreground)]/40" />
+                    <Edit3 className="h-3.5 w-3.5 text-[var(--foreground)]/60" />
                   </button>
                   <button onClick={() => store.deleteGoal(goal.id)} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
                     <Trash2 className="h-3.5 w-3.5 text-red-400" />
@@ -139,8 +139,8 @@ export default function GoalsPage() {
                     className="w-full flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--foreground)]/[0.03] transition-all text-start">
                     {m.completed
                       ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      : <Circle className="h-4 w-4 text-[var(--foreground)]/20 shrink-0" />}
-                    <span className={cn('text-xs', m.completed && 'line-through text-[var(--foreground)]/40')}>
+                      : <Circle className="h-4 w-4 text-[var(--foreground)]/40 shrink-0" />}
+                    <span className={cn('text-xs', m.completed && 'line-through text-[var(--foreground)]/60')}>
                       {isAr ? m.titleAr : m.titleEn}
                     </span>
                   </button>
@@ -163,12 +163,12 @@ export default function GoalsPage() {
       {/* Completed Goals */}
       {completedGoals.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-[var(--foreground)]/40 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]/60 mb-3 flex items-center gap-2">
             <Award className="h-4 w-4" /> {isAr ? 'أهداف مكتملة' : 'Completed Goals'} ({completedGoals.length})
           </h2>
           <div className="space-y-2">
             {completedGoals.map(goal => (
-              <div key={goal.id} className="flex items-center gap-3 rounded-xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] px-4 py-3 opacity-60">
+              <div key={goal.id} className="flex items-center gap-3 rounded-xl app-card px-4 py-3 opacity-60">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
                 <span className="text-sm line-through">{isAr ? goal.titleAr : goal.titleEn}</span>
                 <span className="text-[10px] text-[var(--foreground)]/30 ms-auto">
@@ -186,13 +186,13 @@ export default function GoalsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm" />
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[520px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--background)] border border-[var(--foreground)]/[0.08] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[520px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
             >
-              <div className="sticky top-0 z-10 bg-[var(--background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.06]">
+              <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{editingGoal ? (isAr ? 'تعديل الهدف' : 'Edit Goal') : (isAr ? 'هدف جديد' : 'New Goal')}</h2>
                 <button onClick={() => { setShowForm(false); resetForm(); }} className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]"><X className="h-4 w-4" /></button>
               </div>
@@ -200,25 +200,25 @@ export default function GoalsPage() {
               <div className="p-5 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'العنوان (عربي)' : 'Title (Arabic)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'العنوان (عربي)' : 'Title (Arabic)'}</label>
                     <input dir="rtl" value={form.titleAr} onChange={e => setForm(f => ({ ...f, titleAr: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'العنوان (إنجليزي)' : 'Title (English)'}</label>
+                    <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'العنوان (إنجليزي)' : 'Title (English)'}</label>
                     <input dir="ltr" value={form.titleEn} onChange={e => setForm(f => ({ ...f, titleEn: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                      className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-1 block">{isAr ? 'تاريخ الهدف' : 'Target Date'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'تاريخ الهدف' : 'Target Date'}</label>
                   <input type="date" value={form.targetDate} onChange={e => setForm(f => ({ ...f, targetDate: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                    className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'اللون' : 'Color'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'اللون' : 'Color'}</label>
                   <div className="flex gap-2 flex-wrap">
                     {ITEM_COLORS.map(c => (
                       <button key={c} onClick={() => setForm(f => ({ ...f, color: c }))}
@@ -230,7 +230,7 @@ export default function GoalsPage() {
 
                 {/* Milestones */}
                 <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/50 mb-2 block">{isAr ? 'المراحل' : 'Milestones'}</label>
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'المراحل' : 'Milestones'}</label>
                   <div className="space-y-2">
                     {form.milestones.map((m, idx) => (
                       <div key={m.id} className="flex gap-2">
@@ -242,7 +242,7 @@ export default function GoalsPage() {
                             setForm(f => ({ ...f, milestones: updated }));
                           }}
                           placeholder={isAr ? `مرحلة ${idx + 1}` : `Milestone ${idx + 1}`}
-                          className="flex-1 rounded-xl border border-[var(--foreground)]/[0.08] bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-primary)]/40" />
+                          className="flex-1 rounded-xl app-input px-3 py-2 text-sm" />
                         {form.milestones.length > 1 && (
                           <button onClick={() => setForm(f => ({ ...f, milestones: f.milestones.filter((_, i) => i !== idx) }))}
                             className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05]">
@@ -259,11 +259,11 @@ export default function GoalsPage() {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-[var(--background)] flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.06]">
+              <div className="sticky bottom-0 bg-[var(--color-background)] flex justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
                 <button onClick={() => { setShowForm(false); resetForm(); }}
-                  className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/50">{isAr ? 'إلغاء' : 'Cancel'}</button>
+                  className="px-4 py-2 rounded-xl text-sm text-[var(--foreground)]/70">{isAr ? 'إلغاء' : 'Cancel'}</button>
                 <button onClick={handleSave}
-                  className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-sm font-medium text-white hover:opacity-90">
+                  className="px-5 py-2 rounded-xl app-btn-primary text-sm font-medium">
                   {editingGoal ? (isAr ? 'تحديث' : 'Update') : (isAr ? 'إنشاء' : 'Create')}
                 </button>
               </div>

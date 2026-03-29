@@ -31,6 +31,35 @@ function saveState(state: AppState) {
   } catch { /* storage full — silently fail */ }
 }
 
+// ── MongoDB Sync ──────────────────────────────────────────
+
+async function loadFromMongo(): Promise<AppState | null> {
+  try {
+    const res = await fetch('/api/state');
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    if (!data) return null;
+    return { ...DEFAULT_APP_STATE, ...data };
+  } catch {
+    return null;
+  }
+}
+
+let mongoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function saveToMongo(state: AppState) {
+  if (mongoSaveTimer) clearTimeout(mongoSaveTimer);
+  mongoSaveTimer = setTimeout(async () => {
+    try {
+      await fetch('/api/state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+      });
+    } catch { /* network error — silently fail, localStorage still has the data */ }
+  }, 1000);
+}
+
 // ── Context ────────────────────────────────────────────────
 
 interface AppStore extends AppState {
@@ -59,6 +88,7 @@ interface AppStore extends AppState {
   // Timers
   startTimer: (session: Omit<TimerSession, 'id' | 'completed' | 'distractionCount' | 'note'>) => string;
   updateActiveTimer: (updates: Partial<ActiveTimer>) => void;
+  tickActiveTimer: () => void;
   completeTimer: (sessionId: string, note?: string, productivityRating?: number) => void;
   cancelTimer: () => void;
   addDistraction: () => void;
@@ -91,6 +121,10 @@ interface AppStore extends AppState {
   logMood: (entry: Omit<MoodEntry, 'id'>) => MoodEntry;
   getMoodForDate: (date: string) => MoodEntry[];
 
+  // Custom categories
+  addCustomCategory: (name: string) => void;
+  deleteCustomCategory: (name: string) => void;
+
   // Settings
   updateSettings: (updates: Partial<UserSettings>) => void;
 
@@ -112,12 +146,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   stateRef.current = state;
 
   useEffect(() => {
-    setState(loadState());
+    // Load localStorage immediately, then try MongoDB for latest data
+    const local = loadState();
+    setState(local);
     setMounted(true);
+
+    loadFromMongo().then(remote => {
+      if (remote) {
+        setState(remote);
+        saveState(remote); // sync localStorage with MongoDB data
+      }
+    });
   }, []);
 
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (mounted) saveState(state);
+    if (!mounted) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveState(state);
+      saveToMongo(state);
+    }, 300);
   }, [state, mounted]);
 
   const update = useCallback((fn: (prev: AppState) => AppState) => {
@@ -365,6 +414,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     update(s => s.activeTimer ? { ...s, activeTimer: { ...s.activeTimer, ...updates } } : s);
   }, [update]);
 
+  const tickActiveTimer = useCallback(() => {
+    update(s => s.activeTimer && s.activeTimer.state === 'running'
+      ? { ...s, activeTimer: { ...s.activeTimer, elapsed: s.activeTimer.elapsed + 1 } }
+      : s);
+  }, [update]);
+
   const completeTimer = useCallback((sessionId: string, note?: string, productivityRating?: number) => {
     update(s => ({
       ...s,
@@ -512,6 +567,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return stateRef.current.moodEntries.filter(m => m.date === date);
   }, []);
 
+  // ── Custom Categories ──
+
+  const addCustomCategory = useCallback((name: string) => {
+    update(s => s.customCategories.includes(name) ? s : { ...s, customCategories: [...s.customCategories, name] });
+  }, [update]);
+
+  const deleteCustomCategory = useCallback((name: string) => {
+    update(s => ({ ...s, customCategories: s.customCategories.filter(c => c !== name) }));
+  }, [update]);
+
   // ── Settings ──
 
   const updateSettings = useCallback((updates: Partial<UserSettings>) => {
@@ -553,12 +618,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     isHabitCompletedToday, getTodayCompletionRate,
     addSkill, updateSkill, deleteSkill,
     logSkillSession, deleteSkillSession, getSkillSessions, getSkillStats,
-    startTimer, updateActiveTimer, completeTimer, cancelTimer, addDistraction,
+    startTimer, updateActiveTimer, tickActiveTimer, completeTimer, cancelTimer, addDistraction,
     addReminder, updateReminder, deleteReminder, toggleReminder,
     logHormone, deleteHormoneLog, getHormoneLogs,
     logNutrition, deleteNutritionLog, logHydration, getHydrationForDate, getNutritionForDate,
     addGoal, updateGoal, deleteGoal, toggleGoalMilestone,
     logMood, getMoodForDate,
+    addCustomCategory, deleteCustomCategory,
     updateSettings,
     getLogsForDate, exportData, importData, resetData,
   };

@@ -155,13 +155,13 @@ export default function AnalyticsPage() {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'التحليلات' : 'Analytics'}</h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-1">{isAr ? 'نظرة شاملة على أدائك' : 'Overview of your performance'}</p>
+          <p className="text-sm text-[var(--foreground)]/70 mt-1">{isAr ? 'نظرة شاملة على أدائك' : 'Overview of your performance'}</p>
         </div>
-        <div className="flex p-1 rounded-xl bg-[var(--foreground)]/[0.04]">
+        <div className="flex p-1 rounded-xl bg-[var(--foreground)]/[0.06]">
           {(['week', 'month', 'year'] as const).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
               className={cn('px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
-                period === p ? 'bg-[var(--background)] shadow-sm' : 'text-[var(--foreground)]/40')}>
+                period === p ? 'bg-[var(--color-background)] shadow-sm' : 'text-[var(--foreground)]/60')}>
               {p === 'week' ? (isAr ? 'أسبوع' : 'Week') : p === 'month' ? (isAr ? 'شهر' : 'Month') : (isAr ? 'سنة' : 'Year')}
             </button>
           ))}
@@ -177,9 +177,9 @@ export default function AnalyticsPage() {
           { labelEn: 'Avg Quality', labelAr: 'متوسط الجودة', value: `${avgQuality}/5`, icon: Star, color: 'text-amber-500 bg-amber-500/10' },
         ].map((s, i) => (
           <motion.div key={i} variants={fadeUp} custom={i + 1}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-4">
+            className="rounded-2xl app-stat-card p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-medium text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? s.labelAr : s.labelEn}</span>
+              <span className="text-[10px] font-medium text-[var(--foreground)]/60 uppercase tracking-wider">{isAr ? s.labelAr : s.labelEn}</span>
               <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg', s.color.split(' ')[1])}>
                 <s.icon className={cn('h-4 w-4', s.color.split(' ')[0])} />
               </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Daily Completion Chart */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-4">{isAr ? 'الإنجاز اليومي' : 'Daily Completion'}</h3>
             <div className="flex items-end gap-[2px] h-32 overflow-hidden">
               {dailyCompletion.map((day, i) => {
@@ -214,7 +214,7 @@ export default function AnalyticsPage() {
 
           {/* Weekday Performance */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-4">{isAr ? 'الأداء حسب اليوم' : 'Performance by Day'}</h3>
             <div className="flex items-end gap-2 h-24">
               {weekdayStats.map((count, i) => {
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
                     <span className="text-[10px] font-medium tabular-nums">{count}</span>
                     <div className={cn('w-full rounded-t-md transition-all', isBest ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-primary)]/30')}
                       style={{ height: `${Math.max(height, 4)}%` }} />
-                    <span className={cn('text-[10px]', isBest ? 'font-bold text-[var(--color-primary)]' : 'text-[var(--foreground)]/30')}>
+                    <span className={cn('text-[10px]', isBest ? 'font-bold text-[var(--color-primary)]' : 'text-[var(--foreground)]/50')}>
                       {dayLabels[i]}
                     </span>
                   </div>
@@ -237,9 +237,9 @@ export default function AnalyticsPage() {
 
           {/* Hourly Focus Distribution */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-1">{isAr ? 'توزيع التركيز بالساعة' : 'Focus Distribution by Hour'}</h3>
-            <p className="text-xs text-[var(--foreground)]/40 mb-4">
+            <p className="text-xs text-[var(--foreground)]/60 mb-4">
               {peakHour >= 0 && hourlyFocus[peakHour] > 0
                 ? (isAr ? `ذروة التركيز: ${peakHour}:00` : `Peak focus: ${peakHour}:00`)
                 : (isAr ? 'لا توجد بيانات' : 'No data yet')}
@@ -255,11 +255,11 @@ export default function AnalyticsPage() {
               })}
             </div>
             <div className="flex justify-between mt-1">
-              <span className="text-[8px] text-[var(--foreground)]/20">00</span>
-              <span className="text-[8px] text-[var(--foreground)]/20">06</span>
-              <span className="text-[8px] text-[var(--foreground)]/20">12</span>
-              <span className="text-[8px] text-[var(--foreground)]/20">18</span>
-              <span className="text-[8px] text-[var(--foreground)]/20">24</span>
+              <span className="text-[8px] text-[var(--foreground)]/40">00</span>
+              <span className="text-[8px] text-[var(--foreground)]/40">06</span>
+              <span className="text-[8px] text-[var(--foreground)]/40">12</span>
+              <span className="text-[8px] text-[var(--foreground)]/40">18</span>
+              <span className="text-[8px] text-[var(--foreground)]/40">24</span>
             </div>
           </motion.div>
         </div>
@@ -267,13 +267,13 @@ export default function AnalyticsPage() {
         <div className="space-y-6">
           {/* Smart Insights */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <Brain className="h-4 w-4 text-[var(--color-primary)]" />
               {isAr ? 'رؤى ذكية' : 'Smart Insights'}
             </h3>
             {insights.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'ابدأ التتبع للحصول على رؤى' : 'Start tracking to get insights'}</p>
+              <p className="text-xs text-[var(--foreground)]/50 text-center py-4">{isAr ? 'ابدأ التتبع للحصول على رؤى' : 'Start tracking to get insights'}</p>
             ) : (
               <div className="space-y-3">
                 {insights.map((ins, i) => (
@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
                     <div className={cn('mt-0.5 flex h-6 w-6 items-center justify-center rounded-lg shrink-0', ins.color.replace('text-', 'bg-').replace('500', '500/10'))}>
                       <ins.icon className={cn('h-3.5 w-3.5', ins.color)} />
                     </div>
-                    <p className="text-xs text-[var(--foreground)]/60 leading-relaxed">{isAr ? ins.textAr : ins.textEn}</p>
+                    <p className="text-xs text-[var(--foreground)]/80 leading-relaxed">{isAr ? ins.textAr : ins.textEn}</p>
                   </div>
                 ))}
               </div>
@@ -290,17 +290,17 @@ export default function AnalyticsPage() {
 
           {/* Top Skills */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-3">{isAr ? 'أفضل المهارات' : 'Top Skills'}</h3>
             {topSkills.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'لا توجد بيانات' : 'No data'}</p>
+              <p className="text-xs text-[var(--foreground)]/50 text-center py-4">{isAr ? 'لا توجد بيانات' : 'No data'}</p>
             ) : (
               <div className="space-y-3">
                 {topSkills.map(({ skill, minutes }, i) => (
                   <div key={skill!.id}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium">{isAr ? skill!.nameAr : skill!.nameEn}</span>
-                      <span className="text-[10px] text-[var(--foreground)]/40">{formatDuration(minutes)}</span>
+                      <span className="text-[10px] text-[var(--foreground)]/60">{formatDuration(minutes)}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
                       <div className="h-full rounded-full" style={{
@@ -316,22 +316,22 @@ export default function AnalyticsPage() {
 
           {/* Streak Rankings */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7}
-            className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-5">
+            className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-3">{isAr ? 'ترتيب السلاسل' : 'Streak Rankings'}</h3>
             {allStreaks.filter(s => s.streak.current > 0 || s.streak.best > 0).length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'لا توجد سلاسل' : 'No streaks yet'}</p>
+              <p className="text-xs text-[var(--foreground)]/50 text-center py-4">{isAr ? 'لا توجد سلاسل' : 'No streaks yet'}</p>
             ) : (
               <div className="space-y-2">
                 {allStreaks.filter(s => s.streak.best > 0).slice(0, 5).map(({ habit, streak }, i) => (
                   <div key={habit.id} className="flex items-center gap-3 rounded-lg bg-[var(--foreground)]/[0.03] px-3 py-2">
-                    <span className="text-xs font-bold text-[var(--foreground)]/30 w-4">#{i + 1}</span>
+                    <span className="text-xs font-bold text-[var(--foreground)]/50 w-4">#{i + 1}</span>
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: habit.color }} />
                     <span className="text-xs flex-1 truncate">{isAr ? habit.nameAr : habit.nameEn}</span>
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-0.5 text-[10px]">
                         <Flame className="h-3 w-3 text-orange-400" /> {streak.current}
                       </span>
-                      <span className="flex items-center gap-0.5 text-[10px] text-[var(--foreground)]/30">
+                      <span className="flex items-center gap-0.5 text-[10px] text-[var(--foreground)]/50">
                         <Award className="h-3 w-3" /> {streak.best}
                       </span>
                     </div>
