@@ -73,12 +73,18 @@ function useGlobalAlarmChecker() {
           }
 
           // One-time alarm
-          if (alarm.oneTimeDate && alarm.days.length === 0) {
+          if (alarm.oneTimeDate && (!alarm.days || alarm.days.length === 0)) {
             return alarm.oneTimeDate === todayStr;
           }
 
-          // Recurring: check day
-          if (alarm.days.length > 0) {
+          // Recurring: check based on schedule mode
+          if (alarm.scheduleMode === 'monthdays' && alarm.monthDays?.length) {
+            return alarm.monthDays.includes(now.getDate());
+          }
+          if (alarm.scheduleMode === 'yeardays' && alarm.yearDays?.length) {
+            return alarm.yearDays.some(yd => yd.month === now.getMonth() && yd.day === now.getDate());
+          }
+          if (alarm.days?.length > 0) {
             return alarm.days.includes(currentDay);
           }
 

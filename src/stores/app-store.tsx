@@ -411,6 +411,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const scheduleType = habit?.scheduleType ?? (habit?.frequency === 'custom' ? 'custom' : habit?.frequency === 'weekly' ? 'weekly' : 'daily');
     const isScheduledDay = (dateStr: string) => {
       if (scheduleType === 'daily') return true;
+      if (habit?.frequency === 'custom' && habit?.customScheduleType) {
+        const d = new Date(dateStr);
+        if (habit.customScheduleType === 'weekdays' && habit.customDays?.length) {
+          return habit.customDays.includes(d.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6);
+        }
+        if (habit.customScheduleType === 'monthdays' && habit.customMonthDays?.length) {
+          return habit.customMonthDays.includes(d.getDate());
+        }
+        if (habit.customScheduleType === 'yeardays' && habit.customYearDays?.length) {
+          return habit.customYearDays.some(yd => yd.month === d.getMonth() && yd.day === d.getDate());
+        }
+      }
       if (scheduleType === 'custom' && scheduleDays.length > 0) {
         const dayOfWeek = new Date(dateStr).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
         return scheduleDays.includes(dayOfWeek);
@@ -475,11 +487,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const today = todayString();
     const activeHabits = stateRef.current.habits.filter(h => !h.archived);
     if (activeHabits.length === 0) return 0;
+    const todayDate = new Date(today);
     const todayHabits = activeHabits.filter(h => {
       if (h.frequency === 'daily') return true;
       if (h.frequency === 'weekly') {
-        const dayOfWeek = new Date(today).getDay() as number;
+        const dayOfWeek = todayDate.getDay() as number;
         return h.customDays?.includes(dayOfWeek as any) ?? dayOfWeek === 0;
+      }
+      if (h.frequency === 'custom' && h.customScheduleType) {
+        if (h.customScheduleType === 'weekdays' && h.customDays?.length) {
+          return h.customDays.includes(todayDate.getDay() as any);
+        }
+        if (h.customScheduleType === 'monthdays' && h.customMonthDays?.length) {
+          return h.customMonthDays.includes(todayDate.getDate());
+        }
+        if (h.customScheduleType === 'yeardays' && h.customYearDays?.length) {
+          return h.customYearDays.some(yd => yd.month === todayDate.getMonth() && yd.day === todayDate.getDate());
+        }
       }
       return true;
     });

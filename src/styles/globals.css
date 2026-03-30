@@ -79,7 +79,7 @@
   --color-card-foreground: #000000;
   --color-popover: #ffffff;
   --color-popover-foreground: #000000;
-  --color-primary: #E11D48;
+  --color-primary: #0066FF;
   --color-primary-foreground: #ffffff;
   --color-secondary: #ffffff;
   --color-secondary-foreground: #000000;
@@ -95,8 +95,8 @@
   --color-warning-foreground: #000000;
   --color-border: rgba(0, 0, 0, 0.12);
   --color-input: rgba(0, 0, 0, 0.12);
-  --color-ring: #E11D48;
-  --color-primary-rgb: 225 29 72;
+  --color-ring: #0066FF;
+  --color-primary-rgb: 0 102 255;
 }
 
 /* ── Dark Theme ── */
@@ -109,7 +109,7 @@
   --color-card-foreground: #ffffff;
   --color-popover: #000000;
   --color-popover-foreground: #ffffff;
-  --color-primary: #FB7185;
+  --color-primary: #3388FF;
   --color-primary-foreground: #ffffff;
   --color-secondary: #000000;
   --color-secondary-foreground: #ffffff;
@@ -125,8 +125,8 @@
   --color-warning-foreground: #ffffff;
   --color-border: rgba(255, 255, 255, 0.12);
   --color-input: rgba(255, 255, 255, 0.12);
-  --color-ring: #FB7185;
-  --color-primary-rgb: 251 113 133;
+  --color-ring: #3388FF;
+  --color-primary-rgb: 51 136 255;
 }
 
 /* ── Custom Design Tokens (outside @theme) ── */
@@ -1139,6 +1139,136 @@ h3 {
 }
 .habit-card-animated-border:hover::before {
   opacity: 0.5;
+}
+
+/* ── Habit card inner element hover effects ── */
+.habit-card-animated-border .hc-hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.25s ease,
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+.habit-card-animated-border .hc-hover:hover {
+  transform: scale(1.025);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.habit-card-animated-border .hc-hover:active {
+  transform: scale(0.97);
+}
+.habit-card-animated-border .hc-badge {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              box-shadow 0.2s ease;
+}
+.habit-card-animated-border .hc-badge:hover {
+  transform: scale(1.08) translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
+}
+.habit-card-animated-border .hc-stat {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.22s ease,
+              box-shadow 0.22s ease;
+}
+.habit-card-animated-border .hc-stat:hover {
+  transform: scale(1.06) translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.habit-card-animated-border .hc-dot {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s ease;
+}
+.habit-card-animated-border .hc-dot:hover {
+  transform: scale(1.6) translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.habit-card-animated-border .hc-action {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              box-shadow 0.2s ease,
+              border-color 0.2s ease;
+}
+.habit-card-animated-border .hc-action:hover {
+  transform: scale(1.035) translateY(-1px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+.habit-card-animated-border .hc-action:active {
+  transform: scale(0.96);
+}
+.habit-card-animated-border .hc-tier {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.22s ease,
+              box-shadow 0.22s ease;
+}
+.habit-card-animated-border .hc-tier:hover {
+  transform: scale(1.02) translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+.habit-card-animated-border .hc-loop {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              box-shadow 0.2s ease;
+}
+.habit-card-animated-border .hc-loop:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+.habit-card-animated-border .hc-order {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s ease;
+}
+.habit-card-animated-border .hc-order:hover {
+  transform: scale(1.15) rotate(-3deg);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+.habit-card-animated-border .hc-banner {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s ease;
+}
+.habit-card-animated-border .hc-banner:hover {
+  transform: scale(1.02);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
+.habit-card-animated-border .hc-info {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s ease;
+}
+.habit-card-animated-border .hc-info:hover {
+  transform: scale(1.02) translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+.habit-card-animated-border .hc-empty {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease;
+}
+.habit-card-animated-border .hc-empty:hover {
+  transform: scale(1.02);
+  border-color: rgba(var(--color-primary-rgb) / 0.15);
+}
+.habit-card-animated-border .hc-timer {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s ease;
+}
+.habit-card-animated-border .hc-timer:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.habit-card-animated-border .hc-count-btn {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.18s ease,
+              box-shadow 0.18s ease;
+}
+.habit-card-animated-border .hc-count-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+.habit-card-animated-border .hc-count-btn:active {
+  transform: scale(0.92);
+}
+.habit-card-animated-border .hc-note {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.habit-card-animated-border .hc-note:hover {
+  transform: scale(1.01);
 }
 
 /* ── App: Input with theme focus ── */
@@ -2721,10 +2851,12 @@ select.app-input option {
    LAYER 16 — PERFORMANCE
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Lazy sections ── */
-.section-lazy {
+/* ── Lazy sections — all sections below fold get containment ── */
+.section-lazy,
+main > section:not(:first-child),
+main > div > section:not(:first-child) {
   content-visibility: auto;
-  contain-intrinsic-size: 0 400px;
+  contain-intrinsic-size: 0 500px;
 }
 
 /* ── Containment for heavy components ── */

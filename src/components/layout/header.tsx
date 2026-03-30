@@ -507,7 +507,7 @@ export function Header() {
                       )}
                       style={{
                         background: "linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))",
-                        animation: "logoFloat 6s ease-in-out infinite",
+                        /* logoFloat removed for performance */
                       }}
                       initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                       animate={{ opacity: 1, scale: 1, rotate: 0 }}

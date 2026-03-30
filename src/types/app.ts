@@ -17,6 +17,7 @@ export type HormoneType = 'dopamine' | 'serotonin' | 'oxytocin' | 'endorphins';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type Urgency = 'low' | 'normal' | 'high';
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type CustomScheduleType = 'weekdays' | 'monthdays' | 'yeardays';
 export type AlarmType = 'habit' | 'skill' | 'independent';
 export type AlarmSound = 'classic' | 'digital' | 'gentle' | 'urgent' | 'nature' | 'bell' | 'siren' | 'melody' | 'chime' | 'rooster';
 export type AlarmStatus = 'idle' | 'ringing' | 'snoozed';
@@ -76,6 +77,9 @@ export interface Habit {
   category: HabitCategory;
   frequency: HabitFrequency;
   customDays?: WeekDay[];
+  customScheduleType?: CustomScheduleType; // 'weekdays' | 'monthdays' | 'yeardays'
+  customMonthDays?: number[];              // 1-31, specific days of the month
+  customYearDays?: { month: number; day: number }[]; // specific month/day combos in a year
   priority: Priority;
   difficulty: Difficulty;
   color: string;
@@ -253,6 +257,9 @@ export interface Reminder {
   time: string;
   days: WeekDay[];
   recurring: boolean;
+  scheduleMode?: 'weekdays' | 'monthdays' | 'yeardays'; // custom schedule mode
+  monthDays?: number[];              // 1-31, specific days of the month
+  yearDays?: { month: number; day: number }[]; // specific month/day combos in a year
   urgency: Urgency;
   sound: string;
   enabled: boolean;
@@ -269,6 +276,9 @@ export interface Alarm {
   linkedId?: string;           // habitId or skillId when linked
   time: string;                // HH:mm — alarm trigger time
   days: WeekDay[];             // which days to ring (empty = one-time)
+  scheduleMode?: 'weekdays' | 'monthdays' | 'yeardays'; // custom schedule mode
+  monthDays?: number[];              // 1-31, specific days of the month
+  yearDays?: { month: number; day: number }[]; // specific month/day combos in a year
   oneTimeDate?: string;        // YYYY-MM-DD for one-time alarms
   sound: AlarmSound;
   volume: number;              // 0-100
@@ -556,7 +566,7 @@ export const ITEM_COLORS = [
 // For 'theme', reads the live --color-primary CSS variable
 export function resolveHabitColor(color: string): string {
   if (color !== 'theme') return color;
-  if (typeof window === 'undefined') return '#E11D48';
-  return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#E11D48';
+  if (typeof window === 'undefined') return '#0066FF';
+  return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#0066FF';
 }
 

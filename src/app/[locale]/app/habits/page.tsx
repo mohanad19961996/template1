@@ -11,7 +11,7 @@ import { useToast } from '@/components/app/toast-notifications';
 import {
   Habit, HabitLog, DEFAULT_HABIT_CATEGORIES, HabitCategory, HabitFrequency,
   HabitType, HabitTrackingType, Priority, Difficulty, todayString, generateId, ITEM_COLORS,
-  WeekDay, formatDuration, formatTimerDuration, resolveHabitColor,
+  WeekDay, CustomScheduleType, formatDuration, formatTimerDuration, resolveHabitColor,
 } from '@/types/app';
 import {
   Plus, CheckCircle2, Circle, Flame, Filter, Search, X, Archive,
@@ -55,6 +55,17 @@ const FREQ_LABELS: Record<string, { en: string; ar: string }> = {
 const DAY_LABELS = {
   en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   ar: ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
+};
+
+const MONTH_LABELS = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+};
+
+const CUSTOM_SCHEDULE_LABELS: Record<string, { en: string; ar: string }> = {
+  weekdays: { en: 'Specific Weekdays', ar: 'أيام محددة من الأسبوع' },
+  monthdays: { en: 'Specific Days of Month', ar: 'أيام محددة من الشهر' },
+  yeardays: { en: 'Specific Days of Year', ar: 'أيام محددة من السنة' },
 };
 
 function getHabitTimeStats(habitId: string, logs: HabitLog[]) {
@@ -209,6 +220,14 @@ export default function HabitsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'done' | 'pending' | 'missed'>('all');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  // Live clock state
+  const [clockNow, setClockNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setClockNow(new Date());
+    const id = setInterval(() => setClockNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // Auto-complete: when timed habit timer reaches expectedDuration, auto-log
   const autoCompleteRef = useRef<string | null>(null);
   useEffect(() => {
@@ -241,6 +260,9 @@ export default function HabitsPage() {
     category: 'health' as HabitCategory,
     frequency: 'daily' as HabitFrequency,
     customDays: [] as WeekDay[],
+    customScheduleType: 'weekdays' as CustomScheduleType,
+    customMonthDays: [] as number[],
+    customYearDays: [] as { month: number; day: number }[],
     priority: 'medium' as Priority,
     difficulty: 'medium' as Difficulty,
     color: ITEM_COLORS[0],
@@ -270,6 +292,7 @@ export default function HabitsPage() {
     setFormData({
       nameEn: '', nameAr: '', descriptionEn: '', descriptionAr: '',
       category: 'health', frequency: 'daily', customDays: [],
+      customScheduleType: 'weekdays' as CustomScheduleType, customMonthDays: [], customYearDays: [],
       priority: 'medium', difficulty: 'medium', color: ITEM_COLORS[0],
       icon: 'Activity', type: 'positive',
       trackingType: 'boolean', targetValue: 1, targetUnit: 'times',
@@ -308,6 +331,9 @@ export default function HabitsPage() {
       descriptionEn: habit.descriptionEn, descriptionAr: habit.descriptionAr,
       category: habit.category, frequency: habit.frequency,
       customDays: habit.customDays ?? [],
+      customScheduleType: habit.customScheduleType ?? 'weekdays',
+      customMonthDays: habit.customMonthDays ?? [],
+      customYearDays: habit.customYearDays ?? [],
       priority: habit.priority, difficulty: habit.difficulty,
       color: habit.color, icon: habit.icon, type: habit.type,
       trackingType: habit.trackingType ?? 'boolean',
@@ -349,8 +375,13 @@ export default function HabitsPage() {
       if (conflict) return;
     }
     const { orderNumber, streakGoal, streakGoal2, streakGoal3, maxDailyReps, ...rest } = formData;
+    const isCustom = formData.frequency === 'custom';
     const data = {
       ...rest,
+      customScheduleType: isCustom ? formData.customScheduleType : undefined,
+      customDays: isCustom && formData.customScheduleType === 'weekdays' ? formData.customDays : (formData.frequency === 'weekly' ? formData.customDays : undefined),
+      customMonthDays: isCustom && formData.customScheduleType === 'monthdays' ? formData.customMonthDays : undefined,
+      customYearDays: isCustom && formData.customScheduleType === 'yeardays' ? formData.customYearDays : undefined,
       expectedDuration: formData.expectedDuration ? Number(formData.expectedDuration) : undefined,
       windowStart: formData.windowStart || undefined,
       windowEnd: formData.windowEnd || undefined,
@@ -486,6 +517,51 @@ export default function HabitsPage() {
         </motion.p>
       </motion.div>
 
+      {/* ═══ Live Clock & Date ═══ */}
+      {clockNow && <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="flex flex-col items-center mb-8"
+      >
+        <div className="relative overflow-hidden rounded-2xl px-8 py-5 border border-[var(--foreground)]/[0.08] bg-[var(--color-background)]"
+          style={{ boxShadow: '0 4px 24px rgba(var(--color-primary-rgb) / 0.08)' }}>
+          {/* Subtle accent line */}
+          <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, var(--color-primary), transparent)` }} />
+          {/* Time */}
+          <div className="flex items-baseline justify-center gap-1 font-mono" dir="ltr">
+            <span className="text-4xl sm:text-5xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+              {String(clockNow.getHours() % 12 || 12).padStart(2, '0')}
+            </span>
+            <motion.span
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="text-4xl sm:text-5xl font-black" style={{ color: 'var(--color-primary)' }}
+            >:</motion.span>
+            <span className="text-4xl sm:text-5xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+              {String(clockNow.getMinutes()).padStart(2, '0')}
+            </span>
+            <motion.span
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="text-4xl sm:text-5xl font-black" style={{ color: 'var(--color-primary)' }}
+            >:</motion.span>
+            <span className="text-4xl sm:text-5xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+              {String(clockNow.getSeconds()).padStart(2, '0')}
+            </span>
+            <span className="text-sm sm:text-base font-bold ms-2 text-[var(--foreground)]/50">
+              {clockNow.getHours() >= 12 ? 'PM' : 'AM'}
+            </span>
+          </div>
+          {/* Date */}
+          <div className="text-center mt-2">
+            <p className="text-sm font-semibold text-[var(--foreground)]/60">
+              {clockNow.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+        </div>
+      </motion.div>}
+
       {/* ═══ Inspirational Quote ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -580,13 +656,17 @@ export default function HabitsPage() {
         <>
           {/* Stats Bar */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="grid grid-cols-3 gap-3 mb-6">
-            <motion.div whileHover={{ scale: 1.02, y: -2 }} className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.04] p-5 text-center transition-shadow hover:shadow-lg cursor-default">
-              <Target className="h-5 w-5 text-blue-500 mx-auto mb-2" />
+            <motion.div whileHover={{ scale: 1.02, y: -3 }} className="rounded-2xl border border-[var(--color-primary)]/15 p-5 text-center cursor-default transition-all duration-300 hover:border-[var(--color-primary)]/30 hover:shadow-[0_8px_30px_rgba(var(--color-primary-rgb)/0.12)]" style={{ background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
+              <div className="h-10 w-10 rounded-xl mx-auto mb-2.5 flex items-center justify-center transition-all duration-300" style={{ background: 'rgba(var(--color-primary-rgb) / 0.08)', border: '1px solid rgba(var(--color-primary-rgb) / 0.1)' }}>
+                <Target className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
+              </div>
               <p className="text-3xl font-black tracking-tight">{activeHabitsCount}</p>
               <p className="text-xs font-bold text-[var(--foreground)]/70 mt-1">{isAr ? 'عادات نشطة' : 'Active Habits'}</p>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.02, y: -2 }} className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.04] p-5 text-center transition-shadow hover:shadow-lg cursor-default">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 mx-auto mb-2" />
+            <motion.div whileHover={{ scale: 1.02, y: -3 }} className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.03] p-5 text-center cursor-default transition-all duration-300 hover:border-emerald-500/30 hover:shadow-[0_8px_30px_rgba(16,185,129,0.12)]">
+              <div className="h-10 w-10 rounded-xl mx-auto mb-2.5 flex items-center justify-center bg-emerald-500/8 border border-emerald-500/10 transition-all duration-300">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              </div>
               <p className="text-3xl font-black tracking-tight">{completedTodayCount}<span className="text-lg font-bold text-[var(--foreground)]/40"> / {activeHabitsCount}</span></p>
               <p className="text-xs font-bold text-[var(--foreground)]/70 mt-1">{isAr ? 'مكتملة اليوم' : 'Done Today'}</p>
               {activeHabitsCount > 0 && (
@@ -597,8 +677,10 @@ export default function HabitsPage() {
                 </div>
               )}
             </motion.div>
-            <motion.div whileHover={{ scale: 1.02, y: -2 }} className="rounded-2xl border border-amber-500/15 bg-amber-500/[0.04] p-5 text-center transition-shadow hover:shadow-lg cursor-default">
-              <Archive className="h-5 w-5 text-amber-500 mx-auto mb-2" />
+            <motion.div whileHover={{ scale: 1.02, y: -3 }} className="rounded-2xl border border-amber-500/15 bg-amber-500/[0.03] p-5 text-center cursor-default transition-all duration-300 hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgba(245,158,11,0.12)]">
+              <div className="h-10 w-10 rounded-xl mx-auto mb-2.5 flex items-center justify-center bg-amber-500/8 border border-amber-500/10 transition-all duration-300">
+                <Archive className="h-5 w-5 text-amber-500" />
+              </div>
               <p className="text-3xl font-black tracking-tight">{store.habits.filter(h => h.archived).length}</p>
               <p className="text-xs font-bold text-[var(--foreground)]/70 mt-1">{isAr ? 'مؤرشفة' : 'Archived'}</p>
             </motion.div>
@@ -618,57 +700,87 @@ export default function HabitsPage() {
               const current = views.find(v => v.key === viewMode) || views[0];
               return (
                 <div className="relative group/view">
-                  <button className="flex items-center gap-2 rounded-xl border border-[var(--foreground)]/[0.12] bg-[var(--color-primary)]/5 px-4 py-2.5 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)]/25 transition-all">
-                    <current.icon className="h-4 w-4 text-[var(--color-primary)]" />
+                  <button className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-all duration-300 group-hover/view:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.1)]" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.15)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.35)'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.15)'; }}>
+                    <current.icon className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
                     {isAr ? current.ar : current.en}
-                    <ChevronDown className="h-3.5 w-3.5 text-[var(--foreground)]/50" />
+                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover/view:rotate-180" style={{ color: 'rgba(var(--color-primary-rgb) / 0.5)' }} />
                   </button>
-                  <div className="absolute top-full mt-1.5 start-0 z-50 w-48 rounded-xl border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] shadow-xl py-1.5 opacity-0 invisible group-hover/view:opacity-100 group-hover/view:visible transition-all duration-200">
-                    {views.map(v => (
-                      <button key={v.key} onClick={() => setViewMode(v.key)}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all',
-                          viewMode === v.key
-                            ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                            : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.06]'
-                        )}>
-                        <v.icon className="h-4 w-4" />
-                        {isAr ? v.ar : v.en}
-                        {viewMode === v.key && <CheckCircle2 className="h-3.5 w-3.5 ms-auto text-[var(--color-primary)]" />}
-                      </button>
-                    ))}
+                  <div className="absolute top-full pt-1.5 start-0 z-50 w-52 opacity-0 invisible group-hover/view:opacity-100 group-hover/view:visible transition-all duration-200 translate-y-1 group-hover/view:translate-y-0">
+                    <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: 'var(--color-background)', border: '1px solid rgba(var(--color-primary-rgb) / 0.12)' }}>
+                      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
+                      <div className="py-1.5">
+                        {views.map(v => (
+                          <button key={v.key} onClick={() => setViewMode(v.key)}
+                            className={cn(
+                              'w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all duration-200',
+                              viewMode === v.key
+                                ? 'text-white'
+                                : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]'
+                            )}
+                            style={viewMode === v.key ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
+                            <v.icon className="h-4 w-4" />
+                            {isAr ? v.ar : v.en}
+                            {viewMode === v.key && <CheckCircle2 className="h-3.5 w-3.5 ms-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
             })()}
 
             {/* Category Filter */}
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
-              className="rounded-xl border border-[var(--foreground)]/[0.12] bg-transparent px-4 py-2.5 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2] focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-all cursor-pointer">
-              <option value="all">{isAr ? 'كل الفئات' : 'All Categories'}</option>
-              {allCategories.map(c => (
-                <option key={c} value={c}>{isAr ? (CATEGORY_LABELS[c]?.ar ?? c) : (CATEGORY_LABELS[c]?.en ?? c)}</option>
-              ))}
-            </select>
+            <div className="relative group/cat">
+              <button className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer group-hover/cat:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.1)]" style={{ borderColor: filterCategory !== 'all' ? 'rgba(var(--color-primary-rgb) / 0.3)' : 'rgba(var(--color-primary-rgb) / 0.12)', background: filterCategory !== 'all' ? 'rgba(var(--color-primary-rgb) / 0.06)' : 'transparent', color: filterCategory !== 'all' ? 'var(--color-primary)' : 'var(--foreground)' }}>
+                <Filter className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
+                {filterCategory === 'all' ? (isAr ? 'كل الفئات' : 'All Categories') : (isAr ? (CATEGORY_LABELS[filterCategory]?.ar ?? filterCategory) : (CATEGORY_LABELS[filterCategory]?.en ?? filterCategory))}
+                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover/cat:rotate-180" style={{ color: 'rgba(var(--color-primary-rgb) / 0.5)' }} />
+              </button>
+              <div className="absolute top-full pt-1.5 start-0 z-50 w-52 max-h-[320px] opacity-0 invisible group-hover/cat:opacity-100 group-hover/cat:visible transition-all duration-200 translate-y-1 group-hover/cat:translate-y-0">
+                <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: 'var(--color-background)', border: '1px solid rgba(var(--color-primary-rgb) / 0.12)' }}>
+                  <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
+                  <div className="py-1.5 max-h-[300px] overflow-y-auto">
+                    {[{ value: 'all', label: isAr ? 'كل الفئات' : 'All Categories' }, ...allCategories.map(c => ({ value: c, label: isAr ? (CATEGORY_LABELS[c]?.ar ?? c) : (CATEGORY_LABELS[c]?.en ?? c) }))].map(opt => (
+                      <button key={opt.value} onClick={() => setFilterCategory(opt.value)}
+                        className={cn('w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all duration-200', filterCategory === opt.value ? 'text-white' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                        style={filterCategory === opt.value ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
+                        {opt.label}
+                        {filterCategory === opt.value && <CheckCircle2 className="h-3.5 w-3.5 ms-auto" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Archive */}
             <button onClick={() => setShowArchived(!showArchived)}
-              className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all',
+              className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer',
                 showArchived
-                  ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                  : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2]')}>
+                  ? 'text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.2)]'
+                  : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]')}
+              style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+              onMouseEnter={(e) => { if (!showArchived) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; }}
+              onMouseLeave={(e) => { if (!showArchived) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; }}>
               <Archive className="h-4 w-4" />
               {showArchived ? (isAr ? 'المؤرشفة' : 'Archived') : (isAr ? 'الأرشيف' : 'Archive')}
             </button>
 
             {/* Compliance */}
             <button onClick={() => setShowFullTable(true)}
-              className="flex items-center gap-2 rounded-xl border border-[var(--foreground)]/[0.12] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2] transition-all">
+              className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-all duration-300 cursor-pointer hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]"
+              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.04)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.background = 'transparent'; }}>
               <Table2 className="h-4 w-4" />
               {isAr ? 'جدول الالتزام' : 'Compliance Table'}
             </button>
             <Link href="/app/habits/log"
-              className="flex items-center gap-2 rounded-xl border border-[var(--foreground)]/[0.12] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2] transition-all">
+              className="habits-toolbar-btn flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-all duration-300 hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]"
+              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.04)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.background = 'transparent'; }}>
               <CalendarIcon className="h-4 w-4" />
               {isAr ? 'السجل' : 'History'}
             </Link>
@@ -676,10 +788,13 @@ export default function HabitsPage() {
             {/* Categories */}
             <div className="relative z-[100]">
               <button onClick={() => setShowCategoryManager(!showCategoryManager)}
-                className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all',
+                className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer',
                   showCategoryManager
-                    ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                    : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2]')}>
+                    ? 'text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.2)]'
+                    : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]')}
+                style={showCategoryManager ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+                onMouseEnter={(e) => { if (!showCategoryManager) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; }}
+                onMouseLeave={(e) => { if (!showCategoryManager) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; }}>
                 <Plus className="h-4 w-4" />
                 {isAr ? 'الفئات' : 'Categories'}
               </button>
@@ -752,26 +867,55 @@ export default function HabitsPage() {
             </div>
 
             {/* Sort */}
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="rounded-xl border border-[var(--foreground)]/[0.12] bg-transparent px-4 py-2.5 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2] focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-all cursor-pointer">
-              <option value="default">{isAr ? 'ترتيب افتراضي' : 'Default Order'}</option>
-              <option value="name">{isAr ? 'الاسم' : 'Name'}</option>
-              <option value="priority">{isAr ? 'الأولوية' : 'Priority'}</option>
-              <option value="newest">{isAr ? 'الأحدث' : 'Newest'}</option>
-              <option value="streak">{isAr ? 'السلسلة' : 'Streak'}</option>
-              <option value="completion">{isAr ? 'نسبة الإنجاز' : 'Completion %'}</option>
-              <option value="order">{isAr ? 'رقم الترتيب' : 'Order Number'}</option>
-              <option value="custom">{isAr ? 'ترتيب يدوي (سحب)' : 'Custom (Drag)'}</option>
-            </select>
+            {(() => {
+              const sortOptions = [
+                { value: 'default' as const, en: 'Default Order', ar: 'ترتيب افتراضي' },
+                { value: 'name' as const, en: 'Name', ar: 'الاسم' },
+                { value: 'priority' as const, en: 'Priority', ar: 'الأولوية' },
+                { value: 'newest' as const, en: 'Newest', ar: 'الأحدث' },
+                { value: 'streak' as const, en: 'Streak', ar: 'السلسلة' },
+                { value: 'completion' as const, en: 'Completion %', ar: 'نسبة الإنجاز' },
+                { value: 'order' as const, en: 'Order Number', ar: 'رقم الترتيب' },
+                { value: 'custom' as const, en: 'Custom (Drag)', ar: 'ترتيب يدوي (سحب)' },
+              ];
+              const currentSort = sortOptions.find(s => s.value === sortBy) || sortOptions[0];
+              return (
+                <div className="relative group/sort">
+                  <button className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer group-hover/sort:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.1)]" style={{ borderColor: sortBy !== 'default' && sortBy !== 'order' ? 'rgba(var(--color-primary-rgb) / 0.3)' : 'rgba(var(--color-primary-rgb) / 0.12)', background: sortBy !== 'default' && sortBy !== 'order' ? 'rgba(var(--color-primary-rgb) / 0.06)' : 'transparent', color: sortBy !== 'default' && sortBy !== 'order' ? 'var(--color-primary)' : 'var(--foreground)' }}>
+                    <ArrowUpDown className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
+                    {isAr ? currentSort.ar : currentSort.en}
+                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover/sort:rotate-180" style={{ color: 'rgba(var(--color-primary-rgb) / 0.5)' }} />
+                  </button>
+                  <div className="absolute top-full pt-1.5 start-0 z-50 w-52 opacity-0 invisible group-hover/sort:opacity-100 group-hover/sort:visible transition-all duration-200 translate-y-1 group-hover/sort:translate-y-0">
+                    <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: 'var(--color-background)', border: '1px solid rgba(var(--color-primary-rgb) / 0.12)' }}>
+                      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
+                      <div className="py-1.5">
+                        {sortOptions.map(opt => (
+                          <button key={opt.value} onClick={() => setSortBy(opt.value)}
+                            className={cn('w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all duration-200', sortBy === opt.value ? 'text-white' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                            style={sortBy === opt.value ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
+                            {isAr ? opt.ar : opt.en}
+                            {sortBy === opt.value && <CheckCircle2 className="h-3.5 w-3.5 ms-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {/* Advanced Filters */}
             {(() => {
               const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
               return (
                 <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all',
+                  className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer',
                     showAdvancedFilters || activeFilterCount > 0
-                      ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                      : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05] hover:border-[var(--foreground)]/[0.2]')}>
+                      ? 'text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.2)]'
+                      : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]')}
+                  style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+                  onMouseEnter={(e) => { if (!showAdvancedFilters && activeFilterCount === 0) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; }}
+                  onMouseLeave={(e) => { if (!showAdvancedFilters && activeFilterCount === 0) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; }}>
                   <SlidersHorizontal className="h-4 w-4" />
                   {isAr ? 'فلاتر' : 'Filters'}
                   {activeFilterCount > 0 && <span className="text-[11px] font-black bg-[var(--color-primary)] text-white h-5 min-w-[20px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
@@ -783,12 +927,12 @@ export default function HabitsPage() {
             {/* Column toggle + Expand/Collapse */}
             {viewMode === 'cards' && (
               <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-1 rounded-xl border border-[var(--foreground)]/[0.12] p-1">
+                <div className="flex items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
                   {([2, 3] as const).map(n => (
                     <button key={n} onClick={() => setGridCols(n)}
-                      className={cn('px-3 py-1.5 rounded-lg text-xs font-black transition-all',
-                        gridCols === n ? 'text-white' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.06]')}
-                      style={gridCols === n ? { background: 'var(--color-primary)' } : undefined}>
+                      className={cn('px-3 py-1.5 rounded-lg text-xs font-black transition-all duration-300 cursor-pointer',
+                        gridCols === n ? 'text-white shadow-sm' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                      style={gridCols === n ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                       {n}
                     </button>
                   ))}
@@ -810,25 +954,30 @@ export default function HabitsPage() {
                   </button>
                   {showExpandMenu && (
                     <div className={cn('absolute top-full pt-2 z-50 min-w-[180px]', isAr ? 'right-0' : 'left-0')}>
-                    <div className="rounded-xl border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] backdrop-blur-xl shadow-2xl p-1.5">
+                    <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: 'var(--color-background)', border: '1px solid rgba(var(--color-primary-rgb) / 0.12)' }}>
+                      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
+                      <div className="p-1.5">
                       <button onClick={() => { setExpandMode('expandAll'); setCardsExpanded(true); const totalRows = Math.ceil(filteredHabits.length / gridCols); setExpandedRows(new Set(Array.from({ length: totalRows }, (_, i) => i))); setShowExpandMenu(false); }}
-                        className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                          expandMode === 'expandAll' ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05]')}>
+                        className={cn('w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold transition-all duration-200',
+                          expandMode === 'expandAll' ? 'text-white' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                        style={expandMode === 'expandAll' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                         <ChevronDown className="h-4 w-4 rotate-180" />
                         {isAr ? 'توسيع الكل' : 'Expand All'}
                       </button>
                       <button onClick={() => { setExpandMode('foldAll'); setCardsExpanded(false); setExpandedRows(new Set()); setShowExpandMenu(false); }}
-                        className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                          expandMode === 'foldAll' ? 'bg-orange-400/10 text-orange-500' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05]')}>
+                        className={cn('w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold transition-all duration-200',
+                          expandMode === 'foldAll' ? 'bg-orange-400/10 text-orange-500' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}>
                         <ChevronDown className="h-4 w-4" />
                         {isAr ? 'طي الكل' : 'Fold All'}
                       </button>
                       <button onClick={() => { setExpandMode('auto'); setCardsExpanded(false); setShowExpandMenu(false); }}
-                        className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                          expandMode === 'auto' ? 'bg-[var(--foreground)]/[0.08] text-[var(--foreground)]' : 'text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.05]')}>
+                        className={cn('w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold transition-all duration-200',
+                          expandMode === 'auto' ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                        style={expandMode === 'auto' ? { background: 'rgba(var(--color-primary-rgb) / 0.1)' } : undefined}>
                         <ChevronsUpDown className="h-4 w-4" />
                         {isAr ? 'تلقائي (من البطاقات)' : 'Auto (from cards)'}
                       </button>
+                      </div>
                     </div>
                     </div>
                   )}
@@ -836,11 +985,14 @@ export default function HabitsPage() {
               </div>
             )}
 
-            <div className="relative ms-auto">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground)]/40" />
+            <div className="relative ms-auto group/search">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-300 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.4)' }} />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={isAr ? 'بحث...' : 'Search...'}
-                className="rounded-xl border border-[var(--foreground)]/[0.1] bg-transparent ps-9 pe-3 py-2.5 text-sm font-medium w-[160px] sm:w-[220px] placeholder:text-[var(--foreground)]/40 focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-all" />
+                className="rounded-xl border ps-9 pe-3 py-2.5 text-sm font-medium w-[160px] sm:w-[220px] placeholder:text-[var(--foreground)]/40 focus:outline-none transition-all duration-300 bg-transparent"
+                style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08), 0 4px 16px rgba(var(--color-primary-rgb) / 0.06)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.02)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }} />
             </div>
           </motion.div>
 
@@ -886,8 +1038,9 @@ export default function HabitsPage() {
                           { v: 'avoidance' as const, en: 'Break', ar: 'تجنب' },
                         ]).map(o => (
                           <button key={o.v} onClick={() => setFilterType(o.v)}
-                            className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                              filterType === o.v ? 'bg-[var(--foreground)]/[0.12] text-[var(--foreground)] shadow-sm' : 'text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/[0.06]')}>
+                            className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer',
+                              filterType === o.v ? 'text-white shadow-sm' : 'text-[var(--foreground)]/60 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                            style={filterType === o.v ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                             {isAr ? o.ar : o.en}
                           </button>
                         ))}
@@ -905,7 +1058,8 @@ export default function HabitsPage() {
                         ]).map(o => (
                           <button key={o.v} onClick={() => setFilterPriority(o.v)}
                             className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                              filterPriority === o.v ? 'bg-[var(--foreground)]/[0.12] text-[var(--foreground)] shadow-sm' : 'text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/[0.06]')}>
+                              filterPriority === o.v ? 'text-white shadow-sm' : 'text-[var(--foreground)]/60 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                            style={filterPriority === o.v ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                             {isAr ? o.ar : o.en}
                           </button>
                         ))}
@@ -923,7 +1077,8 @@ export default function HabitsPage() {
                         ]).map(o => (
                           <button key={o.v} onClick={() => setFilterTracking(o.v)}
                             className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                              filterTracking === o.v ? 'bg-[var(--foreground)]/[0.12] text-[var(--foreground)] shadow-sm' : 'text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/[0.06]')}>
+                              filterTracking === o.v ? 'text-white shadow-sm' : 'text-[var(--foreground)]/60 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                            style={filterTracking === o.v ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                             {isAr ? o.ar : o.en}
                           </button>
                         ))}
@@ -940,7 +1095,8 @@ export default function HabitsPage() {
                         ]).map(o => (
                           <button key={o.v} onClick={() => setFilterStatus(o.v)}
                             className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                              filterStatus === o.v ? 'bg-[var(--foreground)]/[0.12] text-[var(--foreground)] shadow-sm' : 'text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/[0.06]')}>
+                              filterStatus === o.v ? 'text-white shadow-sm' : 'text-[var(--foreground)]/60 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                            style={filterStatus === o.v ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                             {isAr ? o.ar : o.en}
                           </button>
                         ))}
@@ -1520,8 +1676,8 @@ export default function HabitsPage() {
                   </div>
                 </div>
 
-                {/* Custom days */}
-                {(formData.frequency === 'weekly' || formData.frequency === 'custom') && (
+                {/* Weekly repeat days */}
+                {formData.frequency === 'weekly' && (
                   <div>
                     <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">
                       {isAr ? 'أيام التكرار' : 'Repeat Days'}
@@ -1547,6 +1703,197 @@ export default function HabitsPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Custom frequency options */}
+                {formData.frequency === 'custom' && (
+                  <div className="space-y-3">
+                    {/* Custom schedule type selector */}
+                    <div>
+                      <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">
+                        {isAr ? 'نوع الجدول المخصص' : 'Custom Schedule Type'}
+                      </label>
+                      <div className="flex gap-1.5">
+                        {(['weekdays', 'monthdays', 'yeardays'] as const).map(t => (
+                          <button
+                            key={t}
+                            onClick={() => setFormData(f => ({ ...f, customScheduleType: t }))}
+                            className={cn(
+                              'app-toggle flex-1 py-2 rounded-lg text-xs font-medium',
+                              formData.customScheduleType === t
+                                ? 'app-toggle-active'
+                                : 'text-[var(--foreground)]/70'
+                            )}
+                          >
+                            {isAr ? CUSTOM_SCHEDULE_LABELS[t].ar : CUSTOM_SCHEDULE_LABELS[t].en}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Weekdays picker */}
+                    {formData.customScheduleType === 'weekdays' && (
+                      <div>
+                        <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">
+                          {isAr ? 'أيام التكرار' : 'Repeat Days'}
+                        </label>
+                        <div className="flex gap-1.5">
+                          {[0, 1, 2, 3, 4, 5, 6].map(d => (
+                            <button
+                              key={d}
+                              onClick={() => setFormData(f => ({
+                                ...f,
+                                customDays: f.customDays.includes(d as WeekDay)
+                                  ? f.customDays.filter(x => x !== d)
+                                  : [...f.customDays, d as WeekDay]
+                              }))}
+                              className={cn(
+                                'app-toggle flex-1 py-2 rounded-lg text-xs font-medium',
+                                formData.customDays.includes(d as WeekDay)
+                                  ? 'app-toggle-active'
+                                  : 'text-[var(--foreground)]/70'
+                              )}
+                            >
+                              {isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Month days picker (1-31 grid) */}
+                    {formData.customScheduleType === 'monthdays' && (
+                      <div>
+                        <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">
+                          {isAr ? 'أيام الشهر' : 'Days of Month'}
+                        </label>
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                            <button
+                              key={d}
+                              onClick={() => setFormData(f => ({
+                                ...f,
+                                customMonthDays: f.customMonthDays.includes(d)
+                                  ? f.customMonthDays.filter(x => x !== d)
+                                  : [...f.customMonthDays, d].sort((a, b) => a - b)
+                              }))}
+                              className={cn(
+                                'app-toggle py-1.5 rounded-lg text-xs font-medium',
+                                formData.customMonthDays.includes(d)
+                                  ? 'app-toggle-active'
+                                  : 'text-[var(--foreground)]/70'
+                              )}
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
+                        {formData.customMonthDays.length > 0 && (
+                          <p className="text-[10px] text-[var(--foreground)]/50 mt-1.5">
+                            {isAr ? 'المحدد: ' : 'Selected: '}{formData.customMonthDays.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Year days picker (month + day combos) */}
+                    {formData.customScheduleType === 'yeardays' && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">
+                          {isAr ? 'أيام محددة من السنة' : 'Specific Days of Year'}
+                        </label>
+                        {/* Month selector grid */}
+                        <div className="grid grid-cols-4 gap-1">
+                          {MONTH_LABELS[isAr ? 'ar' : 'en'].map((label, mi) => {
+                            const hasEntries = formData.customYearDays.some(yd => yd.month === mi);
+                            return (
+                              <button
+                                key={mi}
+                                onClick={() => {
+                                  // Toggle showing days for this month by adding/removing placeholder
+                                  setFormData(f => {
+                                    const existing = f.customYearDays.filter(yd => yd.month === mi);
+                                    if (existing.length > 0) {
+                                      return { ...f, customYearDays: f.customYearDays.filter(yd => yd.month !== mi) };
+                                    }
+                                    // When clicking a month with no entries, expand it (add day 1 as default)
+                                    return { ...f, customYearDays: [...f.customYearDays, { month: mi, day: 1 }].sort((a, b) => a.month - b.month || a.day - b.day) };
+                                  });
+                                }}
+                                className={cn(
+                                  'app-toggle py-1.5 rounded-lg text-xs font-medium',
+                                  hasEntries ? 'app-toggle-active' : 'text-[var(--foreground)]/70'
+                                )}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {/* Show day grid for each selected month */}
+                        {(() => {
+                          const selectedMonths = [...new Set(formData.customYearDays.map(yd => yd.month))].sort((a, b) => a - b);
+                          if (selectedMonths.length === 0) return null;
+                          return selectedMonths.map(mi => {
+                            const daysInMonth = new Date(2024, mi + 1, 0).getDate(); // Use leap year to get max days
+                            const selectedDays = formData.customYearDays.filter(yd => yd.month === mi).map(yd => yd.day);
+                            return (
+                              <div key={mi} className="mt-2">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[11px] font-semibold text-[var(--foreground)]/60">
+                                    {isAr ? MONTH_LABELS.ar[mi] : MONTH_LABELS.en[mi]}
+                                  </span>
+                                  <button
+                                    onClick={() => setFormData(f => ({
+                                      ...f,
+                                      customYearDays: f.customYearDays.filter(yd => yd.month !== mi)
+                                    }))}
+                                    className="text-[10px] text-red-400 hover:text-red-500"
+                                  >
+                                    {isAr ? 'إزالة' : 'Remove'}
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-7 gap-1">
+                                  {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => (
+                                    <button
+                                      key={d}
+                                      onClick={() => setFormData(f => {
+                                        const has = f.customYearDays.some(yd => yd.month === mi && yd.day === d);
+                                        const updated = has
+                                          ? f.customYearDays.filter(yd => !(yd.month === mi && yd.day === d))
+                                          : [...f.customYearDays, { month: mi, day: d }];
+                                        // If removing the last day from a month, keep at least the month header
+                                        const monthStillHasDays = updated.some(yd => yd.month === mi);
+                                        const final = monthStillHasDays ? updated : updated;
+                                        return { ...f, customYearDays: final.sort((a, b) => a.month - b.month || a.day - b.day) };
+                                      })}
+                                      className={cn(
+                                        'app-toggle py-1.5 rounded-lg text-[11px] font-medium',
+                                        selectedDays.includes(d)
+                                          ? 'app-toggle-active'
+                                          : 'text-[var(--foreground)]/70'
+                                      )}
+                                    >
+                                      {d}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                        {/* Summary */}
+                        {formData.customYearDays.length > 0 && (
+                          <p className="text-[10px] text-[var(--foreground)]/50 mt-1">
+                            {isAr ? 'المحدد: ' : 'Selected: '}
+                            {formData.customYearDays.map(yd =>
+                              `${(isAr ? MONTH_LABELS.ar : MONTH_LABELS.en)[yd.month]} ${yd.day}`
+                            ).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2339,16 +2686,16 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
 
           <div className={cn('px-4 pb-3 pt-3 flex-1 flex flex-col', !minimized && 'overflow-y-auto')}>
             {/* ─ Row 1: Order # + Name + quick actions ─ */}
-            <div className="flex items-start justify-between gap-2 h-[56px] mb-2 overflow-hidden">
+            <div className="flex items-start justify-between gap-2 mb-2 min-h-[58px]">
               <div className="min-w-0 flex-1 flex items-start gap-2.5">
                 {/* Order number badge */}
-                <div className="h-7 w-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-sm"
+                <div className="hc-order h-7 w-7 rounded-xl flex items-center justify-center text-xs font-black shrink-0 mt-0.5 shadow-sm cursor-default"
                   style={{ background: `${hc}20`, color: hc, border: `1.5px solid ${hc}30` }}>
                   {habit.order || '-'}
                 </div>
                 <div className="min-w-0">
                   <h3 className={cn('text-[15px] font-extrabold leading-snug tracking-tight', done && 'line-through opacity-50')}>{name}</h3>
-                  <div className="flex items-center gap-1.5 mt-0.5 text-[11px] font-medium text-[var(--foreground)]/70">
+                  <div className="flex items-center gap-1.5 mt-0.5 text-[11px] font-medium text-[var(--foreground)]/70 flex-wrap">
                     <span>{catLabel}</span>
                     <span>·</span>
                     <span>{freqLabel}</span>
@@ -2415,37 +2762,37 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
 
             {!minimized && <>
             {/* ─ Row 2: Meta badges ─ */}
-            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-              <span className={cn('text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1',
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap min-h-[52px]">
+              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                 habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
                 {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
                 <span className="opacity-50">{isAr ? 'النوع:' : 'Type:'}</span> {habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break')}
               </span>
-              <span className={cn('text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1',
+              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                 habit.difficulty === 'hard' ? 'bg-red-500/10 text-red-500' : habit.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-500')}>
                 <BarChart3 className="h-3 w-3" />
                 <span className="opacity-50">{isAr ? 'الصعوبة:' : 'Diff:'}</span> {isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty}
               </span>
-              <span className={cn('text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1',
+              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                 habit.priority === 'high' ? 'bg-red-500/10 text-red-500' : habit.priority === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-sky-500/10 text-sky-500')}>
                 <ArrowUpDown className="h-3 w-3" />
                 <span className="opacity-50">{isAr ? 'الأولوية:' : 'Pri:'}</span> {isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority}
               </span>
-              <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70 flex items-center gap-1">
+              <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-[var(--foreground)]/[0.06] cursor-default text-[var(--foreground)]/70 flex items-center gap-1">
                 <Target className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'الهدف:' : 'Goal:'}</span> {goalLabel}
               </span>
               {habit.expectedDuration && (
-                <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-purple-500/10 text-purple-600 flex items-center gap-1">
+                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-purple-500/10 cursor-default text-purple-600 flex items-center gap-1">
                   <Timer className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المدة:' : 'Dur:'}</span> {habit.expectedDuration} {isAr ? 'دقيقة' : 'min'}
                 </span>
               )}
               {habit.preferredTime && (
-                <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-sky-500/10 text-sky-600 flex items-center gap-1">
+                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-sky-500/10 cursor-default text-sky-600 flex items-center gap-1">
                   <Clock className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المفضل:' : 'Preferred:'}</span> {to12h(habit.preferredTime!)}
                 </span>
               )}
               {habit.windowStart && habit.windowEnd && (
-                <span className={cn('text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1',
+                <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                   habit.strictWindow ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-600')}>
                   <Target className="h-3 w-3" />
                   <span className="opacity-50">{habit.strictWindow ? (isAr ? 'إجباري:' : 'Strict:') : (isAr ? 'نافذة:' : 'Window:')}</span>
@@ -2456,7 +2803,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 3: Today's status banner ─ */}
-            <div className={cn('flex items-center gap-2 rounded-xl px-3 h-[40px] mb-2 text-xs font-bold')}
+            <div className={cn('hc-banner flex items-center gap-2 rounded-xl px-3 h-[40px] mb-2 text-xs font-bold cursor-default')}
               style={strictLocked
                 ? { background: '#ef444415', color: '#ef4444', border: '1px solid #ef444425' }
                 : strictNotYet
@@ -2497,7 +2844,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                     <div className="mt-1.5 space-y-1.5">
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => handleCountIncrement(-1)} disabled={todayCountValue <= 0}
-                          className="h-9 w-9 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.06] disabled:opacity-30 transition-all active:scale-95">
+                          className="hc-count-btn h-9 w-9 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.06] disabled:opacity-30">
                           <Minus className="h-4 w-4" />
                         </button>
                         <div className="flex-1 text-center">
@@ -2507,7 +2854,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                           <span className="text-xs font-semibold text-[var(--foreground)]/60"> / {countTarget} {countUnit}</span>
                         </div>
                         <button onClick={() => handleCountIncrement(1)}
-                          className="h-9 w-9 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.06] transition-all active:scale-95"
+                          className="hc-count-btn h-9 w-9 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.06]"
                           style={countProgress < 1 ? { background: `${hc}15`, color: hc } : { background: '#22c55e15', color: '#22c55e' }}>
                           <Plus className="h-4 w-4" />
                         </button>
@@ -2547,85 +2894,59 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               )}
             </div>
 
-            {/* ─ Row 5: Streak Challenges — fixed height */}
-            <div className="h-[180px] mb-2 overflow-hidden">
+            {/* ─ Row 5: Streak Challenges ─ */}
+            <div className="mb-2">
             {!hasStreakChallenge ? (
-              <div className="rounded-2xl border border-dashed border-[var(--foreground)]/[0.08] h-full flex flex-col items-center justify-center gap-2">
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-[var(--foreground)]/[0.04]">
-                  <Trophy className="h-4 w-4 text-[var(--foreground)]/20" />
-                </div>
+              <div className="hc-empty rounded-2xl border border-dashed border-[var(--foreground)]/[0.08] py-5 flex flex-col items-center justify-center gap-1.5 cursor-default">
+                <Trophy className="h-4 w-4 text-[var(--foreground)]/15" />
                 <span className="text-[10px] font-bold text-[var(--foreground)]/25">{isAr ? 'لا توجد تحديات' : 'No challenges'}</span>
-                <span className="text-[8px] text-[var(--foreground)]/15">{isAr ? 'أضف من التعديل' : 'Add from edit'}</span>
               </div>
             ) : (
-              <div className="rounded-2xl h-full overflow-hidden flex flex-col"
-                style={{ background: `linear-gradient(160deg, ${hc}06, ${hc}02)`, border: `1px solid ${hc}12` }}>
-                {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 shrink-0" style={{ borderBottom: `1px solid ${hc}08` }}>
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: '#f59e0b15' }}>
-                      <Trophy className="h-3 w-3 text-amber-500" />
-                    </div>
-                    <span className="text-[10px] font-black">{isAr ? 'التحديات' : 'Challenges'}</span>
-                  </div>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${hc}10`, color: hc }}>
-                    {streakTiers.filter(t => t.done).length}/{streakTiers.length}
-                  </span>
-                </div>
-                {/* Challenges list */}
-                <div className="flex-1 overflow-hidden px-2.5 py-2 space-y-2">
-                  {streakTiers.map((t, i) => {
-                    const filledDots = Math.min(t.goal, streak.current);
-                    const pct = Math.round(t.progress * 100);
-                    return (
-                      <div key={i} className="rounded-xl p-2"
-                        style={{ background: t.done ? '#f59e0b08' : 'var(--color-background)', border: `1px solid ${t.done ? '#f59e0b20' : 'var(--foreground)'}08` }}>
-                        {/* Top row */}
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px]">{t.icon}</span>
-                            <span className="text-[10px] font-black" style={{ color: t.done ? '#d97706' : hc }}>
-                              {streak.current}/{t.goal} {isAr ? 'يوم' : 'd'}
-                            </span>
-                            {t.done && <CheckCircle2 className="h-3 w-3 text-amber-500" />}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            {t.reward && (
-                              <span className={cn('text-[8px] font-bold truncate max-w-[80px] px-1.5 py-0.5 rounded-md',
-                                t.done ? 'bg-amber-500/10 text-amber-600' : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50')}>
-                                🎁 {t.reward}
-                              </span>
-                            )}
-                            <span className="text-[9px] font-black min-w-[28px] text-end" style={{ color: t.done ? '#d97706' : hc }}>
-                              {pct}%
-                            </span>
-                          </div>
-                        </div>
-                        {/* Dots grid */}
-                        <div className="flex flex-wrap gap-[3px]">
-                          {Array.from({ length: t.goal }).map((_, si) => (
-                            <div key={si}
-                              className="h-[5px] w-[5px] rounded-full transition-all duration-300"
-                              style={{
-                                background: si < filledDots
-                                  ? t.done ? '#d97706' : hc
-                                  : `${hc}10`,
-                                boxShadow: si < filledDots ? `0 0 3px ${t.done ? '#d9770640' : `${hc}30`}` : 'none',
-                                transitionDelay: `${Math.min(si * 10, 500)}ms`,
-                              }} />
-                          ))}
-                        </div>
+              <div className="space-y-2">
+                {streakTiers.map((t, i) => {
+                  const pct = Math.round(t.progress * 100);
+                  const filled = Math.min(t.goal, streak.current);
+                  const tierColor = t.done ? '#d97706' : hc;
+                  return (
+                    <div key={i} className="hc-tier rounded-xl px-3.5 py-3 cursor-default"
+                      style={{ background: t.done ? '#f59e0b08' : `${hc}05`, border: `1px solid ${t.done ? '#f59e0b18' : `${hc}10`}` }}>
+                      {/* Tier header */}
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <span className="text-base leading-none">{t.icon}</span>
+                        <span className="text-xs font-black" style={{ color: tierColor }}>
+                          {filled}/{t.goal} {isAr ? 'يوم' : 'days'}
+                        </span>
+                        {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />}
+                        {t.reward && (
+                          <span className={cn('text-[9px] font-bold truncate max-w-[100px] px-2 py-0.5 rounded-md ms-auto',
+                            t.done ? 'bg-amber-500/10 text-amber-600' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/45')}>
+                            {t.reward}
+                          </span>
+                        )}
+                        <span className={cn('text-xs font-black', !t.reward && 'ms-auto')} style={{ color: tierColor }}>
+                          {pct}%
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      {/* Day dots — each dot = 1 day */}
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from({ length: t.goal }).map((_, di) => (
+                          <div key={di}
+                            className="h-[7px] w-[7px] rounded-full"
+                            style={{
+                              background: di < filled ? tierColor : `${hc}15`,
+                            }} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
            </div>
 
             {/* ─ Row 5b: Habit Loop (always visible) ─ */}
             <div className="flex items-center gap-1 h-[60px] mb-2 overflow-hidden">
-              <div className="flex-1 min-w-0 rounded-lg bg-amber-500/8 px-2 py-1.5 text-center">
+              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-amber-500/8 px-2 py-1.5 text-center cursor-default">
                 <Lightbulb className="h-3 w-3 text-amber-500 mx-auto mb-0.5" />
                 <p className="text-[8px] font-black text-amber-600 uppercase">{isAr ? 'المحفز' : 'Trigger'}</p>
                 <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.cueAr : habit.cueEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
@@ -2633,7 +2954,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 </p>
               </div>
               <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
-              <div className="flex-1 min-w-0 rounded-lg bg-blue-500/8 px-2 py-1.5 text-center">
+              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-blue-500/8 px-2 py-1.5 text-center cursor-default">
                 <Repeat className="h-3 w-3 text-blue-500 mx-auto mb-0.5" />
                 <p className="text-[8px] font-black text-blue-600 uppercase">{isAr ? 'الروتين' : 'Routine'}</p>
                 <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.routineAr : habit.routineEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
@@ -2641,7 +2962,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 </p>
               </div>
               <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
-              <div className="flex-1 min-w-0 rounded-lg bg-emerald-500/8 px-2 py-1.5 text-center">
+              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-emerald-500/8 px-2 py-1.5 text-center cursor-default">
                 <Gift className="h-3 w-3 text-emerald-500 mx-auto mb-0.5" />
                 <p className="text-[8px] font-black text-emerald-600 uppercase">{isAr ? 'المكافأة' : 'Reward'}</p>
                 <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.rewardAr : habit.rewardEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
@@ -2653,7 +2974,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             {/* ─ Row 5c: Notes ─ */}
             <div className={cn('mb-2', showNote ? '' : 'h-[24px] overflow-hidden')} onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowNote(!showNote)}
-                className="flex items-center gap-1.5 text-xs font-bold mb-1 transition-all"
+                className="hc-hover flex items-center gap-1.5 text-xs font-bold mb-1 transition-all"
                 style={{ color: hc }}>
                 <Edit3 className="h-3 w-3" />
                 {habit.notes
@@ -2686,54 +3007,52 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 6: 7-day visual dots ─ */}
-            <div className="h-[75px] mb-2 overflow-hidden">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold" style={{ color: hc }}>{isAr ? 'آخر ٧ أيام' : 'Last 7 days'}</span>
-                <span className="text-xs font-black" style={{ color: completedCount7 >= 5 ? '#22c55e' : completedCount7 >= 3 ? hc : '#ef4444' }}>
-                  {completedCount7}/7
-                </span>
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-xs font-bold text-[var(--foreground)]/50">{isAr ? 'آخر ٧ أيام' : 'Last 7 days'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black" style={{ color: completedCount7 >= 5 ? '#22c55e' : completedCount7 >= 3 ? hc : '#ef4444' }}>
+                    {Math.round((completedCount7 / 7) * 100)}%
+                  </span>
+                  <span className="text-[11px] font-semibold text-[var(--foreground)]/30">{completedCount7}/7</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                {last7.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <div className={cn('h-3 w-3 rounded-full transition-all',
-                      d.done ? (d.color === 'green' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : d.color === 'orange' ? 'bg-amber-500 shadow-sm shadow-amber-500/30' : 'bg-emerald-500 shadow-sm shadow-emerald-500/30')
-                        : d.date <= today ? 'bg-red-400/50' : 'bg-[var(--foreground)]/[0.08]')}
-                      title={d.date} />
-                    <span className="text-[8px] font-semibold text-[var(--foreground)]/60">
-                      {new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.08] overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${(completedCount7 / 7) * 100}%` }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                  className="h-full rounded-full"
-                  style={{ background: completedCount7 >= 5 ? '#22c55e' : completedCount7 >= 3 ? '#eab308' : '#ef4444' }} />
+              <div className="flex items-center justify-between gap-1.5">
+                {last7.map((d, i) => {
+                  const dayLabel = new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
+                  const isToday = d.date === today;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                      <span className={cn('text-[10px] font-semibold', isToday ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/40')}>
+                        {dayLabel}
+                      </span>
+                      <div className={cn('hc-dot h-3.5 w-3.5 rounded-full cursor-default',
+                        d.done
+                          ? d.color === 'green' ? 'bg-emerald-500' : d.color === 'orange' ? 'bg-amber-500' : 'bg-emerald-500'
+                          : d.date <= today ? 'bg-red-400/40' : 'bg-[var(--foreground)]/[0.07]'
+                      )}
+                        style={isToday ? { boxShadow: `0 0 0 2.5px ${d.done ? '#22c55e30' : `${hc}25`}` } : undefined}
+                        title={d.date}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* ─ Row 7: Stats grid ─ */}
-            <div className="grid grid-cols-4 gap-1.5 h-[56px] mb-2">
-              <div className="text-center rounded-xl py-2" style={{ background: `${hc}08`, border: `1px solid ${hc}12` }}>
-                <p className="text-sm font-black" style={{ color: hc }}>{streak.current}</p>
-                <p className="text-[9px] font-bold text-[var(--foreground)]/70">{isAr ? 'سلسلة' : 'Streak'}</p>
-              </div>
-              <div className="text-center rounded-xl py-2" style={{ background: `${hc}08`, border: `1px solid ${hc}12` }}>
-                <p className="text-sm font-black" style={{ color: hc }}>{streak.best}</p>
-                <p className="text-[9px] font-bold text-[var(--foreground)]/70">{isAr ? 'أفضل' : 'Best'}</p>
-              </div>
-              <div className="text-center rounded-xl py-2" style={{ background: `${hc}08`, border: `1px solid ${hc}12` }}>
-                <p className="text-sm font-black" style={{ color: hc }}>{stats.completionRate}%</p>
-                <p className="text-[9px] font-bold text-[var(--foreground)]/70">{isAr ? 'التزام' : 'Rate'}</p>
-              </div>
-              <div className="text-center rounded-xl py-2" style={{ background: `${hc}08`, border: `1px solid ${hc}12` }}>
-                <p className="text-sm font-black" style={{ color: hc }}>
-                  {totalMinutes > 0 ? (totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h` : `${totalMinutes}m`) : stats.totalCompletions}
-                </p>
-                <p className="text-[9px] font-bold text-[var(--foreground)]/70">{totalMinutes > 0 ? (isAr ? 'وقت' : 'Time') : (isAr ? 'مجمل' : 'Total')}</p>
-              </div>
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
+              {[
+                { value: streak.current, label: isAr ? 'سلسلة' : 'Streak' },
+                { value: streak.best, label: isAr ? 'أفضل' : 'Best' },
+                { value: `${stats.completionRate}%`, label: isAr ? 'التزام' : 'Rate' },
+                { value: totalMinutes > 0 ? (totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h` : `${totalMinutes}m`) : stats.totalCompletions, label: totalMinutes > 0 ? (isAr ? 'وقت' : 'Time') : (isAr ? 'مجمل' : 'Total') },
+              ].map((s, i) => (
+                <div key={i} className="hc-stat text-center rounded-lg py-1.5 cursor-default" style={{ background: `${hc}06` }}>
+                  <p className="text-[13px] font-black leading-tight" style={{ color: hc }}>{s.value}</p>
+                  <p className="text-[8px] font-bold text-[var(--foreground)]/40 mt-0.5">{s.label}</p>
+                </div>
+              ))}
             </div>
 
             {/* ─ Row 8: Bottom actions bar ─ */}
@@ -2742,7 +3061,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               {(() => {
                 if (!lastCompletedDate) {
                   return (
-                    <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-dashed border-[var(--foreground)]/[0.08]">
+                    <div className="hc-info flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-dashed border-[var(--foreground)]/[0.08] cursor-default">
                       <Circle className="h-3.5 w-3.5 text-[var(--foreground)]/30" />
                       <span className="text-[10px] font-bold text-[var(--foreground)]/40">{isAr ? 'لم يُنجز بعد' : 'No completions yet'}</span>
                     </div>
@@ -2759,7 +3078,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                     : (isAr ? `منذ ${diffDays} يوم` : `${diffDays}d ago`);
                 const isRecent = diffDays <= 1;
                 return (
-                  <div className="flex items-center justify-between py-2 px-3 rounded-xl"
+                  <div className="hc-info flex items-center justify-between py-2 px-3 rounded-xl cursor-default"
                     style={{ background: isRecent ? '#22c55e08' : `${hc}06`, border: `1px solid ${isRecent ? '#22c55e15' : `${hc}10`}` }}>
                     <div className="flex items-center gap-2">
                       <div className="h-6 w-6 rounded-lg flex items-center justify-center"
@@ -2781,13 +3100,17 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               {/* Action buttons row */}
               <div className="flex items-center gap-1.5">
                 <Link href={`/app/habits/${habit.id}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
-                  style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}>
+                  className="hc-action flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 active:scale-[0.97]"
+                  style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; e.currentTarget.style.boxShadow = `0 4px 14px ${hc}33`; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}10`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
                   <Maximize2 className="h-3.5 w-3.5" /> {isAr ? 'الصفحة' : 'Page'}
                 </Link>
                 <button onClick={onDetail}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
-                  style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}>
+                  className="hc-action flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer active:scale-[0.97]"
+                  style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; e.currentTarget.style.boxShadow = `0 4px 14px ${hc}33`; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}10`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
                   <Eye className="h-3.5 w-3.5" /> {isAr ? 'تفاصيل' : 'Details'}
                 </button>
               </div>

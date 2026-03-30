@@ -203,49 +203,127 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
     );
   }
 
-  // SM layout — bigger, professional, for cards
+  // SM layout — always-visible professional timer for cards
   const pctText = t.hasDuration && t.targetSecs > 0 ? Math.round(progress * 100) : null;
+  const isActive = t.isMyTimer && (t.running || t.paused);
+  const isIdle = !isActive;
+  const timerSegments = 20;
+  const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
+
+  // Status label
+  const statusLabel = t.running
+    ? (isAr ? 'قيد التشغيل' : 'Running')
+    : t.paused
+      ? (isAr ? 'متوقف مؤقتًا' : 'Paused')
+      : done || allRepsDone
+        ? (isAr ? 'مكتمل' : 'Completed')
+        : cantStart
+          ? (isAr ? 'غير متاح' : 'Unavailable')
+          : (isAr ? 'جاهز' : 'Ready');
+
+  // Status dot color
+  const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : (done || allRepsDone) ? '#22c55e' : cantStart ? '#ef4444' : `${hc}60`;
+
+  // Display time
+  const displayTime = isActive
+    ? (t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed))
+    : (t.hasDuration ? formatTimerDuration(t.targetSecs) : '00:00');
+
+  // Background gradient based on state
+  const timerBg = t.running
+    ? `linear-gradient(135deg, ${hc}15, ${hc}08)`
+    : t.paused
+      ? `linear-gradient(135deg, #f59e0b10, ${hc}06)`
+      : (done || allRepsDone)
+        ? 'linear-gradient(135deg, #22c55e08, #22c55e04)'
+        : `linear-gradient(135deg, ${hc}06, transparent)`;
+
+  const timerBorder = t.running ? `${hc}35` : t.paused ? '#f59e0b30' : (done || allRepsDone) ? '#22c55e25' : `${hc}15`;
 
   return (
     <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
-      {/* Timer display when active */}
-      {t.isMyTimer && (t.running || t.paused) && (() => {
-        const timerSegments = 20;
-        const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
-        return (
-          <div className="rounded-xl p-3.5" style={{ background: `${hc}08`, border: `1.5px solid ${hc}20` }}>
-            {/* Big time display */}
-            <div className={cn('text-3xl font-mono font-black tracking-tight text-center', t.running && 'animate-pulse')} style={{ color: hc }}>
-              {t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed)}
+      {/* Timer display — always visible */}
+      <div className="hc-timer rounded-xl overflow-hidden relative" style={{ background: timerBg, border: `1.5px solid ${timerBorder}` }}>
+        {/* Subtle animated background pulse when running */}
+        {t.running && (
+          <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
+        )}
+        <div className="relative p-3.5">
+          {/* Header: status + icon */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full shrink-0" style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">{statusLabel}</span>
             </div>
-            {/* Segmented progress bar for countdown */}
-            {t.hasDuration && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold text-[var(--foreground)]/70">{t.running ? (isAr ? 'قيد التشغيل' : 'Running') : (isAr ? 'متوقف مؤقتًا' : 'Paused')}</span>
-                  <span className="text-sm font-black" style={{ color: hc }}>{pctText}%</span>
-                </div>
-                <div className="flex gap-[2px]">
-                  {Array.from({ length: timerSegments }).map((_, si) => (
-                    <div key={si} className="flex-1 h-3 rounded-sm transition-all duration-300"
-                      style={{
-                        background: si < filledSegs ? hc : `${hc}12`,
-                        transitionDelay: `${si * 20}ms`,
-                      }} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Stopwatch: elapsed minutes display */}
-            {!t.hasDuration && (
-              <div className="mt-2 text-center">
-                <span className="text-xs font-bold text-[var(--foreground)]/70">{t.running ? (isAr ? 'قيد التشغيل...' : 'Running...') : (isAr ? 'متوقف مؤقتًا' : 'Paused')}</span>
-                <span className="text-xs font-bold ms-2" style={{ color: hc }}>{Math.floor(t.elapsed / 60)} {isAr ? 'دقيقة' : 'min'}</span>
-              </div>
-            )}
+            <Timer className="h-3.5 w-3.5" style={{ color: isActive ? hc : `${hc}50` }} />
           </div>
-        );
-      })()}
+
+          {/* Big time display */}
+          <div className={cn(
+            'text-2xl font-mono font-black tracking-tight text-center transition-all duration-300',
+            t.running && 'scale-105',
+            isIdle && !done && !allRepsDone && 'opacity-40',
+          )} style={{ color: (done || allRepsDone) ? '#22c55e' : hc }}>
+            {(done || allRepsDone) && !isActive ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <span className="text-lg">{isAr ? 'مكتمل' : 'Done'}</span>
+              </div>
+            ) : displayTime}
+          </div>
+
+          {/* Target info for idle countdown */}
+          {isIdle && t.hasDuration && !done && !allRepsDone && (
+            <div className="text-center mt-1">
+              <span className="text-[10px] font-semibold text-[var(--foreground)]/40">
+                {isAr ? `الهدف: ${habit.expectedDuration} دقيقة` : `Target: ${habit.expectedDuration} min`}
+              </span>
+            </div>
+          )}
+
+          {/* Progress bar — always visible for countdown habits */}
+          {t.hasDuration && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-1">
+                {isActive && (
+                  <span className="text-[10px] font-bold" style={{ color: `${hc}80` }}>
+                    {formatTimerDuration(t.elapsed)} / {formatTimerDuration(t.targetSecs)}
+                  </span>
+                )}
+                {!isActive && (
+                  <span className="text-[10px] font-bold text-[var(--foreground)]/30">
+                    0:00 / {formatTimerDuration(t.targetSecs)}
+                  </span>
+                )}
+                <span className="text-[11px] font-black" style={{ color: isActive ? hc : `${hc}40` }}>
+                  {isActive ? `${pctText}%` : (done || allRepsDone) ? '100%' : '0%'}
+                </span>
+              </div>
+              {/* Segmented progress bar */}
+              <div className="flex gap-[2px]">
+                {Array.from({ length: timerSegments }).map((_, si) => (
+                  <div key={si} className="flex-1 h-2.5 rounded-sm transition-all duration-300"
+                    style={{
+                      background: (done || allRepsDone) && !isActive
+                        ? (si < timerSegments ? '#22c55e' : '#22c55e12')
+                        : si < filledSegs ? hc : `${hc}10`,
+                      transitionDelay: isActive ? `${si * 20}ms` : '0ms',
+                    }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stopwatch mode info */}
+          {!t.hasDuration && isActive && (
+            <div className="mt-2 text-center">
+              <span className="text-[10px] font-bold" style={{ color: `${hc}80` }}>
+                {Math.floor(t.elapsed / 60)} {isAr ? 'دقيقة' : 'min'} {Math.floor(t.elapsed % 60).toString().padStart(2, '0')} {isAr ? 'ثانية' : 'sec'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Buttons */}
       <div className="flex items-center gap-1.5">

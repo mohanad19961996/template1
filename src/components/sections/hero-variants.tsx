@@ -19,16 +19,20 @@ function Counter({ value, inView }: { value: string; inView: boolean }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (!inView) return;
-    let start = 0;
     const end = num || 0;
     if (end === 0) return;
-    const inc = end / (1600 / 16);
-    const timer = setInterval(() => {
-      start += inc;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
+    const duration = 1600;
+    let startTime: number | null = null;
+    let rafId: number;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
   }, [inView, num]);
   return <>{inView ? count : 0}{suffix}</>;
 }
@@ -66,14 +70,14 @@ export function HeroCentered() {
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[80%]" style={{ background: "radial-gradient(ellipse at center top, rgba(var(--color-primary-rgb) / 0.06) 0%, transparent 60%)" }} />
         <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "radial-gradient(circle, rgba(var(--color-primary-rgb) / 0.4) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
-        <motion.div className="absolute top-[12%] start-[6%] h-2 w-2 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.3 }} animate={{ y: [0, -25, 0], x: [0, 8, 0], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} />
-        <motion.div className="absolute top-[22%] end-[8%] h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.2 }} animate={{ y: [0, 18, 0], x: [0, -10, 0], opacity: [0.2, 0.5, 0.2] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} />
-        <motion.div className="absolute bottom-[25%] start-[12%] h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.25 }} animate={{ y: [0, -15, 0], x: [0, 6, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} />
-        <motion.div className="absolute top-[60%] end-[15%] h-1 w-1 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.2 }} animate={{ y: [0, -12, 0], opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 2 }} />
-        <motion.div className="absolute top-[35%] start-[4%] h-8 w-8 rounded-full hidden lg:block" style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.08)" }} animate={{ y: [0, -10, 0], rotate: [0, 180, 360] }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} />
-        <motion.div className="absolute bottom-[20%] end-[5%] h-6 w-6 rounded-full hidden lg:block" style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.06)" }} animate={{ y: [0, 8, 0], rotate: [360, 180, 0] }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }} />
-        <motion.div className="absolute top-[18%] start-0 w-[1px] h-[180px]" style={{ background: "linear-gradient(180deg, transparent, rgba(var(--color-primary-rgb) / 0.12), transparent)" }} animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} />
-        <motion.div className="absolute top-[28%] end-0 w-[1px] h-[220px]" style={{ background: "linear-gradient(180deg, transparent, rgba(var(--color-primary-rgb) / 0.1), transparent)" }} animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1.5 }} />
+        <div className="absolute top-[12%] start-[6%] h-2 w-2 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.4 }} />
+        <div className="absolute top-[22%] end-[8%] h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.3 }} />
+        <div className="absolute bottom-[25%] start-[12%] h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.25 }} />
+        <div className="absolute top-[60%] end-[15%] h-1 w-1 rounded-full" style={{ background: "var(--color-primary)", opacity: 0.2 }} />
+        <div className="absolute top-[35%] start-[4%] h-8 w-8 rounded-full hidden lg:block" style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.08)" }} />
+        <div className="absolute bottom-[20%] end-[5%] h-6 w-6 rounded-full hidden lg:block" style={{ border: "1px solid rgba(var(--color-primary-rgb) / 0.06)" }} />
+        <div className="absolute top-[18%] start-0 w-[1px] h-[180px]" style={{ background: "linear-gradient(180deg, transparent, rgba(var(--color-primary-rgb) / 0.12), transparent)", opacity: 0.75 }} />
+        <div className="absolute top-[28%] end-0 w-[1px] h-[220px]" style={{ background: "linear-gradient(180deg, transparent, rgba(var(--color-primary-rgb) / 0.1), transparent)", opacity: 0.75 }} />
       </div>
 
       <Container>

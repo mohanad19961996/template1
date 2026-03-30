@@ -66,4 +66,4 @@ export const themes: Record<string, ThemeConfig> = {
   },
 };
 
-export const defaultTheme = "rose";
+export const defaultTheme = "blue";

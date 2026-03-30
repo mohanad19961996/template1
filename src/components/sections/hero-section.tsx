@@ -30,16 +30,20 @@ function Counter({ value, inView }: { value: string; inView: boolean }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (!inView) return;
-    let start = 0;
     const end = num || 0;
     if (end === 0) return;
-    const inc = end / (1800 / 16);
-    const timer = setInterval(() => {
-      start += inc;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
+    const duration = 1800;
+    let startTime: number | null = null;
+    let rafId: number;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
   }, [inView, num]);
   return <>{inView ? count : 0}{suffix}</>;
 }
@@ -194,21 +198,21 @@ function HeroVisual({ inView, isAr, imageStyle, showFloatingCards }: { inView: b
 
   return (
     <div className="relative w-full max-w-[560px] mx-auto lg:mx-0">
-      <motion.div className="absolute -z-10 rounded-full blur-[100px]" style={{ width: "70%", height: "70%", top: "15%", left: "15%", background: "radial-gradient(circle, rgba(var(--color-primary-rgb) / 0.25) 0%, transparent 70%)" }} animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} />
+      <div className="absolute -z-10 rounded-full blur-[100px]" style={{ width: "70%", height: "70%", top: "15%", left: "15%", background: "radial-gradient(circle, rgba(var(--color-primary-rgb) / 0.25) 0%, transparent 70%)", opacity: 0.65 }} />
 
       {imageStyle === "gradient-border" ? (
-        <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+        <div>
           <div className="relative rounded-3xl p-[3px] group cursor-pointer" style={{ background: "linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.35), var(--color-primary), rgba(var(--color-primary-rgb) / 0.6), var(--color-primary))", backgroundSize: "400% 400%", animation: "gradientBorder 3s ease infinite", boxShadow: "0 40px 100px rgba(var(--color-foreground-rgb) / 0.1), 0 0 20px rgba(var(--color-primary-rgb) / 0.12)" }}>
             <div className="relative rounded-[calc(1.5rem-3px)] overflow-hidden">{imageContent}</div>
           </div>
-        </motion.div>
+        </div>
       ) : imageStyle === "floating" ? (
-        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+        <div>
           <div className="relative rounded-3xl overflow-hidden group cursor-pointer" style={{ boxShadow: "0 40px 100px rgba(var(--color-foreground-rgb) / 0.12), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.08)" }}>
             <div className="absolute top-0 inset-x-0 h-[2px] z-10" style={{ background: "linear-gradient(90deg, transparent, var(--color-primary), transparent)" }} />
             {imageContent}
           </div>
-        </motion.div>
+        </div>
       ) : imageStyle === "masked" ? (
         <div className="relative group cursor-pointer" style={{ clipPath: "polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)" }}>
           <div className="rounded-2xl overflow-hidden">{imageContent}</div>

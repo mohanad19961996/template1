@@ -21,6 +21,17 @@ const DAY_LABELS = {
   ar: ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
 };
 
+const MONTH_LABELS = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+};
+
+const SCHEDULE_MODE_LABELS: Record<string, { en: string; ar: string }> = {
+  weekdays: { en: 'Weekdays', ar: 'أيام الأسبوع' },
+  monthdays: { en: 'Month Days', ar: 'أيام الشهر' },
+  yeardays: { en: 'Year Days', ar: 'أيام السنة' },
+};
+
 export default function RemindersPage() {
   const locale = useLocale();
   const isAr = locale === 'ar';
@@ -31,6 +42,9 @@ export default function RemindersPage() {
     titleEn: '', titleAr: '', descriptionEn: '', descriptionAr: '',
     type: 'general' as 'habit' | 'skill' | 'general',
     linkedId: '', time: '08:00', days: [1, 2, 3, 4, 5] as WeekDay[],
+    scheduleMode: 'weekdays' as 'weekdays' | 'monthdays' | 'yeardays',
+    monthDays: [] as number[],
+    yearDays: [] as { month: number; day: number }[],
     recurring: true, urgency: 'normal' as Urgency,
     sound: 'default', enabled: true,
   });
@@ -39,6 +53,8 @@ export default function RemindersPage() {
     setForm({
       titleEn: '', titleAr: '', descriptionEn: '', descriptionAr: '',
       type: 'general', linkedId: '', time: '08:00', days: [1, 2, 3, 4, 5],
+      scheduleMode: 'weekdays' as 'weekdays' | 'monthdays' | 'yeardays',
+      monthDays: [] as number[], yearDays: [] as { month: number; day: number }[],
       recurring: true, urgency: 'normal', sound: 'default', enabled: true,
     });
     setEditingId(null);
@@ -46,10 +62,17 @@ export default function RemindersPage() {
 
   const handleSave = () => {
     if (!form.titleEn && !form.titleAr) return;
+    const data = {
+      ...form,
+      days: form.scheduleMode === 'weekdays' ? form.days : [],
+      scheduleMode: form.scheduleMode,
+      monthDays: form.scheduleMode === 'monthdays' ? form.monthDays : undefined,
+      yearDays: form.scheduleMode === 'yeardays' ? form.yearDays : undefined,
+    };
     if (editingId) {
-      store.updateReminder(editingId, { ...form });
+      store.updateReminder(editingId, data);
     } else {
-      store.addReminder({ ...form });
+      store.addReminder(data);
     }
     setShowForm(false);
     resetForm();
@@ -101,7 +124,11 @@ export default function RemindersPage() {
                     <Clock className="h-3 w-3" /> {reminder.time}
                   </span>
                   <span className="text-[10px] text-[var(--foreground)]/60">
-                    {reminder.days.map(d => isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]).join(', ')}
+                    {reminder.scheduleMode === 'monthdays' && reminder.monthDays?.length
+                      ? (isAr ? 'أيام الشهر: ' : 'Monthly: ') + reminder.monthDays.join(', ')
+                      : reminder.scheduleMode === 'yeardays' && reminder.yearDays?.length
+                        ? (isAr ? 'سنوي: ' : 'Yearly: ') + reminder.yearDays.map(yd => `${(isAr ? MONTH_LABELS.ar : MONTH_LABELS.en)[yd.month]} ${yd.day}`).join(', ')
+                        : reminder.days.map(d => isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]).join(', ')}
                   </span>
                 </div>
               </div>
@@ -114,7 +141,11 @@ export default function RemindersPage() {
                     titleEn: reminder.titleEn, titleAr: reminder.titleAr,
                     descriptionEn: reminder.descriptionEn, descriptionAr: reminder.descriptionAr,
                     type: reminder.type, linkedId: reminder.linkedId ?? '',
-                    time: reminder.time, days: reminder.days, recurring: reminder.recurring,
+                    time: reminder.time, days: reminder.days,
+                    scheduleMode: reminder.scheduleMode ?? 'weekdays',
+                    monthDays: reminder.monthDays ?? [],
+                    yearDays: reminder.yearDays ?? [],
+                    recurring: reminder.recurring,
                     urgency: reminder.urgency, sound: reminder.sound, enabled: reminder.enabled,
                   });
                   setEditingId(reminder.id);
@@ -183,25 +214,150 @@ export default function RemindersPage() {
                     className="w-full rounded-xl app-input px-3 py-2.5 text-sm" />
                 </div>
 
-                <div>
-                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-2 block">{isAr ? 'الأيام' : 'Days'}</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-medium text-[var(--foreground)]/70 mb-1 block">{isAr ? 'الأيام' : 'Days'}</label>
+                  {/* Schedule mode tabs */}
                   <div className="flex gap-1.5">
-                    {[0, 1, 2, 3, 4, 5, 6].map(d => (
-                      <button key={d}
-                        onClick={() => setForm(f => ({
-                          ...f,
-                          days: f.days.includes(d as WeekDay)
-                            ? f.days.filter(x => x !== d)
-                            : [...f.days, d as WeekDay]
-                        }))}
-                        className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
-                          form.days.includes(d as WeekDay)
-                            ? 'bg-[var(--color-primary)] text-white'
-                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
-                        {isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]}
+                    {(['weekdays', 'monthdays', 'yeardays'] as const).map(m => (
+                      <button key={m}
+                        onClick={() => setForm(f => ({ ...f, scheduleMode: m }))}
+                        className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all',
+                          form.scheduleMode === m
+                            ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30'
+                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                        {isAr ? SCHEDULE_MODE_LABELS[m].ar : SCHEDULE_MODE_LABELS[m].en}
                       </button>
                     ))}
                   </div>
+
+                  {/* Weekdays */}
+                  {form.scheduleMode === 'weekdays' && (
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2, 3, 4, 5, 6].map(d => (
+                        <button key={d}
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            days: f.days.includes(d as WeekDay)
+                              ? f.days.filter(x => x !== d)
+                              : [...f.days, d as WeekDay]
+                          }))}
+                          className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
+                            form.days.includes(d as WeekDay)
+                              ? 'bg-[var(--color-primary)] text-white'
+                              : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                          {isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Month days (1-31) */}
+                  {form.scheduleMode === 'monthdays' && (
+                    <div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                          <button key={d}
+                            onClick={() => setForm(f => ({
+                              ...f,
+                              monthDays: f.monthDays.includes(d)
+                                ? f.monthDays.filter(x => x !== d)
+                                : [...f.monthDays, d].sort((a, b) => a - b)
+                            }))}
+                            className={cn('py-1.5 rounded-lg text-xs font-medium transition-all',
+                              form.monthDays.includes(d)
+                                ? 'bg-[var(--color-primary)] text-white'
+                                : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                            {d}
+                          </button>
+                        ))}
+                      </div>
+                      {form.monthDays.length > 0 && (
+                        <p className="text-[10px] text-[var(--foreground)]/50 mt-1.5">
+                          {isAr ? 'المحدد: ' : 'Selected: '}{form.monthDays.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Year days (month + day) */}
+                  {form.scheduleMode === 'yeardays' && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-4 gap-1">
+                        {(isAr ? MONTH_LABELS.ar : MONTH_LABELS.en).map((label, mi) => {
+                          const hasEntries = form.yearDays.some(yd => yd.month === mi);
+                          return (
+                            <button key={mi}
+                              onClick={() => {
+                                setForm(f => {
+                                  const existing = f.yearDays.filter(yd => yd.month === mi);
+                                  if (existing.length > 0) {
+                                    return { ...f, yearDays: f.yearDays.filter(yd => yd.month !== mi) };
+                                  }
+                                  return { ...f, yearDays: [...f.yearDays, { month: mi, day: 1 }].sort((a, b) => a.month - b.month || a.day - b.day) };
+                                });
+                              }}
+                              className={cn('py-1.5 rounded-lg text-[11px] font-medium transition-all',
+                                hasEntries
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(() => {
+                        const selectedMonths = [...new Set(form.yearDays.map(yd => yd.month))].sort((a, b) => a - b);
+                        if (selectedMonths.length === 0) return null;
+                        return selectedMonths.map(mi => {
+                          const daysInMonth = new Date(2024, mi + 1, 0).getDate();
+                          const selectedDays = form.yearDays.filter(yd => yd.month === mi).map(yd => yd.day);
+                          return (
+                            <div key={mi} className="mt-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[11px] font-semibold text-[var(--foreground)]/60">
+                                  {isAr ? MONTH_LABELS.ar[mi] : MONTH_LABELS.en[mi]}
+                                </span>
+                                <button
+                                  onClick={() => setForm(f => ({
+                                    ...f,
+                                    yearDays: f.yearDays.filter(yd => yd.month !== mi)
+                                  }))}
+                                  className="text-[10px] text-red-400 hover:text-red-500 cursor-pointer">
+                                  {isAr ? 'إزالة' : 'Remove'}
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-7 gap-1">
+                                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => (
+                                  <button key={d}
+                                    onClick={() => setForm(f => {
+                                      const has = f.yearDays.some(yd => yd.month === mi && yd.day === d);
+                                      const updated = has
+                                        ? f.yearDays.filter(yd => !(yd.month === mi && yd.day === d))
+                                        : [...f.yearDays, { month: mi, day: d }];
+                                      return { ...f, yearDays: updated.sort((a, b) => a.month - b.month || a.day - b.day) };
+                                    })}
+                                    className={cn('py-1.5 rounded-lg text-[11px] font-medium transition-all',
+                                      selectedDays.includes(d)
+                                        ? 'bg-[var(--color-primary)] text-white'
+                                        : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                                    {d}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      {form.yearDays.length > 0 && (
+                        <p className="text-[10px] text-[var(--foreground)]/50 mt-1">
+                          {isAr ? 'المحدد: ' : 'Selected: '}
+                          {form.yearDays.map(yd =>
+                            `${(isAr ? MONTH_LABELS.ar : MONTH_LABELS.en)[yd.month]} ${yd.day}`
+                          ).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>

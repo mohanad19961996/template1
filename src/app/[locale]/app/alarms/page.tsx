@@ -31,11 +31,26 @@ const ALARM_ICON_OPTIONS = Object.keys(ICON_MAP);
 const DAY_LABELS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_LABELS_AR = ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'];
 
+const MONTH_LABELS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+const SCHEDULE_MODE_LABELS: Record<string, { en: string; ar: string }> = {
+  weekdays: { en: 'Weekdays', ar: 'أيام الأسبوع' },
+  monthdays: { en: 'Month Days', ar: 'أيام الشهر' },
+  yeardays: { en: 'Year Days', ar: 'أيام السنة' },
+};
+
 const SNOOZE_OPTIONS = [5, 10, 15, 20, 30];
 
 // ── Default Alarm Form ────────────────────────────────────
 
-function defaultAlarmForm(): Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 'status'> {
+type AlarmFormData = Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 'status'> & {
+  scheduleMode: 'weekdays' | 'monthdays' | 'yeardays';
+  monthDays: number[];
+  yearDays: { month: number; day: number }[];
+};
+
+function defaultAlarmForm(): AlarmFormData {
   return {
     labelEn: '',
     labelAr: '',
@@ -43,6 +58,9 @@ function defaultAlarmForm(): Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 's
     linkedId: undefined,
     time: '07:00',
     days: [0, 1, 2, 3, 4, 5, 6],
+    scheduleMode: 'weekdays',
+    monthDays: [],
+    yearDays: [],
     oneTimeDate: undefined,
     sound: 'classic',
     volume: 80,
@@ -60,12 +78,15 @@ function defaultAlarmForm(): Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 's
 // ── Live Clock Component ──────────────────────────────────
 
 function LiveClock({ isAr }: { isAr: boolean }) {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  if (!now) return <div className="relative flex flex-col items-center gap-6" style={{ minHeight: 280 }} />;
 
   const h = now.getHours();
   const m = now.getMinutes();
@@ -190,7 +211,7 @@ function AlarmCountdown({ alarm, isAr }: { alarm: Alarm; isAr: boolean }) {
       }
 
       // If alarm has specific days, find next matching day
-      if (alarm.days.length > 0 && alarm.days.length < 7) {
+      if (alarm.days?.length > 0 && alarm.days.length < 7) {
         for (let i = 0; i < 8; i++) {
           const checkDate = new Date(target);
           checkDate.setDate(target.getDate() + i);
@@ -470,13 +491,16 @@ export default function AlarmsPage() {
 
   // Open edit form
   const openEdit = (alarm: Alarm) => {
-    setForm({
+    const formData: AlarmFormData = {
       labelEn: alarm.labelEn,
       labelAr: alarm.labelAr,
       type: alarm.type,
       linkedId: alarm.linkedId,
       time: alarm.time,
       days: alarm.days,
+      scheduleMode: alarm.scheduleMode ?? 'weekdays',
+      monthDays: alarm.monthDays ?? [],
+      yearDays: alarm.yearDays ?? [],
       oneTimeDate: alarm.oneTimeDate,
       sound: alarm.sound,
       volume: alarm.volume,
@@ -488,7 +512,8 @@ export default function AlarmsPage() {
       enabled: alarm.enabled,
       color: alarm.color,
       icon: alarm.icon,
-    });
+    };
+    setForm(formData);
     setEditingId(alarm.id);
     setScheduleMode(alarm.oneTimeDate ? 'oneTime' : 'recurring');
     setShowForm(true);
@@ -496,9 +521,13 @@ export default function AlarmsPage() {
 
   // Save alarm
   const handleSave = () => {
+    const isRecurring = scheduleMode === 'recurring';
     const data = {
       ...form,
-      days: scheduleMode === 'oneTime' ? [] : form.days,
+      days: isRecurring && form.scheduleMode === 'weekdays' ? form.days : [],
+      scheduleMode: isRecurring ? form.scheduleMode : undefined,
+      monthDays: isRecurring && form.scheduleMode === 'monthdays' ? form.monthDays : undefined,
+      yearDays: isRecurring && form.scheduleMode === 'yeardays' ? form.yearDays : undefined,
       oneTimeDate: scheduleMode === 'oneTime' ? form.oneTimeDate : undefined,
     };
     if (editingId) {
@@ -750,29 +779,42 @@ export default function AlarmsPage() {
                       </div>
                     )}
                     {/* Days badges */}
-                    {alarm.days.length > 0 && alarm.days.length < 7 && (
-                      <div className="flex gap-1 mt-1.5">
-                        {(isAr ? DAY_LABELS_AR : DAY_LABELS_EN).map((d, i) => (
-                          <span
-                            key={i}
-                            className={`text-[9px] w-6 h-5 rounded flex items-center justify-center font-bold ${
-                              alarm.days.includes(i as WeekDay)
-                                ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
-                                : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/30'
-                            }`}
-                          >
-                            {d}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {alarm.days.length === 7 && (
-                      <span className="text-[10px] text-[var(--foreground)]/50 flex items-center gap-1 mt-1">
-                        <Repeat className="w-3 h-3" />
-                        {isAr ? 'كل يوم' : 'Every day'}
+                    {alarm.scheduleMode === 'monthdays' && alarm.monthDays?.length ? (
+                      <span className="text-[10px] text-[var(--foreground)]/50 mt-1 block">
+                        {isAr ? 'أيام الشهر: ' : 'Monthly: '}{alarm.monthDays.join(', ')}
                       </span>
+                    ) : alarm.scheduleMode === 'yeardays' && alarm.yearDays?.length ? (
+                      <span className="text-[10px] text-[var(--foreground)]/50 mt-1 block">
+                        {isAr ? 'سنوي: ' : 'Yearly: '}
+                        {alarm.yearDays.map(yd => `${(isAr ? MONTH_LABELS_AR : MONTH_LABELS_EN)[yd.month]} ${yd.day}`).join(', ')}
+                      </span>
+                    ) : (
+                      <>
+                        {alarm.days?.length > 0 && alarm.days.length < 7 && (
+                          <div className="flex gap-1 mt-1.5">
+                            {(isAr ? DAY_LABELS_AR : DAY_LABELS_EN).map((d, i) => (
+                              <span
+                                key={i}
+                                className={`text-[9px] w-6 h-5 rounded flex items-center justify-center font-bold ${
+                                  alarm.days.includes(i as WeekDay)
+                                    ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                                    : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/30'
+                                }`}
+                              >
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {alarm.days?.length === 7 && (
+                          <span className="text-[10px] text-[var(--foreground)]/50 flex items-center gap-1 mt-1">
+                            <Repeat className="w-3 h-3" />
+                            {isAr ? 'كل يوم' : 'Every day'}
+                          </span>
+                        )}
+                      </>
                     )}
-                    {alarm.oneTimeDate && alarm.days.length === 0 && (
+                    {alarm.oneTimeDate && (!alarm.days || alarm.days.length === 0) && !alarm.scheduleMode && (
                       <span className="text-[10px] text-[var(--foreground)]/50 mt-1 block">
                         {alarm.oneTimeDate}
                       </span>
@@ -1061,31 +1103,176 @@ export default function AlarmsPage() {
                 </div>
 
                 {scheduleMode === 'recurring' ? (
-                  <div className="flex gap-1.5 justify-center">
-                    {(isAr ? DAY_LABELS_AR : DAY_LABELS_EN).map((d, i) => {
-                      const selected = form.days.includes(i as WeekDay);
-                      return (
+                  <div className="space-y-3">
+                    {/* Schedule mode tabs */}
+                    <div className="flex gap-1.5">
+                      {(['weekdays', 'monthdays', 'yeardays'] as const).map(m => (
                         <button
-                          key={i}
+                          key={m}
                           type="button"
-                          onClick={() => {
-                            setForm(f => ({
-                              ...f,
-                              days: selected
-                                ? f.days.filter(x => x !== i)
-                                : [...f.days, i as WeekDay].sort(),
-                            }));
-                          }}
-                          className={`w-9 h-9 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            selected
-                              ? 'bg-[var(--color-primary)] text-white'
+                          onClick={() => setForm(f => ({ ...f, scheduleMode: m }))}
+                          className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                            form.scheduleMode === m
+                              ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30'
                               : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/10'
                           }`}
                         >
-                          {d}
+                          {isAr ? SCHEDULE_MODE_LABELS[m].ar : SCHEDULE_MODE_LABELS[m].en}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
+
+                    {/* Weekdays picker */}
+                    {form.scheduleMode === 'weekdays' && (
+                      <div className="flex gap-1.5 justify-center">
+                        {(isAr ? DAY_LABELS_AR : DAY_LABELS_EN).map((d, i) => {
+                          const selected = form.days.includes(i as WeekDay);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setForm(f => ({
+                                  ...f,
+                                  days: selected
+                                    ? f.days.filter(x => x !== i)
+                                    : [...f.days, i as WeekDay].sort(),
+                                }));
+                              }}
+                              className={`w-9 h-9 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                selected
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/10'
+                              }`}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Month days picker (1-31) */}
+                    {form.scheduleMode === 'monthdays' && (
+                      <div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setForm(f => ({
+                                ...f,
+                                monthDays: f.monthDays.includes(d)
+                                  ? f.monthDays.filter(x => x !== d)
+                                  : [...f.monthDays, d].sort((a, b) => a - b)
+                              }))}
+                              className={`py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                                form.monthDays.includes(d)
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/10'
+                              }`}
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
+                        {form.monthDays.length > 0 && (
+                          <p className="text-[10px] text-[var(--foreground)]/50 mt-1.5">
+                            {isAr ? 'المحدد: ' : 'Selected: '}{form.monthDays.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Year days picker (month + day) */}
+                    {form.scheduleMode === 'yeardays' && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-4 gap-1">
+                          {(isAr ? MONTH_LABELS_AR : MONTH_LABELS_EN).map((label, mi) => {
+                            const hasEntries = form.yearDays.some(yd => yd.month === mi);
+                            return (
+                              <button
+                                key={mi}
+                                type="button"
+                                onClick={() => {
+                                  setForm(f => {
+                                    const existing = f.yearDays.filter(yd => yd.month === mi);
+                                    if (existing.length > 0) {
+                                      return { ...f, yearDays: f.yearDays.filter(yd => yd.month !== mi) };
+                                    }
+                                    return { ...f, yearDays: [...f.yearDays, { month: mi, day: 1 }].sort((a, b) => a.month - b.month || a.day - b.day) };
+                                  });
+                                }}
+                                className={`py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                                  hasEntries
+                                    ? 'bg-[var(--color-primary)] text-white'
+                                    : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/10'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {(() => {
+                          const selectedMonths = [...new Set(form.yearDays.map(yd => yd.month))].sort((a, b) => a - b);
+                          if (selectedMonths.length === 0) return null;
+                          return selectedMonths.map(mi => {
+                            const daysInMonth = new Date(2024, mi + 1, 0).getDate();
+                            const selectedDays = form.yearDays.filter(yd => yd.month === mi).map(yd => yd.day);
+                            return (
+                              <div key={mi} className="mt-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[11px] font-semibold text-[var(--foreground)]/60">
+                                    {isAr ? MONTH_LABELS_AR[mi] : MONTH_LABELS_EN[mi]}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setForm(f => ({
+                                      ...f,
+                                      yearDays: f.yearDays.filter(yd => yd.month !== mi)
+                                    }))}
+                                    className="text-[10px] text-red-400 hover:text-red-500 cursor-pointer"
+                                  >
+                                    {isAr ? 'إزالة' : 'Remove'}
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-7 gap-1">
+                                  {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => (
+                                    <button
+                                      key={d}
+                                      type="button"
+                                      onClick={() => setForm(f => {
+                                        const has = f.yearDays.some(yd => yd.month === mi && yd.day === d);
+                                        const updated = has
+                                          ? f.yearDays.filter(yd => !(yd.month === mi && yd.day === d))
+                                          : [...f.yearDays, { month: mi, day: d }];
+                                        return { ...f, yearDays: updated.sort((a, b) => a.month - b.month || a.day - b.day) };
+                                      })}
+                                      className={`py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                                        selectedDays.includes(d)
+                                          ? 'bg-[var(--color-primary)] text-white'
+                                          : 'bg-[var(--foreground)]/5 text-[var(--foreground)]/60 hover:bg-[var(--foreground)]/10'
+                                      }`}
+                                    >
+                                      {d}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                        {form.yearDays.length > 0 && (
+                          <p className="text-[10px] text-[var(--foreground)]/50 mt-1">
+                            {isAr ? 'المحدد: ' : 'Selected: '}
+                            {form.yearDays.map(yd =>
+                              `${(isAr ? MONTH_LABELS_AR : MONTH_LABELS_EN)[yd.month]} ${yd.day}`
+                            ).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <input

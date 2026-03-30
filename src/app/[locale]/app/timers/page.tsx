@@ -41,10 +41,18 @@ export default function TimersPage() {
   const [completionNote, setCompletionNote] = useState('');
   const [completionRating, setCompletionRating] = useState<MoodLevel>(3);
   const [showHistory, setShowHistory] = useState(false);
+  const [clockNow, setClockNow] = useState<Date | null>(null);
 
   const active = store.activeTimer;
   const isRunning = active?.state === 'running';
   const isPaused = active?.state === 'paused';
+
+  // Live clock
+  useEffect(() => {
+    setClockNow(new Date());
+    const cid = setInterval(() => setClockNow(new Date()), 1000);
+    return () => clearInterval(cid);
+  }, []);
 
   // Timer tick is handled globally in app layout — only watch for completion here
   useEffect(() => {
@@ -222,6 +230,18 @@ export default function TimersPage() {
     [store.timerSessions]
   );
 
+  const todaySessions = useMemo(() =>
+    store.timerSessions.filter(t => t.completed && t.startedAt.startsWith(todayString())).length,
+    [store.timerSessions]
+  );
+
+  const weekTotal = useMemo(() => {
+    const now = new Date();
+    const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay());
+    const weekStart = ws.toISOString().split('T')[0];
+    return store.timerSessions.filter(t => t.completed && t.startedAt >= weekStart).reduce((a, t) => a + t.duration, 0);
+  }, [store.timerSessions]);
+
   const containerClass = fullscreen
     ? 'fixed inset-0 z-[var(--z-modal)] bg-[var(--color-background)] flex flex-col items-center justify-center'
     : 'px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto';
@@ -368,6 +388,48 @@ export default function TimersPage() {
         {/* Side panel */}
         {!fullscreen && (
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="space-y-4">
+            {/* Live Clock & Stats */}
+            {clockNow && (
+              <div className="rounded-2xl app-card p-4 space-y-3">
+                <div className="text-center" dir="ltr">
+                  <div className="flex items-baseline justify-center gap-0.5 font-mono">
+                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+                      {String(clockNow.getHours() % 12 || 12).padStart(2, '0')}
+                    </span>
+                    <span className="text-3xl font-black animate-pulse" style={{ color: 'var(--color-primary)' }}>:</span>
+                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+                      {String(clockNow.getMinutes()).padStart(2, '0')}
+                    </span>
+                    <span className="text-3xl font-black animate-pulse" style={{ color: 'var(--color-primary)' }}>:</span>
+                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
+                      {String(clockNow.getSeconds()).padStart(2, '0')}
+                    </span>
+                    <span className="text-xs font-bold ms-1.5 text-[var(--foreground)]/50">
+                      {clockNow.getHours() >= 12 ? 'PM' : 'AM'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--foreground)]/50 mt-1">
+                    {clockNow.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+                {/* Quick stats */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--foreground)]/[0.08]">
+                  <div className="text-center">
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{todaySessions}</p>
+                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'جلسات اليوم' : 'Today'}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{formatTimerDuration(todayTotal)}</p>
+                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'وقت اليوم' : 'Time'}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{formatTimerDuration(weekTotal)}</p>
+                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'هذا الأسبوع' : 'Week'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Settings */}
             {!active && (
               <>
@@ -502,9 +564,11 @@ export default function TimersPage() {
             })()}
 
             {/* Timer History */}
-            {showHistory && (
               <div className="rounded-2xl app-card p-4">
-                <h3 className="text-sm font-semibold mb-3">{isAr ? 'السجل' : 'History'}</h3>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[var(--color-primary)]" />
+                  {isAr ? 'السجل' : 'History'}
+                </h3>
                 {recentTimers.length === 0 ? (
                   <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'لا توجد جلسات سابقة' : 'No sessions yet'}</p>
                 ) : (
@@ -538,7 +602,6 @@ export default function TimersPage() {
                   </div>
                 )}
               </div>
-            )}
           </motion.div>
         )}
       </div>

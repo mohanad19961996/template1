@@ -15,16 +15,20 @@ function AnimatedCounter({ value, suffix, id }: { value: number; suffix: string;
   useEffect(() => {
     if (countedValues.has(id)) { setCount(value); return; }
     countedValues.add(id);
-    let start = 0;
     const end = value;
     if (end === 0) return;
-    const inc = end / (1200 / 16);
-    const timer = setInterval(() => {
-      start += inc;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
+    const duration = 1200;
+    let startTime: number | null = null;
+    let rafId: number;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
   }, [value, id]);
 
   return <span>{count}{suffix}</span>;
