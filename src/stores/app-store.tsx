@@ -297,7 +297,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       createdAt: new Date().toISOString(),
       archived: false,
-      order: data.order ?? stateRef.current.habits.length,
+      order: data.order ?? (stateRef.current.habits.filter(h => !h.archived).length + 1),
       trackingType: data.trackingType ?? 'boolean',
       targetValue: data.targetValue ?? 1,
       targetUnit: data.targetUnit ?? 'times',
@@ -351,12 +351,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ...s,
       habits: s.habits.map(h => {
         const idx = orderedIds.indexOf(h.id);
-        return idx >= 0 ? { ...h, order: idx } : h;
+        return idx >= 0 ? { ...h, order: idx + 1 } : h;
       }),
     }));
     // Persist order to API for each habit
     orderedIds.forEach((id, idx) => {
-      apiPatch(`/api/habits/${id}`, { order: idx });
+      apiPatch(`/api/habits/${id}`, { order: idx + 1 });
     });
   }, [update]);
 

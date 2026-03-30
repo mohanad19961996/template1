@@ -41,11 +41,12 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   const stop = (today: string, done: boolean) => {
     if (!currentSession) return;
     const secs = elapsed;
-    if (secs > 0 && !hasDuration && !done && !habit.archived) {
+    if (secs > 0 && !done && !habit.archived) {
+      const durationMin = hasDuration ? (habit.expectedDuration ?? Math.max(1, Math.round(secs / 60))) : Math.max(1, Math.round(secs / 60));
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        duration: Math.max(1, Math.round(secs / 60)),
+        duration: durationMin,
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: true,
         source: 'timer',
       });
