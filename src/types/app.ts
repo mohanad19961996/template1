@@ -17,6 +17,9 @@ export type HormoneType = 'dopamine' | 'serotonin' | 'oxytocin' | 'endorphins';
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type Urgency = 'low' | 'normal' | 'high';
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type AlarmType = 'habit' | 'skill' | 'independent';
+export type AlarmSound = 'classic' | 'digital' | 'gentle' | 'urgent' | 'nature' | 'bell' | 'siren' | 'melody' | 'chime' | 'rooster';
+export type AlarmStatus = 'idle' | 'ringing' | 'snoozed';
 
 export const DEFAULT_HABIT_CATEGORIES = [
   'health', 'fitness', 'learning', 'productivity', 'mindfulness',
@@ -256,6 +259,51 @@ export interface Reminder {
   createdAt: string;
 }
 
+// ── Alarm ─────────────────────────────────────────────────
+
+export interface Alarm {
+  id: string;
+  labelEn: string;
+  labelAr: string;
+  type: AlarmType;
+  linkedId?: string;           // habitId or skillId when linked
+  time: string;                // HH:mm — alarm trigger time
+  days: WeekDay[];             // which days to ring (empty = one-time)
+  oneTimeDate?: string;        // YYYY-MM-DD for one-time alarms
+  sound: AlarmSound;
+  volume: number;              // 0-100
+  snoozeEnabled: boolean;
+  snoozeDuration: number;      // minutes (5, 10, 15, 20, 30)
+  maxSnoozes: number;          // max snooze count (1-10)
+  snoozeCount: number;         // current snooze count
+  vibrate: boolean;
+  gradualVolume: boolean;      // start quiet, get louder over 30s
+  enabled: boolean;
+  status: AlarmStatus;         // idle | ringing | snoozed
+  lastTriggered?: string;      // ISO timestamp — prevent double-fire
+  color: string;
+  icon: string;
+  createdAt: string;
+}
+
+export const ALARM_SOUNDS: { id: AlarmSound; labelEn: string; labelAr: string }[] = [
+  { id: 'classic', labelEn: 'Classic', labelAr: 'كلاسيكي' },
+  { id: 'digital', labelEn: 'Digital', labelAr: 'رقمي' },
+  { id: 'gentle', labelEn: 'Gentle', labelAr: 'هادئ' },
+  { id: 'urgent', labelEn: 'Urgent', labelAr: 'عاجل' },
+  { id: 'nature', labelEn: 'Nature', labelAr: 'طبيعة' },
+  { id: 'bell', labelEn: 'Bell', labelAr: 'جرس' },
+  { id: 'siren', labelEn: 'Siren', labelAr: 'صفارة' },
+  { id: 'melody', labelEn: 'Melody', labelAr: 'لحن' },
+  { id: 'chime', labelEn: 'Chime', labelAr: 'رنين' },
+  { id: 'rooster', labelEn: 'Rooster', labelAr: 'ديك' },
+];
+
+export const ALARM_ICONS = [
+  'AlarmClock', 'Bell', 'BellRing', 'Clock', 'Sun', 'Moon',
+  'Coffee', 'Dumbbell', 'BookOpen', 'Brain', 'Heart', 'Star',
+] as const;
+
 export interface HormoneLog {
   id: string;
   date: string;
@@ -359,6 +407,7 @@ export interface AppState {
   skillSessions: SkillSession[];
   timerSessions: TimerSession[];
   reminders: Reminder[];
+  alarms: Alarm[];
   hormoneLogs: HormoneLog[];
   nutritionLogs: NutritionLog[];
   hydrationLogs: HydrationLog[];
@@ -483,6 +532,7 @@ export const DEFAULT_APP_STATE: AppState = {
   skillSessions: [],
   timerSessions: [],
   reminders: [],
+  alarms: [],
   hormoneLogs: [],
   nutritionLogs: [],
   hydrationLogs: [],

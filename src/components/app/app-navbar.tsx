@@ -47,6 +47,7 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
     analytics: { en: 'Analytics', ar: 'التحليلات' },
     calendar: { en: 'Calendar', ar: 'التقويم' },
     goals: { en: 'Goals', ar: 'الأهداف' },
+    alarms: { en: 'Alarms', ar: 'المنبهات' },
     reminders: { en: 'Reminders', ar: 'التذكيرات' },
     hormones: { en: 'Hormones', ar: 'الهرمونات' },
     nutrition: { en: 'Nutrition', ar: 'التغذية' },
@@ -66,14 +67,16 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
     >
       {/* Left side */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
-        <button
-          onClick={onOpenMobile}
-          className="flex h-9 w-9 icon-btn lg:hidden"
-          aria-label="Open menu"
-        >
-          <Menu className="h-4 w-4" />
-        </button>
+        {/* Mobile menu button — hidden on lg+ (sidebar visible) */}
+        <div className="lg:hidden">
+          <button
+            onClick={onOpenMobile}
+            className="h-9 w-9 icon-btn"
+            aria-label="Open menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* Desktop sidebar toggle */}
         <button

@@ -148,6 +148,7 @@ export default function HabitsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [conflictNewOrder, setConflictNewOrder] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -162,6 +163,7 @@ export default function HabitsPage() {
   const [cardsExpanded, setCardsExpanded] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'priority' | 'newest' | 'streak' | 'completion' | 'order' | 'custom'>('order');
+  const [showTodayFocus, setShowTodayFocus] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [goalTaggingId, setGoalTaggingId] = useState<string | null>(null);
@@ -312,6 +314,12 @@ export default function HabitsPage() {
 
   const handleSave = () => {
     if (!formData.nameEn && !formData.nameAr) return;
+    // Block save if order number is duplicate (user must swap or remove conflict first)
+    if (formData.orderNumber !== '' && formData.orderNumber !== undefined) {
+      const num = Number(formData.orderNumber);
+      const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
+      if (conflict) return;
+    }
     const { orderNumber, streakGoal, streakGoal2, streakGoal3, maxDailyReps, ...rest } = formData;
     const data = {
       ...rest,
@@ -905,20 +913,35 @@ export default function HabitsPage() {
             return (
               <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}
                 className="mb-6 rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.02] overflow-hidden shadow-sm">
-                {/* Section header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-500/10">
+                {/* Section header — click to toggle */}
+                <button onClick={() => setShowTodayFocus(prev => !prev)}
+                  className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-emerald-500/[0.03] transition-colors"
+                  style={{ borderBottom: showTodayFocus ? '1px solid rgba(16,185,129,0.1)' : 'none' }}>
                   <div className="flex items-center gap-2.5">
                     <div className="h-8 w-8 rounded-xl bg-emerald-500/15 flex items-center justify-center">
                       <Zap className="h-4 w-4 text-emerald-500" />
                     </div>
                     <span className="text-sm font-black">{isAr ? 'تركيز اليوم' : "Today's Focus"}</span>
                   </div>
-                  <span className="text-xs font-bold text-[var(--foreground)]/70">
-                    {allDone
-                      ? (isAr ? 'أحسنت! أكملت الكل ✓' : 'All done! Great job ✓')
-                      : `${done.length} / ${todayHabits.length} ${isAr ? 'مكتمل' : 'done'}`}
-                  </span>
-                </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs font-bold text-[var(--foreground)]/70">
+                      {allDone
+                        ? (isAr ? 'أحسنت! أكملت الكل ✓' : 'All done! Great job ✓')
+                        : `${done.length} / ${todayHabits.length} ${isAr ? 'مكتمل' : 'done'}`}
+                    </span>
+                    <ChevronDown className={cn('h-4 w-4 text-[var(--foreground)]/40 transition-transform duration-300', showTodayFocus && 'rotate-180')} />
+                  </div>
+                </button>
+
+                <AnimatePresence initial={false}>
+                {showTodayFocus && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="overflow-hidden"
+                >
 
                 {/* In-progress timer */}
                 {inProgress.map(h => {
@@ -1006,6 +1029,10 @@ export default function HabitsPage() {
                     ))}
                   </div>
                 )}
+
+                </motion.div>
+                )}
+                </AnimatePresence>
               </motion.div>
             );
           })()}
@@ -1558,12 +1585,76 @@ export default function HabitsPage() {
                   </label>
                   <input
                     type="number"
-                    min="0"
+                    min="1"
                     value={formData.orderNumber}
-                    onChange={e => setFormData(f => ({ ...f, orderNumber: e.target.value }))}
-                    className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                    onChange={e => { setFormData(f => ({ ...f, orderNumber: e.target.value })); setConflictNewOrder(''); }}
+                    className={cn('app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm',
+                      (() => {
+                        const val = formData.orderNumber;
+                        if (val === '' || val === undefined) return '';
+                        const num = Number(val);
+                        const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
+                        return conflict ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : '';
+                      })()
+                    )}
                     placeholder={isAr ? 'مثال: 1, 2, 3...' : 'e.g., 1, 2, 3...'}
                   />
+                  {(() => {
+                    const val = formData.orderNumber;
+                    if (val === '' || val === undefined) return null;
+                    const num = Number(val);
+                    const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
+                    if (!conflict) return null;
+                    const conflictName = isAr ? conflict.nameAr : conflict.nameEn;
+                    // Check if the new number typed for conflict is also taken
+                    const conflictNewNum = conflictNewOrder !== '' ? Number(conflictNewOrder) : null;
+                    const conflictNewTaken = conflictNewNum !== null && conflictNewNum !== num
+                      ? store.habits.find(h => h.order === conflictNewNum && h.id !== conflict.id && (!editingHabit || h.id !== editingHabit.id))
+                      : null;
+                    return (
+                      <div className="mt-1.5 rounded-lg border border-red-500/20 bg-red-500/5 p-2.5 space-y-2">
+                        <p className="text-[10px] font-bold text-red-500 flex items-center gap-1">
+                          ⚠ {isAr ? `الرقم ${num} مستخدم بالفعل في "${conflictName}"` : `Number ${num} is already used by "${conflictName}"`}
+                        </p>
+                        <div>
+                          <label className="text-[10px] font-semibold text-[var(--foreground)]/60 mb-1 block">
+                            {isAr ? `اختر رقم جديد لـ "${conflictName}":` : `Choose a new number for "${conflictName}":`}
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              value={conflictNewOrder}
+                              onChange={e => setConflictNewOrder(e.target.value)}
+                              className={cn('app-input flex-1 rounded-lg bg-transparent px-2.5 py-1.5 text-xs',
+                                conflictNewTaken ? 'border-red-500' : '')}
+                              placeholder={isAr ? 'رقم جديد...' : 'New number...'}
+                            />
+                            <button
+                              type="button"
+                              disabled={!conflictNewOrder || conflictNewNum === num || !!conflictNewTaken}
+                              onClick={() => {
+                                if (conflictNewOrder && conflictNewNum && !conflictNewTaken) {
+                                  store.updateHabit(conflict.id, { order: conflictNewNum });
+                                  setConflictNewOrder('');
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                            >
+                              {isAr ? 'تطبيق' : 'Apply'}
+                            </button>
+                          </div>
+                          {conflictNewTaken && (
+                            <p className="text-[9px] font-bold text-red-500 mt-1">
+                              ⚠ {isAr
+                                ? `الرقم ${conflictNewNum} مستخدم أيضًا في "${isAr ? conflictNewTaken.nameAr : conflictNewTaken.nameEn}"`
+                                : `Number ${conflictNewNum} is also used by "${isAr ? conflictNewTaken.nameAr : conflictNewTaken.nameEn}"`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <p className="text-[9px] text-[var(--foreground)]/35 mt-1">
                     {isAr ? 'رقم أصغر = يظهر أولاً عند الترتيب حسب الرقم' : 'Lower number = appears first when sorting by order'}
                   </p>
@@ -2048,8 +2139,6 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
   onEdit: () => void; onArchive: () => void; onDelete: () => void; onDetail: () => void; onViewPage?: string; expanded?: boolean;
   rowExpanded?: boolean; onToggleRow?: () => void;
 }) {
-  const [flipped, setFlipped] = useState(false);
-  const [flippedTab, setFlippedTab] = useState<'details' | 'stats'>('details');
   const [showNote, setShowNote] = useState(false);
   const [noteText, setNoteText] = useState(habit.notes || '');
   const minimized = !expanded;
@@ -2157,20 +2246,11 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      style={{ perspective: '1200px' }}
       className="habit-flip-wrap"
     >
-      <motion.div
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-        className="relative"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        {/* ── FRONT ── */}
         <div
-          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-front group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', flipped && 'invisible')}
+          className={cn('rounded-2xl overflow-hidden flex flex-col group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]')}
           style={{
-            backfaceVisibility: 'hidden',
             '--habit-color': hc,
             '--habit-border-color': done || allRepsDone ? '#22c55e' : isDisabled ? '#ef4444' : hc,
             background: minimized ? 'var(--color-background)' : `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 120px)`,
@@ -2308,7 +2388,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 4: Primary CTA ─ */}
-            <div className={cn('h-[48px] mb-2 overflow-hidden', isDisabled && 'opacity-40 pointer-events-none')}>
+            <div className={cn('min-h-[82px] mb-2', isDisabled && 'opacity-40 pointer-events-none')}>
               {!habit.archived ? (
                 <div onClick={e => e.stopPropagation()}>
                   <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" disabled={isDisabled} />
@@ -2353,6 +2433,10 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                       {hasMultipleReps ? `${todayCompletedReps}/${maxReps} ${isAr ? 'مكتمل' : 'done'}` : (isAr ? 'مكتملة ✓' : 'Done ✓')}
                     </div>
                   )}
+                  {/* Spacer for habits with only one button (timer habits) to maintain row alignment */}
+                  {hasDuration && !isCount && (
+                    <div className="h-[38px]" />
+                  )}
                 </div>
               ) : (
                 <motion.button whileTap={{ scale: 0.97 }} onClick={onArchive}
@@ -2363,7 +2447,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 5: Streak Challenges — fixed height */}
-            <div className="h-[100px] mb-2 overflow-hidden">
+            <div className="h-[180px] mb-2 overflow-hidden">
             {!hasStreakChallenge ? (
               <div className="rounded-xl border border-dashed border-[var(--foreground)]/[0.06] p-2.5 h-full flex items-center justify-center">
                 <span className="text-[10px] font-bold text-[var(--foreground)]/30 flex items-center gap-1.5">
@@ -2371,7 +2455,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 </span>
               </div>
             ) : (
-              <div className="rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02] p-2.5 h-full overflow-y-auto space-y-2">
+              <div className="rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02] p-2.5 h-full overflow-hidden space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Trophy className="h-3.5 w-3.5 text-amber-500" />
                   <span className="text-[10px] font-black">{isAr ? 'التحديات' : 'Challenges'}</span>
@@ -2443,7 +2527,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 5c: Notes ─ */}
-            <div className="h-[24px] mb-2 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className={cn('mb-2', showNote ? '' : 'h-[24px] overflow-hidden')} onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowNote(!showNote)}
                 className="flex items-center gap-1.5 text-xs font-bold mb-1 transition-all"
                 style={{ color: hc }}>
@@ -2548,172 +2632,11 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                   style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}>
                   <Eye className="h-3.5 w-3.5" /> {isAr ? 'تفاصيل' : 'Details'}
                 </button>
-                <button onClick={() => { setFlipped(true); setFlippedTab('stats'); }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
-                  style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}20` }}>
-                  <BarChart3 className="h-3.5 w-3.5" /> {isAr ? 'إحصائيات' : 'Stats'}
-                </button>
               </div>
             </div>
             </>}
           </div>
         </div>
-
-        {/* ── BACK ── */}
-        <div
-          className={cn('rounded-2xl overflow-hidden flex flex-col habit-flip-back habit-card-animated-border', !flipped ? 'invisible absolute inset-0' : 'absolute inset-x-0 top-0')}
-          style={{
-            backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-            '--habit-color': hc,
-            '--habit-border-color': hc,
-            background: `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 100px)`,
-            boxShadow: `0 2px 12px ${hc}10`,
-          } as React.CSSProperties}
-        >
-          <div className="h-1.5 w-full shrink-0" style={{ background: `linear-gradient(90deg, ${hc}, ${hc}99)` }} />
-
-          <div className="p-4 flex-1 overflow-y-auto flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.93 }} onClick={() => setFlipped(false)}
-                className="flex items-center gap-1.5 rounded-xl py-1.5 px-3 text-[11px] font-bold text-[var(--foreground)]/80 bg-[var(--foreground)]/[0.06] hover:bg-[var(--foreground)]/[0.12] transition-all cursor-pointer border border-[var(--foreground)]/[0.06] hover:border-[var(--foreground)]/[0.15]">
-                <ChevronLeft className={cn('h-3.5 w-3.5', isAr && 'rotate-180')} /> {isAr ? 'رجوع' : 'Back'}
-              </motion.button>
-              <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: `${hc}15` }}>
-                <div className="h-2.5 w-2.5 rounded-full" style={{ background: hc }} />
-              </div>
-            </div>
-            <h3 className="text-sm font-extrabold text-center mb-3">{name}</h3>
-
-            {/* Tab switcher */}
-            <div className="flex gap-1 mb-3 rounded-xl bg-[var(--foreground)]/[0.05] p-1">
-              {([
-                { key: 'details' as const, label: isAr ? 'التفاصيل' : 'Details' },
-                { key: 'stats' as const, label: isAr ? 'الإحصائيات' : 'Statistics' },
-              ]).map(t => (
-                <button key={t.key} onClick={() => setFlippedTab(t.key)}
-                  className={cn('flex-1 py-2 rounded-lg text-[11px] font-bold transition-all',
-                    flippedTab === t.key ? 'bg-[var(--color-background)] text-[var(--foreground)] shadow-sm' : 'text-[var(--foreground)]/60 hover:text-[var(--foreground)]/80')}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {flippedTab === 'details' ? (
-              <>
-                {(isAr ? habit.descriptionAr : habit.descriptionEn) && (
-                  <p className="text-[11px] text-[var(--foreground)]/70 leading-relaxed mb-3 rounded-xl px-3 py-2.5 bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
-                    {isAr ? habit.descriptionAr : habit.descriptionEn}
-                  </p>
-                )}
-                <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                  {(isAr ? habit.placeAr : habit.placeEn) && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-600"><MapPin className="h-3 w-3" /> {isAr ? habit.placeAr : habit.placeEn}</span>
-                  )}
-                  {habit.preferredTime && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600"><Clock className="h-3 w-3" /> {habit.preferredTime}</span>
-                  )}
-                  {habit.expectedDuration && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600"><Hourglass className="h-3 w-3" /> {habit.expectedDuration}{isAr ? 'د' : 'm'}</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {[
-                    { label: isAr ? 'الصعوبة' : 'Difficulty', value: isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty },
-                    { label: isAr ? 'النوع' : 'Type', value: isAr ? (habit.type === 'positive' ? 'بناء' : 'تجنب') : (habit.type === 'positive' ? 'Build' : 'Break') },
-                    { label: isAr ? 'منذ' : 'Since', value: new Date(habit.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }) },
-                    { label: isAr ? 'العمر' : 'Age', value: `${daysSinceCreation}${isAr ? ' يوم' : 'd'}` },
-                  ].map((item, i) => (
-                    <div key={i} className="rounded-xl bg-[var(--foreground)]/[0.03] p-2.5 border border-[var(--foreground)]/[0.06]">
-                      <p className="text-[9px] text-[var(--foreground)]/60 font-bold uppercase">{item.label}</p>
-                      <p className="text-[12px] font-extrabold">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Habit Loop */}
-                {(() => {
-                  const hasCue = !!(isAr ? habit.cueAr : habit.cueEn);
-                  const hasRoutine = !!(isAr ? habit.routineAr : habit.routineEn);
-                  const hasReward = !!(isAr ? habit.rewardAr : habit.rewardEn);
-                  if (!hasCue && !hasRoutine && !hasReward) return null;
-                  return (
-                    <div className="mb-3 rounded-xl border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02] p-3 space-y-2">
-                      <span className="text-[9px] font-black text-[var(--foreground)]/60 uppercase flex items-center gap-1"><Repeat className="h-3 w-3" /> {isAr ? 'حلقة العادة' : 'Habit Loop'}</span>
-                      {hasCue && <p className="text-[11px] text-[var(--foreground)]/80"><span className="text-amber-500 font-bold">{isAr ? 'المحفز' : 'Trigger'}:</span> {isAr ? habit.cueAr : habit.cueEn}</p>}
-                      {hasRoutine && <p className="text-[11px] text-[var(--foreground)]/80"><span className="text-blue-500 font-bold">{isAr ? 'الروتين' : 'Routine'}:</span> {isAr ? habit.routineAr : habit.routineEn}</p>}
-                      {hasReward && <p className="text-[11px] text-[var(--foreground)]/80"><span className="text-emerald-500 font-bold">{isAr ? 'المكافأة' : 'Reward'}:</span> {isAr ? habit.rewardAr : habit.rewardEn}</p>}
-                    </div>
-                  );
-                })()}
-              </>
-            ) : (
-              <>
-                <div className="grid grid-cols-4 gap-1.5 mb-3">
-                  {[
-                    { label: isAr ? 'أسبوع' : 'Week', value: timeStats.reps.week },
-                    { label: isAr ? 'شهر' : 'Month', value: timeStats.reps.month },
-                    { label: isAr ? 'سنة' : 'Year', value: timeStats.reps.year },
-                    { label: isAr ? 'المجمل' : 'Total', value: timeStats.reps.total },
-                  ].map((r, i) => (
-                    <div key={i} className="text-center rounded-xl bg-[var(--foreground)]/[0.04] border border-[var(--foreground)]/[0.06] py-2">
-                      <p className="text-sm font-black">{r.value}</p>
-                      <p className="text-[8px] text-[var(--foreground)]/60 font-bold uppercase">{r.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="text-center rounded-xl bg-orange-500/8 border border-orange-500/15 py-2.5">
-                    <Flame className="h-4 w-4 mx-auto text-orange-500 mb-0.5" />
-                    <p className="text-sm font-black">{streak.current} / {streak.best}</p>
-                    <p className="text-[8px] text-[var(--foreground)]/60 font-bold uppercase">{isAr ? 'سلسلة / أفضل' : 'Streak / Best'}</p>
-                  </div>
-                  <div className="text-center rounded-xl bg-blue-500/8 border border-blue-500/15 py-2.5">
-                    <TrendingUp className="h-4 w-4 mx-auto text-blue-500 mb-0.5" />
-                    <p className="text-sm font-black">{stats.completionRate}%</p>
-                    <p className="text-[8px] text-[var(--foreground)]/60 font-bold uppercase">{isAr ? 'معدل الإنجاز' : 'Rate'}</p>
-                  </div>
-                </div>
-                <div className="flex items-end gap-1 h-12 px-1 mb-3">
-                  {stats.completionsByWeekday.map((count, wi) => {
-                    const max = Math.max(...stats.completionsByWeekday, 1);
-                    const pct = (count / max) * 100;
-                    return (
-                      <div key={wi} className="flex-1 flex flex-col items-center gap-0.5">
-                        <div className="w-full rounded-sm transition-all hover:opacity-100" style={{ height: `${Math.max(pct, 8)}%`, background: pct > 0 ? hc : 'var(--foreground)', opacity: pct > 0 ? 0.7 : 0.06 }} />
-                        <span className="text-[8px] font-bold text-[var(--foreground)]/60">{(isAr ? DAY_LABELS.ar : DAY_LABELS.en)[wi][0]}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Bottom action buttons */}
-            <div className="flex items-center gap-2 pt-3 border-t border-[var(--foreground)]/[0.08] mt-auto">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={onEdit}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold text-[var(--foreground)]/80 bg-[var(--foreground)]/[0.05] hover:bg-[var(--foreground)]/[0.1] border border-[var(--foreground)]/[0.06] hover:border-[var(--foreground)]/[0.15] transition-all">
-                <Edit3 className="h-3.5 w-3.5" /> {isAr ? 'تعديل' : 'Edit'}
-              </motion.button>
-              <Link href={onViewPage || `/app/habits/${habit.id}`} className="flex-1">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold text-white shadow-sm hover:shadow-md transition-all"
-                  style={{ background: `linear-gradient(135deg, ${hc}, ${hc}cc)` }}>
-                  <Maximize2 className="h-3.5 w-3.5" /> {isAr ? 'الصفحة' : 'Page'}
-                </motion.div>
-              </Link>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={onArchive}
-                className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold border transition-all',
-                  habit.archived
-                    ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
-                    : 'text-amber-600 bg-amber-500/5 border-amber-500/15 hover:bg-amber-500/15')}>
-                {habit.archived ? <RotateCcw className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
     </motion.div>
   );
 }

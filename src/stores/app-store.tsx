@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   AppState, DEFAULT_APP_STATE, Habit, HabitLog, Skill, SkillSession,
-  TimerSession, Reminder, HormoneLog, NutritionLog, HydrationLog,
+  TimerSession, Reminder, Alarm, AlarmStatus, HormoneLog, NutritionLog, HydrationLog,
   Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
   StreakInfo, HabitStats, SkillStats, DateString,
   HabitHistoryEntry, HabitChangeType,
@@ -185,6 +185,16 @@ interface AppStore extends AppState {
   updateReminder: (id: string, updates: Partial<Reminder>) => void;
   deleteReminder: (id: string) => void;
   toggleReminder: (id: string) => void;
+
+  // Alarms
+  addAlarm: (alarm: Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 'status'>) => Alarm;
+  updateAlarm: (id: string, updates: Partial<Alarm>) => void;
+  deleteAlarm: (id: string) => void;
+  toggleAlarm: (id: string) => void;
+  triggerAlarm: (id: string) => void;
+  snoozeAlarm: (id: string) => void;
+  dismissAlarm: (id: string) => void;
+  dismissAllAlarms: () => void;
 
   // Hormones
   logHormone: (log: Omit<HormoneLog, 'id'>) => HormoneLog;
@@ -678,6 +688,49 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     update(s => ({ ...s, reminders: s.reminders.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r) }));
   }, [update]);
 
+  // ── Alarms ──
+
+  const addAlarm = useCallback((data: Omit<Alarm, 'id' | 'createdAt' | 'snoozeCount' | 'status'>): Alarm => {
+    const alarm: Alarm = { ...data, id: generateId(), createdAt: new Date().toISOString(), snoozeCount: 0, status: 'idle' };
+    update(s => ({ ...s, alarms: [...s.alarms, alarm] }));
+    return alarm;
+  }, [update]);
+
+  const updateAlarm = useCallback((id: string, updates: Partial<Alarm>) => {
+    update(s => ({ ...s, alarms: s.alarms.map(a => a.id === id ? { ...a, ...updates } : a) }));
+  }, [update]);
+
+  const deleteAlarm = useCallback((id: string) => {
+    update(s => ({ ...s, alarms: s.alarms.filter(a => a.id !== id) }));
+  }, [update]);
+
+  const toggleAlarm = useCallback((id: string) => {
+    update(s => ({ ...s, alarms: s.alarms.map(a => a.id === id ? { ...a, enabled: !a.enabled, status: 'idle' as AlarmStatus, snoozeCount: 0 } : a) }));
+  }, [update]);
+
+  const triggerAlarm = useCallback((id: string) => {
+    update(s => ({ ...s, alarms: s.alarms.map(a => a.id === id ? { ...a, status: 'ringing' as AlarmStatus, lastTriggered: new Date().toISOString() } : a) }));
+  }, [update]);
+
+  const snoozeAlarm = useCallback((id: string) => {
+    update(s => ({
+      ...s,
+      alarms: s.alarms.map(a => {
+        if (a.id !== id) return a;
+        if (a.snoozeCount >= a.maxSnoozes) return { ...a, status: 'idle' as AlarmStatus, snoozeCount: 0 };
+        return { ...a, status: 'snoozed' as AlarmStatus, snoozeCount: a.snoozeCount + 1, lastTriggered: new Date().toISOString() };
+      }),
+    }));
+  }, [update]);
+
+  const dismissAlarm = useCallback((id: string) => {
+    update(s => ({ ...s, alarms: s.alarms.map(a => a.id === id ? { ...a, status: 'idle' as AlarmStatus, snoozeCount: 0 } : a) }));
+  }, [update]);
+
+  const dismissAllAlarms = useCallback(() => {
+    update(s => ({ ...s, alarms: s.alarms.map(a => a.status !== 'idle' ? { ...a, status: 'idle' as AlarmStatus, snoozeCount: 0 } : a) }));
+  }, [update]);
+
   // ── Hormones ──
 
   const logHormone = useCallback((data: Omit<HormoneLog, 'id'>): HormoneLog => {
@@ -828,6 +881,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     logSkillSession, deleteSkillSession, getSkillSessions, getSkillStats,
     startTimer, updateActiveTimer, tickActiveTimer, completeTimer, cancelTimer, addDistraction,
     addReminder, updateReminder, deleteReminder, toggleReminder,
+    addAlarm, updateAlarm, deleteAlarm, toggleAlarm, triggerAlarm, snoozeAlarm, dismissAlarm, dismissAllAlarms,
     logHormone, deleteHormoneLog, getHormoneLogs,
     logNutrition, deleteNutritionLog, logHydration, getHydrationForDate, getNutritionForDate,
     addGoal, updateGoal, deleteGoal, toggleGoalMilestone,
