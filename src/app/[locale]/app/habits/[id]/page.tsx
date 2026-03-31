@@ -312,36 +312,32 @@ export default function HabitDetailPage() {
           </button>
         )}
 
-        {/* Mark done button */}
+        {/* Completion status (read-only — completion only from habit card) */}
         {(!habit.expectedDuration || !isViewingToday) && (
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-[var(--foreground)]/50">
               {isAr ? 'حالة الإنجاز' : 'Completion Status'}
             </span>
-            <button onClick={handleToggleDay}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+            <span className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold',
                 viewingDateDone
                   ? 'bg-emerald-500/15 text-emerald-600'
-                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]'
+                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40'
               )}>
               {viewingDateDone ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-              {viewingDateDone ? (isAr ? 'مكتملة ✓' : 'Done ✓') : (isAr ? 'تسجيل إنجاز' : 'Mark Done')}
-            </button>
+              {viewingDateDone ? (isAr ? 'مكتملة ✓' : 'Done ✓') : (isAr ? 'لم تكتمل' : 'Not Done')}
+            </span>
           </div>
         )}
 
-        {/* Timer controls — only for today */}
-        {isViewingToday && (
+        {/* Timer info — read-only (completion only from habit card) */}
+        {isViewingToday && habit.expectedDuration && (
           <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2">
               <Timer className="h-4 w-4 text-[var(--foreground)]/40" />
               <span className="text-xs font-medium text-[var(--foreground)]/50">
-                {habit.expectedDuration
-                  ? (isAr ? `مؤقت — ${habit.expectedDuration} دقيقة` : `Timer — ${habit.expectedDuration} min`)
-                  : (isAr ? 'مؤقت (اختياري)' : 'Timer (optional)')}
+                {isAr ? `المؤقت: ${habit.expectedDuration} دقيقة — استخدم بطاقة العادة للتسجيل` : `Timer: ${habit.expectedDuration} min — use the habit card to log`}
               </span>
             </div>
-            <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={viewingDateDone} size="md" />
           </div>
         )}
 

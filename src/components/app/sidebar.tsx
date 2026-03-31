@@ -77,7 +77,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
   const isActive = (href: string) => {
     const localePath = `/${locale}${href}`;
     if (href === '/app') return pathname === localePath;
-    return pathname.startsWith(localePath);
+    return pathname === localePath || pathname.startsWith(localePath + '/');
   };
 
   const NavLink = ({ item, showLabel }: { item: NavItem; showLabel: boolean }) => {

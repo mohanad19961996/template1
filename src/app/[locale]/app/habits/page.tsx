@@ -2925,7 +2925,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
       className="habit-flip-wrap h-full"
     >
         <div
-          className={cn('rounded-2xl overflow-hidden flex flex-col group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] h-full')}
+          className={cn('rounded-2xl overflow-visible flex flex-col group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] h-full')}
           style={{
             '--habit-color': hc,
             '--habit-border-color': done || allRepsDone ? '#22c55e' : isDisabled ? '#ef4444' : hc,
@@ -2935,7 +2935,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
           } as React.CSSProperties}
         >
           {/* Color accent bar */}
-          <div className="w-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ height: minimized ? 4 : 8, background: `linear-gradient(90deg, ${hc}, ${hc}bb)` }} />
+          <div className="w-full transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] rounded-t-2xl" style={{ height: minimized ? 4 : 8, background: `linear-gradient(90deg, ${hc}, ${hc}bb)` }} />
 
           {/* Optional custom image — only when expanded */}
           {!minimized && habit.image && (
@@ -2945,7 +2945,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
           )}
 
-          <div className={cn('px-4 pb-3 pt-3 flex-1 flex flex-col', !minimized && 'overflow-y-auto')}>
+          <div className={cn('px-4 pb-3 pt-3 flex-1 flex flex-col rounded-b-2xl')}>
             {/* ─ Row 1: Order # + Name + quick actions ─ */}
             <div className="flex items-start justify-between gap-2 mb-2 h-[58px] overflow-hidden">
               <div className="min-w-0 flex-1 flex items-start gap-2.5">
@@ -2986,62 +2986,119 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               </div>
             </div>
 
-            {/* Minimized: just show status */}
+            {/* Minimized: status + details button */}
             {minimized && (
-              <div className="flex items-center justify-between py-1">
-                {(done || allRepsDone) ? (
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> {isAr ? 'مكتملة' : 'Done'}</span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--foreground)]/60"><Circle className="h-4 w-4" /> {isAr ? 'لم تكتمل' : 'Pending'}</span>
-                )}
-                {streak.current > 0 && <span className="text-xs font-bold text-orange-500">🔥 {streak.current}</span>}
+              <div className="flex flex-col gap-2 py-1">
+                <div className="flex items-center justify-between">
+                  {(done || allRepsDone) ? (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> {isAr ? 'مكتملة' : 'Done'}</span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--foreground)]/60"><Circle className="h-4 w-4" /> {isAr ? 'لم تكتمل' : 'Pending'}</span>
+                  )}
+                  {streak.current > 0 && <span className="text-xs font-bold text-orange-500">🔥 {streak.current}</span>}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDetail(); }}
+                  className="group/detbtn w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 ease-out cursor-pointer"
+                  style={{ background: `${hc}10`, color: hc, border: `1.5px solid ${hc}20` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; e.currentTarget.style.boxShadow = `0 4px 16px ${hc}40`; e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}10`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  {isAr ? 'التفاصيل' : 'Details'}
+                </button>
               </div>
             )}
 
             {!minimized && <>
             {/* ─ Row 2: Meta badges ─ */}
-            <div className="flex items-center gap-1.5 mb-2 flex-wrap h-[76px] overflow-hidden content-start">
-              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
-                habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
-                {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                <span className="opacity-50">{isAr ? 'النوع:' : 'Type:'}</span> {habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break')}
-              </span>
-              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
-                habit.difficulty === 'hard' ? 'bg-red-500/10 text-red-500' : habit.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-500')}>
-                <BarChart3 className="h-3 w-3" />
-                <span className="opacity-50">{isAr ? 'الصعوبة:' : 'Diff:'}</span> {isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty}
-              </span>
-              <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
-                habit.priority === 'high' ? 'bg-red-500/10 text-red-500' : habit.priority === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-sky-500/10 text-sky-500')}>
-                <ArrowUpDown className="h-3 w-3" />
-                <span className="opacity-50">{isAr ? 'الأولوية:' : 'Pri:'}</span> {isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority}
-              </span>
-              <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-[var(--foreground)]/[0.06] cursor-default text-[var(--foreground)]/70 flex items-center gap-1">
-                <Target className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'الهدف:' : 'Goal:'}</span> {goalLabel}
-              </span>
-              {habit.expectedDuration && (
-                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-purple-500/10 cursor-default text-purple-600 flex items-center gap-1">
-                  <Timer className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المدة:' : 'Dur:'}</span> {habit.expectedDuration} {isAr ? 'دقيقة' : 'min'}
-                </span>
-              )}
-              {habit.preferredTime && (
-                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-sky-500/10 cursor-default text-sky-600 flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المفضل:' : 'Preferred:'}</span> {to12h(habit.preferredTime!)}
-                </span>
-              )}
-              {habit.windowStart && habit.windowEnd && (
+            <div className="relative mb-2 h-[76px] group/badges">
+              {/* Normal — clipped */}
+              <div className="flex items-center gap-1.5 flex-wrap h-full overflow-hidden content-start transition-opacity duration-300 ease-out group-hover/badges:opacity-0">
                 <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
-                  habit.strictWindow ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-600')}>
-                  <Target className="h-3 w-3" />
-                  <span className="opacity-50">{habit.strictWindow ? (isAr ? 'إجباري:' : 'Strict:') : (isAr ? 'نافذة:' : 'Window:')}</span>
-                  {to12h(habit.windowStart!)}–{to12h(habit.windowEnd!)}
-                  {habit.strictWindow && <span className="opacity-60">({isAr ? 'بدونه لاغية' : 'void if missed'})</span>}
+                  habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
+                  {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span className="opacity-50">{isAr ? 'النوع:' : 'Type:'}</span> {habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break')}
                 </span>
-              )}
+                <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                  habit.difficulty === 'hard' ? 'bg-red-500/10 text-red-500' : habit.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-500')}>
+                  <BarChart3 className="h-3 w-3" />
+                  <span className="opacity-50">{isAr ? 'الصعوبة:' : 'Diff:'}</span> {isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty}
+                </span>
+                <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                  habit.priority === 'high' ? 'bg-red-500/10 text-red-500' : habit.priority === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-sky-500/10 text-sky-500')}>
+                  <ArrowUpDown className="h-3 w-3" />
+                  <span className="opacity-50">{isAr ? 'الأولوية:' : 'Pri:'}</span> {isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority}
+                </span>
+                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-[var(--foreground)]/[0.06] cursor-default text-[var(--foreground)]/70 flex items-center gap-1">
+                  <Target className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'الهدف:' : 'Goal:'}</span> {goalLabel}
+                </span>
+                {habit.expectedDuration && (
+                  <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-purple-500/10 cursor-default text-purple-600 flex items-center gap-1">
+                    <Timer className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المدة:' : 'Dur:'}</span> {habit.expectedDuration} {isAr ? 'دقيقة' : 'min'}
+                  </span>
+                )}
+                {habit.preferredTime && (
+                  <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-sky-500/10 cursor-default text-sky-600 flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المفضل:' : 'Preferred:'}</span> {to12h(habit.preferredTime!)}
+                  </span>
+                )}
+                {habit.windowStart && habit.windowEnd && (
+                  <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                    habit.strictWindow ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-600')}>
+                    <Target className="h-3 w-3" />
+                    <span className="opacity-50">{habit.strictWindow ? (isAr ? 'إجباري:' : 'Strict:') : (isAr ? 'نافذة:' : 'Window:')}</span>
+                    {to12h(habit.windowStart!)}–{to12h(habit.windowEnd!)}
+                    {habit.strictWindow && <span className="opacity-60">({isAr ? 'بدونه لاغية' : 'void if missed'})</span>}
+                  </span>
+                )}
+              </div>
+              {/* Expanded on hover */}
+              <div className="absolute left-[-20px] right-[-20px] top-[-14px] z-30 opacity-0 scale-90 pointer-events-none transition-all duration-300 ease-out group-hover/badges:opacity-100 group-hover/badges:scale-110 group-hover/badges:pointer-events-auto">
+                <div className="flex items-center gap-1.5 flex-wrap content-start rounded-2xl p-4 shadow-2xl border border-[var(--foreground)]/10" style={{ background: 'var(--color-background)' }}>
+                  <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                    habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
+                    {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span className="opacity-50">{isAr ? 'النوع:' : 'Type:'}</span> {habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break')}
+                  </span>
+                  <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                    habit.difficulty === 'hard' ? 'bg-red-500/10 text-red-500' : habit.difficulty === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-blue-500/10 text-blue-500')}>
+                    <BarChart3 className="h-3 w-3" />
+                    <span className="opacity-50">{isAr ? 'الصعوبة:' : 'Diff:'}</span> {isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty}
+                  </span>
+                  <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                    habit.priority === 'high' ? 'bg-red-500/10 text-red-500' : habit.priority === 'medium' ? 'bg-amber-500/10 text-amber-600' : 'bg-sky-500/10 text-sky-500')}>
+                    <ArrowUpDown className="h-3 w-3" />
+                    <span className="opacity-50">{isAr ? 'الأولوية:' : 'Pri:'}</span> {isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority}
+                  </span>
+                  <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-[var(--foreground)]/[0.06] cursor-default text-[var(--foreground)]/70 flex items-center gap-1">
+                    <Target className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'الهدف:' : 'Goal:'}</span> {goalLabel}
+                  </span>
+                  {habit.expectedDuration && (
+                    <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-purple-500/10 cursor-default text-purple-600 flex items-center gap-1">
+                      <Timer className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المدة:' : 'Dur:'}</span> {habit.expectedDuration} {isAr ? 'دقيقة' : 'min'}
+                    </span>
+                  )}
+                  {habit.preferredTime && (
+                    <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md bg-sky-500/10 cursor-default text-sky-600 flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> <span className="opacity-50">{isAr ? 'المفضل:' : 'Preferred:'}</span> {to12h(habit.preferredTime!)}
+                    </span>
+                  )}
+                  {habit.windowStart && habit.windowEnd && (
+                    <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
+                      habit.strictWindow ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-600')}>
+                      <Target className="h-3 w-3" />
+                      <span className="opacity-50">{habit.strictWindow ? (isAr ? 'إجباري:' : 'Strict:') : (isAr ? 'نافذة:' : 'Window:')}</span>
+                      {to12h(habit.windowStart!)}–{to12h(habit.windowEnd!)}
+                      {habit.strictWindow && <span className="opacity-60">({isAr ? 'بدونه لاغية' : 'void if missed'})</span>}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* ─ Row 3: Today's status banner ─ */}
-            <div className={cn('hc-banner flex items-center gap-2 rounded-xl px-3 h-[40px] mb-2 text-xs font-bold cursor-default')}
+            <div className={cn('hc-banner flex items-center gap-2 rounded-xl px-3 h-[40px] mb-2 text-xs font-bold cursor-default relative transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:z-30 hover:rounded-2xl')}
               style={strictLocked
                 ? { background: '#ef444415', color: '#ef4444', border: '1px solid #ef444425' }
                 : strictNotYet
@@ -3180,79 +3237,154 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 5: Streak Challenges (fixed height with scroll) ─ */}
-            <div className="mb-2 mt-1 pt-2 h-[160px] overflow-y-auto" style={{ borderTop: `1px dashed ${hc}15` }}>
-            {!hasStreakChallenge ? (
-              <div className="hc-empty rounded-2xl border border-dashed border-[var(--foreground)]/[0.08] py-5 flex flex-col items-center justify-center gap-1.5 cursor-default">
-                <Trophy className="h-4 w-4 text-[var(--foreground)]/15" />
-                <span className="text-[10px] font-bold text-[var(--foreground)]/25">{isAr ? 'لا توجد تحديات' : 'No challenges'}</span>
+            <div className="relative mb-2 mt-1 pt-2 h-[160px] group/streak" style={{ borderTop: `1px dashed ${hc}15` }}>
+              {/* Normal — clipped */}
+              <div className="h-full overflow-hidden transition-opacity duration-300 ease-out group-hover/streak:opacity-0">
+                {!hasStreakChallenge ? (
+                  <div className="hc-empty rounded-2xl border border-dashed border-[var(--foreground)]/[0.08] py-5 flex flex-col items-center justify-center gap-1.5 cursor-default">
+                    <Trophy className="h-4 w-4 text-[var(--foreground)]/15" />
+                    <span className="text-[10px] font-bold text-[var(--foreground)]/25">{isAr ? 'لا توجد تحديات' : 'No challenges'}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {streakTiers.map((t, i) => {
+                      const pct = Math.round(t.progress * 100);
+                      const filled = Math.min(t.goal, streak.current);
+                      const tierColor = t.done ? '#d97706' : hc;
+                      return (
+                        <div key={i} className="hc-tier rounded-xl px-3.5 py-3 cursor-default"
+                          style={{ background: t.done ? '#f59e0b08' : `${hc}05`, border: `1px solid ${t.done ? '#f59e0b18' : `${hc}10`}` }}>
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <span className="text-base leading-none">{t.icon}</span>
+                            <span className="text-xs font-black" style={{ color: tierColor }}>
+                              {filled}/{t.goal} {isAr ? 'يوم' : 'days'}
+                            </span>
+                            {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />}
+                            {t.reward && (
+                              <span className={cn('text-[9px] font-bold truncate max-w-[100px] px-2 py-0.5 rounded-md ms-auto',
+                                t.done ? 'bg-amber-500/10 text-amber-600' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/45')}>
+                                {t.reward}
+                              </span>
+                            )}
+                            <span className={cn('text-xs font-black', !t.reward && 'ms-auto')} style={{ color: tierColor }}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {Array.from({ length: t.goal }).map((_, di) => (
+                              <div key={di} className="h-[7px] w-[7px] rounded-full"
+                                style={{ background: di < filled ? tierColor : `${hc}15` }} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2">
-                {streakTiers.map((t, i) => {
-                  const pct = Math.round(t.progress * 100);
-                  const filled = Math.min(t.goal, streak.current);
-                  const tierColor = t.done ? '#d97706' : hc;
-                  return (
-                    <div key={i} className="hc-tier rounded-xl px-3.5 py-3 cursor-default"
-                      style={{ background: t.done ? '#f59e0b08' : `${hc}05`, border: `1px solid ${t.done ? '#f59e0b18' : `${hc}10`}` }}>
-                      {/* Tier header */}
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <span className="text-base leading-none">{t.icon}</span>
-                        <span className="text-xs font-black" style={{ color: tierColor }}>
-                          {filled}/{t.goal} {isAr ? 'يوم' : 'days'}
-                        </span>
-                        {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />}
-                        {t.reward && (
-                          <span className={cn('text-[9px] font-bold truncate max-w-[100px] px-2 py-0.5 rounded-md ms-auto',
-                            t.done ? 'bg-amber-500/10 text-amber-600' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/45')}>
-                            {t.reward}
-                          </span>
-                        )}
-                        <span className={cn('text-xs font-black', !t.reward && 'ms-auto')} style={{ color: tierColor }}>
-                          {pct}%
-                        </span>
-                      </div>
-                      {/* Day dots — each dot = 1 day */}
-                      <div className="flex flex-wrap gap-1">
-                        {Array.from({ length: t.goal }).map((_, di) => (
-                          <div key={di}
-                            className="h-[7px] w-[7px] rounded-full"
-                            style={{
-                              background: di < filled ? tierColor : `${hc}15`,
-                            }} />
-                        ))}
-                      </div>
+              {/* Expanded on hover */}
+              <div className="absolute left-[-20px] right-[-20px] top-[-14px] z-30 opacity-0 scale-90 pointer-events-none transition-all duration-300 ease-out group-hover/streak:opacity-100 group-hover/streak:scale-110 group-hover/streak:pointer-events-auto">
+                <div className="rounded-2xl p-4 shadow-2xl border border-[var(--foreground)]/10 max-h-[300px] overflow-y-auto" style={{ background: 'var(--color-background)' }}>
+                  {!hasStreakChallenge ? (
+                    <div className="hc-empty rounded-2xl border border-dashed border-[var(--foreground)]/[0.08] py-5 flex flex-col items-center justify-center gap-1.5 cursor-default">
+                      <Trophy className="h-4 w-4 text-[var(--foreground)]/15" />
+                      <span className="text-[10px] font-bold text-[var(--foreground)]/25">{isAr ? 'لا توجد تحديات' : 'No challenges'}</span>
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div className="space-y-2">
+                      {streakTiers.map((t, i) => {
+                        const pct = Math.round(t.progress * 100);
+                        const filled = Math.min(t.goal, streak.current);
+                        const tierColor = t.done ? '#d97706' : hc;
+                        return (
+                          <div key={i} className="hc-tier rounded-xl px-3.5 py-3 cursor-default"
+                            style={{ background: t.done ? '#f59e0b08' : `${hc}05`, border: `1px solid ${t.done ? '#f59e0b18' : `${hc}10`}` }}>
+                            <div className="flex items-center gap-2 mb-2.5">
+                              <span className="text-base leading-none">{t.icon}</span>
+                              <span className="text-xs font-black" style={{ color: tierColor }}>
+                                {filled}/{t.goal} {isAr ? 'يوم' : 'days'}
+                              </span>
+                              {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />}
+                              {t.reward && (
+                                <span className={cn('text-[9px] font-bold px-2 py-0.5 rounded-md ms-auto',
+                                  t.done ? 'bg-amber-500/10 text-amber-600' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/45')}>
+                                  {t.reward}
+                                </span>
+                              )}
+                              <span className={cn('text-xs font-black', !t.reward && 'ms-auto')} style={{ color: tierColor }}>
+                                {pct}%
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {Array.from({ length: t.goal }).map((_, di) => (
+                                <div key={di} className="h-[7px] w-[7px] rounded-full"
+                                  style={{ background: di < filled ? tierColor : `${hc}15` }} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-           </div>
+            </div>
 
             {/* ─ Row 5b: Habit Loop (always visible) ─ */}
-            <div className="flex items-center gap-1 h-[60px] mb-2 overflow-hidden">
-              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-amber-500/8 px-2 py-1.5 text-center cursor-default">
-                <Lightbulb className="h-3 w-3 text-amber-500 mx-auto mb-0.5" />
-                <p className="text-[8px] font-black text-amber-600 uppercase">{isAr ? 'المحفز' : 'Trigger'}</p>
-                <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.cueAr : habit.cueEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
-                  {(isAr ? habit.cueAr : habit.cueEn) || (isAr ? 'لم يُحدد' : '—')}
-                </p>
+            <div className="relative mb-2 h-[60px] group/loop">
+              {/* Normal view */}
+              <div className="flex items-center gap-1 h-full overflow-hidden transition-opacity duration-300 ease-out group-hover/loop:opacity-0">
+                <div className="hc-loop flex-1 min-w-0 rounded-lg bg-amber-500/8 px-2 py-1.5 text-center cursor-default">
+                  <Lightbulb className="h-3 w-3 text-amber-500 mx-auto mb-0.5" />
+                  <p className="text-[8px] font-black text-amber-600 uppercase">{isAr ? 'المحفز' : 'Trigger'}</p>
+                  <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.cueAr : habit.cueEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
+                    {(isAr ? habit.cueAr : habit.cueEn) || (isAr ? 'لم يُحدد' : '—')}
+                  </p>
+                </div>
+                <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
+                <div className="hc-loop flex-1 min-w-0 rounded-lg bg-blue-500/8 px-2 py-1.5 text-center cursor-default">
+                  <Repeat className="h-3 w-3 text-blue-500 mx-auto mb-0.5" />
+                  <p className="text-[8px] font-black text-blue-600 uppercase">{isAr ? 'الروتين' : 'Routine'}</p>
+                  <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.routineAr : habit.routineEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
+                    {(isAr ? habit.routineAr : habit.routineEn) || (isAr ? 'لم يُحدد' : '—')}
+                  </p>
+                </div>
+                <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
+                <div className="hc-loop flex-1 min-w-0 rounded-lg bg-emerald-500/8 px-2 py-1.5 text-center cursor-default">
+                  <Gift className="h-3 w-3 text-emerald-500 mx-auto mb-0.5" />
+                  <p className="text-[8px] font-black text-emerald-600 uppercase">{isAr ? 'المكافأة' : 'Reward'}</p>
+                  <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.rewardAr : habit.rewardEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
+                    {(isAr ? habit.rewardAr : habit.rewardEn) || (isAr ? 'لم يُحدد' : '—')}
+                  </p>
+                </div>
               </div>
-              <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
-              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-blue-500/8 px-2 py-1.5 text-center cursor-default">
-                <Repeat className="h-3 w-3 text-blue-500 mx-auto mb-0.5" />
-                <p className="text-[8px] font-black text-blue-600 uppercase">{isAr ? 'الروتين' : 'Routine'}</p>
-                <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.routineAr : habit.routineEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
-                  {(isAr ? habit.routineAr : habit.routineEn) || (isAr ? 'لم يُحدد' : '—')}
-                </p>
-              </div>
-              <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0', isAr && 'rotate-180')} />
-              <div className="hc-loop flex-1 min-w-0 rounded-lg bg-emerald-500/8 px-2 py-1.5 text-center cursor-default">
-                <Gift className="h-3 w-3 text-emerald-500 mx-auto mb-0.5" />
-                <p className="text-[8px] font-black text-emerald-600 uppercase">{isAr ? 'المكافأة' : 'Reward'}</p>
-                <p className={cn('text-[9px] font-semibold truncate', (isAr ? habit.rewardAr : habit.rewardEn) ? 'text-[var(--foreground)]/80' : 'text-[var(--foreground)]/30 italic')}>
-                  {(isAr ? habit.rewardAr : habit.rewardEn) || (isAr ? 'لم يُحدد' : '—')}
-                </p>
+              {/* Expanded on hover — solid bg, smooth scale */}
+              <div className="absolute left-[-20px] right-[-20px] top-[-14px] z-30 opacity-0 scale-90 pointer-events-none transition-all duration-300 ease-out group-hover/loop:opacity-100 group-hover/loop:scale-110 group-hover/loop:pointer-events-auto">
+                <div className="flex items-start gap-2 rounded-2xl p-4 shadow-2xl border border-[var(--foreground)]/10" style={{ background: 'var(--color-background)' }}>
+                  <div className="flex-1 min-w-0 rounded-lg bg-amber-500/8 px-2 py-2 text-center cursor-default">
+                    <Lightbulb className="h-3.5 w-3.5 text-amber-500 mx-auto mb-0.5" />
+                    <p className="text-[8px] font-black text-amber-600 uppercase">{isAr ? 'المحفز' : 'Trigger'}</p>
+                    <p className={cn('text-[10px] font-bold break-words leading-snug', (isAr ? habit.cueAr : habit.cueEn) ? 'text-[var(--foreground)]' : 'text-[var(--foreground)]/30 italic')}>
+                      {(isAr ? habit.cueAr : habit.cueEn) || (isAr ? 'لم يُحدد' : '—')}
+                    </p>
+                  </div>
+                  <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0 mt-4', isAr && 'rotate-180')} />
+                  <div className="flex-1 min-w-0 rounded-lg bg-blue-500/8 px-2 py-2 text-center cursor-default">
+                    <Repeat className="h-3.5 w-3.5 text-blue-500 mx-auto mb-0.5" />
+                    <p className="text-[8px] font-black text-blue-600 uppercase">{isAr ? 'الروتين' : 'Routine'}</p>
+                    <p className={cn('text-[10px] font-bold break-words leading-snug', (isAr ? habit.routineAr : habit.routineEn) ? 'text-[var(--foreground)]' : 'text-[var(--foreground)]/30 italic')}>
+                      {(isAr ? habit.routineAr : habit.routineEn) || (isAr ? 'لم يُحدد' : '—')}
+                    </p>
+                  </div>
+                  <ArrowRight className={cn('h-3 w-3 text-[var(--foreground)]/30 shrink-0 mt-4', isAr && 'rotate-180')} />
+                  <div className="flex-1 min-w-0 rounded-lg bg-emerald-500/8 px-2 py-2 text-center cursor-default">
+                    <Gift className="h-3.5 w-3.5 text-emerald-500 mx-auto mb-0.5" />
+                    <p className="text-[8px] font-black text-emerald-600 uppercase">{isAr ? 'المكافأة' : 'Reward'}</p>
+                    <p className={cn('text-[10px] font-bold break-words leading-snug', (isAr ? habit.rewardAr : habit.rewardEn) ? 'text-[var(--foreground)]' : 'text-[var(--foreground)]/30 italic')}>
+                      {(isAr ? habit.rewardAr : habit.rewardEn) || (isAr ? 'لم يُحدد' : '—')}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -3293,10 +3425,10 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
 
             {/* ─ Row 6: Weekly dots (Mon–Sun) ─ */}
             <div
-              className="mb-2 rounded-xl px-3 py-2.5 cursor-pointer group/week transition-all hover:shadow-md"
+              className="relative mb-2 rounded-xl px-3 py-2.5 cursor-pointer group/week transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:z-30 hover:rounded-2xl"
               style={{ background: `${hc}04`, border: `1px solid ${hc}10` }}
               onClick={(e) => { e.stopPropagation(); onViewFull ? onViewFull() : onDetail(); }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${hc}30`; e.currentTarget.style.background = `${hc}08`; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${hc}30`; e.currentTarget.style.background = 'var(--color-background)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${hc}10`; e.currentTarget.style.background = `${hc}04`; }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -3356,7 +3488,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 7: Stats grid ─ */}
-            <div className="grid grid-cols-4 gap-1.5 mb-2">
+            <div className="relative grid grid-cols-4 gap-1.5 mb-2 transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:z-30 hover:rounded-2xl hover:p-2 hover:border hover:border-[var(--foreground)]/10" style={{ background: 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
               {[
                 { value: streak.current, label: isAr ? 'سلسلة' : 'Streak' },
                 { value: streak.best, label: isAr ? 'أفضل' : 'Best' },
@@ -3371,7 +3503,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             </div>
 
             {/* ─ Row 8: Bottom actions bar ─ */}
-            <div className="pt-2.5 mt-auto space-y-2" style={{ borderTop: `1.5px solid ${hc}15` }}>
+            <div className="relative pt-2.5 mt-auto space-y-2 transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl hover:z-30 hover:rounded-2xl hover:p-3 hover:border hover:border-[var(--foreground)]/10" style={{ borderTop: `1.5px solid ${hc}15` }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
               {/* Last completion info */}
               {(() => {
                 if (!lastCompletedDate) {
@@ -4824,8 +4956,10 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
   const monthLabel = new Date(calMonth.year, calMonth.month).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'long', year: 'numeric' });
 
   const [hoveredStat, setHoveredStat] = useState<number | null>(null);
+  const [modalDesign, setModalDesign] = useState<1 | 2>(1);
 
-  return (
+  // ── Design 2: Original (kept intact) ──
+  const renderOriginal = () => (
     <div className="relative">
       {/* HERO HEADER */}
       <div className="relative overflow-hidden">
@@ -5382,6 +5516,413 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
           </div>
         </motion.div>
       </div>
+    </div>
+  );
+
+  // ── Design 1: Compact Dashboard ──
+  const renderCompact = () => {
+    const name = isAr ? habit.nameAr : habit.nameEn;
+    const description = isAr ? habit.descriptionAr : habit.descriptionEn;
+    const catLabel = isAr ? (CATEGORY_LABELS[habit.category]?.ar ?? habit.category) : (CATEGORY_LABELS[habit.category]?.en ?? habit.category);
+    const freqLabel = isAr ? FREQ_LABELS[habit.frequency]?.ar : FREQ_LABELS[habit.frequency]?.en;
+    const typeLabel = habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break');
+    const priLabel = isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority;
+    const diffLabel = isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty;
+    const hasLoop = (isAr ? habit.cueAr : habit.cueEn) || (isAr ? habit.routineAr : habit.routineEn) || (isAr ? habit.rewardAr : habit.rewardEn);
+    const hasContext = (isAr ? habit.placeAr : habit.placeEn) || habit.preferredTime || habit.expectedDuration || (habit.windowStart && habit.windowEnd);
+
+    return (
+      <div className="relative">
+        {/* Accent bar */}
+        <div className="h-1 rounded-t-3xl" style={{ background: `linear-gradient(90deg, ${hc}, ${hc}cc, ${hc}44)` }} />
+
+        {/* ── TOP: Header + Week Strip + Close ── */}
+        <div className="px-5 pt-4 pb-3" style={{ background: `linear-gradient(135deg, ${hc}08, ${hc}03, transparent)` }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `${hc}20`, border: `1.5px solid ${hc}30` }}>
+                <div className="h-4 w-4 rounded-full" style={{ backgroundColor: hc }} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-black tracking-tight truncate">{name}</h2>
+                {description && <p className="text-[11px] text-[var(--foreground)]/45 truncate">{description}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold border',
+                done ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50 border-[var(--foreground)]/[0.08]')}>
+                {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                {done ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'لم يُنجز' : 'Not Done')}
+              </div>
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-[var(--foreground)]/[0.08] transition-all">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Week strip — compact */}
+          <div className="flex items-center gap-0.5 mt-2.5">
+            {weekDays.map((d, i) => {
+              const dayLabel = new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
+              const isToday = d.date === today;
+              const isPast = d.date < today;
+              return (
+                <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-lg py-1 transition-all',
+                  isToday && 'bg-[var(--color-primary)]/[0.08]')}
+                  style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
+                  <span className={cn('text-[8px] font-bold', isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]/30')}>{dayLabel}</span>
+                  <div className={cn('h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-black',
+                    d.done && d.color === 'green' ? 'bg-emerald-500 text-white' :
+                    d.done && d.color === 'orange' ? 'bg-amber-500 text-white' :
+                    d.done ? 'bg-emerald-500 text-white' :
+                    isPast ? 'bg-red-400/30 text-red-500/70' :
+                    isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
+                    'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/25')}>
+                    {d.done ? <Check className="h-2.5 w-2.5" /> : new Date(d.date).getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Badges row — compact inline */}
+          <div className="flex items-center gap-1 mt-2 flex-wrap">
+            {[catLabel, freqLabel, typeLabel, `${priLabel}`, `${diffLabel}`, ...(habit.expectedDuration ? [`${habit.expectedDuration}${isAr ? 'د' : 'm'}`] : []), `${habitAge}${isAr ? 'يوم' : 'd'}`].map((b, i) => (
+              <span key={i} className="text-[9px] font-bold px-2 py-0.5 rounded-md cursor-default" style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}15` }}>{b}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* ── BODY: 3-column grid ── */}
+        <div className="px-5 pb-4 pt-2">
+          {/* Action zone — compact */}
+          <div className="rounded-xl p-3 mb-3" style={{ background: `${hc}05`, border: `1px solid ${hc}12` }} onClick={e => e.stopPropagation()}>
+            {hasDuration && !habit.archived && (
+              <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" />
+            )}
+            {isCountHabit && !habit.archived && (
+              <div className="flex items-center gap-3">
+                <button onClick={() => { if (dCountValue <= 0) return; store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: Math.max(0, dCountValue - 1) >= dCountTarget, value: Math.max(0, dCountValue - 1), source: 'manual' }); }}
+                  className={cn('h-10 w-10 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/10 hover:bg-[var(--foreground)]/5', dCountValue <= 0 && 'opacity-20')}>
+                  <Minus className="h-4 w-4" />
+                </button>
+                <div className="flex-1 text-center">
+                  <span className="text-2xl font-black tabular-nums" style={{ color: dCountProgress >= 1 ? '#22c55e' : hc }}>{dCountValue}</span>
+                  <span className="text-sm text-[var(--foreground)]/30 font-semibold"> / {dCountTarget}</span>
+                  <p className="text-[9px] text-[var(--foreground)]/40">{dCountUnit}</p>
+                </div>
+                <button onClick={() => { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: (dCountValue + 1) >= dCountTarget, value: dCountValue + 1, source: 'manual' }); }}
+                  className="h-10 w-10 rounded-xl flex items-center justify-center font-bold border transition-all"
+                  style={{ background: `${dCountProgress < 1 ? hc : '#22c55e'}12`, color: dCountProgress < 1 ? hc : '#22c55e', borderColor: `${dCountProgress < 1 ? hc : '#22c55e'}25` }}>
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            {!isCountHabit && !hasDuration && !habit.archived && (
+              <button
+                onClick={() => { if (done) { const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed); if (log) store.deleteHabitLog(log.id); } else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); } }}
+                className={cn('w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all',
+                  done ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-white')}
+                style={!done ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 4px 16px ${hc}25` } : undefined}>
+                <CheckCircle2 className="h-4 w-4" />
+                {done ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo') : (isAr ? 'أنجز الآن' : 'Mark Done')}
+              </button>
+            )}
+            {todayLog && (
+              <div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-[var(--foreground)]/35">
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {to12h(todayLog.time)}</span>
+                {todayLog.duration && <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {todayLog.duration}{isAr ? 'د' : 'm'}</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Stats + Context row */}
+          <div className="grid grid-cols-4 gap-1.5 mb-3">
+            {[
+              { label: isAr ? 'سلسلة' : 'Streak', value: streak.current, suffix: isAr ? 'ي' : 'd', color: '#f97316' },
+              { label: isAr ? 'أفضل' : 'Best', value: streak.best, suffix: isAr ? 'ي' : 'd', color: '#eab308' },
+              { label: isAr ? 'مجمل' : 'Total', value: stats.totalCompletions, suffix: '', color: '#22c55e' },
+              { label: isAr ? 'نسبة' : 'Rate', value: stats.completionRate, suffix: '%', color: '#3b82f6' },
+            ].map((s, i) => (
+              <div key={i} className="text-center rounded-xl py-2 px-1 cursor-default" style={{ background: `${s.color}08`, border: `1px solid ${s.color}15` }}>
+                <p className="text-base font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}<span className="text-[9px] opacity-50">{s.suffix}</span></p>
+                <p className="text-[8px] font-bold text-[var(--foreground)]/40 mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Context tags */}
+          {hasContext && (
+            <div className="flex items-center gap-1 flex-wrap mb-3">
+              {(isAr ? habit.placeAr : habit.placeEn) && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg bg-violet-500/8 text-violet-600 border border-violet-500/12"><MapPin className="h-2.5 w-2.5" /> {isAr ? habit.placeAr : habit.placeEn}</span>
+              )}
+              {habit.preferredTime && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg bg-sky-500/8 text-sky-600 border border-sky-500/12"><Clock className="h-2.5 w-2.5" /> {to12h(habit.preferredTime!)}</span>
+              )}
+              {habit.expectedDuration && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg bg-emerald-500/8 text-emerald-600 border border-emerald-500/12"><Hourglass className="h-2.5 w-2.5" /> {habit.expectedDuration}{isAr ? 'د' : 'm'}</span>
+              )}
+              {habit.windowStart && habit.windowEnd && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-lg bg-indigo-500/8 text-indigo-600 border border-indigo-500/12">
+                  <Target className="h-2.5 w-2.5" /> {to12h(habit.windowStart!)}–{to12h(habit.windowEnd!)}
+                  {habit.strictWindow && <span className="text-[7px] bg-red-500/15 text-red-500 px-1 rounded font-black">{isAr ? 'صارم' : 'Strict'}</span>}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Habit Loop + Streak — side by side */}
+          {(hasLoop || streakGoals.length > 0) && (
+            <div className={cn('grid gap-2.5 mb-3', hasLoop && streakGoals.length > 0 ? 'grid-cols-2' : 'grid-cols-1')}>
+              {hasLoop && (
+                <div className="rounded-xl border border-[var(--foreground)]/[0.06] overflow-hidden" style={{ background: `${hc}03` }}>
+                  <div className="px-2.5 py-1.5 border-b border-[var(--foreground)]/[0.05] flex items-center gap-1">
+                    <Repeat className="h-3 w-3" style={{ color: hc }} />
+                    <span className="text-[9px] font-bold text-[var(--foreground)]/50">{isAr ? 'حلقة العادة' : 'Habit Loop'}</span>
+                  </div>
+                  <div className="p-2 flex items-stretch gap-1.5">
+                    {(isAr ? habit.cueAr : habit.cueEn) && (
+                      <div className="flex-1 text-center rounded-lg px-1.5 py-2 cursor-default" style={{ background: '#f59e0b0a', border: '1px solid #f59e0b15' }}>
+                        <Lightbulb className="h-3 w-3 text-amber-500 mx-auto mb-0.5" />
+                        <p className="text-[7px] font-black text-amber-600 uppercase">{isAr ? 'الإشارة' : 'Cue'}</p>
+                        <p className="text-[9px] text-[var(--foreground)]/55 leading-tight mt-0.5">{isAr ? habit.cueAr : habit.cueEn}</p>
+                      </div>
+                    )}
+                    {(isAr ? habit.routineAr : habit.routineEn) && (
+                      <>
+                        <div className="flex items-center"><ArrowRight className={cn('h-2.5 w-2.5 text-[var(--foreground)]/15', isAr && 'rotate-180')} /></div>
+                        <div className="flex-1 text-center rounded-lg px-1.5 py-2 cursor-default" style={{ background: '#3b82f60a', border: '1px solid #3b82f615' }}>
+                          <Repeat className="h-3 w-3 text-blue-500 mx-auto mb-0.5" />
+                          <p className="text-[7px] font-black text-blue-600 uppercase">{isAr ? 'الروتين' : 'Routine'}</p>
+                          <p className="text-[9px] text-[var(--foreground)]/55 leading-tight mt-0.5">{isAr ? habit.routineAr : habit.routineEn}</p>
+                        </div>
+                      </>
+                    )}
+                    {(isAr ? habit.rewardAr : habit.rewardEn) && (
+                      <>
+                        <div className="flex items-center"><ArrowRight className={cn('h-2.5 w-2.5 text-[var(--foreground)]/15', isAr && 'rotate-180')} /></div>
+                        <div className="flex-1 text-center rounded-lg px-1.5 py-2 cursor-default" style={{ background: '#22c55e0a', border: '1px solid #22c55e15' }}>
+                          <Gift className="h-3 w-3 text-emerald-500 mx-auto mb-0.5" />
+                          <p className="text-[7px] font-black text-emerald-600 uppercase">{isAr ? 'المكافأة' : 'Reward'}</p>
+                          <p className="text-[9px] text-[var(--foreground)]/55 leading-tight mt-0.5">{isAr ? habit.rewardAr : habit.rewardEn}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              {streakGoals.length > 0 && (
+                <div className="rounded-xl border border-amber-500/10 overflow-hidden" style={{ background: '#eab30804' }}>
+                  <div className="px-2.5 py-1.5 border-b border-amber-500/8 flex items-center gap-1">
+                    <Award className="h-3 w-3 text-amber-500" />
+                    <span className="text-[9px] font-bold text-[var(--foreground)]/50">{isAr ? 'تحديات' : 'Challenges'}</span>
+                  </div>
+                  <div className="p-2 space-y-1.5">
+                    {streakGoals.map((g, i) => {
+                      const achieved = streak.current >= g.target;
+                      const filled = Math.min(streak.current, g.target);
+                      const pct = Math.round((filled / g.target) * 100);
+                      return (
+                        <div key={i} className={cn('rounded-lg px-2.5 py-2', achieved ? 'bg-amber-500/8 border border-amber-500/15' : 'bg-[var(--foreground)]/[0.02] border border-[var(--foreground)]/[0.05]')}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-black tabular-nums" style={{ color: achieved ? '#eab308' : hc }}>{filled}/{g.target}</span>
+                            <div className="flex items-center gap-1.5">
+                              {(isAr ? g.rewardAr : g.rewardEn) && (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: achieved ? '#eab30812' : `${hc}08`, color: achieved ? '#eab308' : hc }}>
+                                  {isAr ? g.rewardAr : g.rewardEn}
+                                </span>
+                              )}
+                              <span className="text-[10px] font-black tabular-nums" style={{ color: achieved ? '#eab308' : hc }}>{pct}%</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-[2px]">
+                            {Array.from({ length: Math.min(g.target, 60) }).map((_, di) => (
+                              <div key={di} className="flex-1 h-1.5 rounded-sm" style={{ background: di < filled ? (achieved ? '#eab308' : hc) : '#d1d5db20' }} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Calendar + Analytics — side by side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+            {/* Calendar — compact */}
+            <div className="rounded-xl border border-[var(--foreground)]/[0.06] overflow-hidden" style={{ background: `${hc}03` }}>
+              <div className="px-3 py-2 flex items-center justify-between border-b border-[var(--foreground)]/[0.05]">
+                <button onClick={() => setCalMonth(m => { const prev = new Date(m.year, m.month - 1); return { year: prev.getFullYear(), month: prev.getMonth() }; })} disabled={!canGoPrev}
+                  className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.06] disabled:opacity-20"><ChevronLeft className="h-3 w-3" /></button>
+                <h3 className="text-[11px] font-black">{monthLabel}</h3>
+                <button onClick={() => setCalMonth(m => { const next = new Date(m.year, m.month + 1); return { year: next.getFullYear(), month: next.getMonth() }; })} disabled={!canGoNext}
+                  className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.06] disabled:opacity-20"><ChevronRight className="h-3 w-3" /></button>
+              </div>
+              <div className="px-2.5 py-2">
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {(isAr ? DAY_LABELS.ar : DAY_LABELS.en).map(d => (
+                    <div key={d} className="text-center text-[7px] font-black text-[var(--foreground)]/25 uppercase">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((day, i) => {
+                    const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
+                    const isTodayCal = day.date === todayString();
+                    return (
+                      <div key={i} title={day.date}
+                        className={cn('h-7 rounded-md flex items-center justify-center text-[10px] font-bold cursor-default',
+                          !day.inMonth && 'invisible',
+                          day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/30',
+                          day.beforeCreated && day.inMonth && 'text-[var(--foreground)]/8',
+                          isApplicable && day.color === 'green' && 'bg-emerald-500 text-white',
+                          isApplicable && day.color === 'orange' && 'bg-amber-500 text-white',
+                          isApplicable && day.color === 'red' && 'bg-red-500/70 text-white',
+                          isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/30',
+                          isTodayCal && 'ring-1.5 ring-offset-1 ring-[var(--color-primary)]')}>
+                        {day.inMonth && day.day}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-2.5 mt-2">
+                  {[
+                    { color: 'bg-emerald-500', label: isAr ? 'في الوقت' : 'On time' },
+                    { color: 'bg-amber-500', label: isAr ? 'متأخر' : 'Late' },
+                    { color: 'bg-red-500/70', label: isAr ? 'فائت' : 'Missed' },
+                    { color: 'bg-gray-300 dark:bg-gray-600', label: isAr ? 'قادم' : 'Upcoming' },
+                  ].map(l => (
+                    <div key={l.label} className="flex items-center gap-1">
+                      <div className={cn('h-2 w-2 rounded-sm', l.color)} />
+                      <span className="text-[7px] text-[var(--foreground)]/35 font-semibold">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* First done + buttons */}
+                <div className="flex gap-1.5 mt-2">
+                  <button onClick={onViewFull}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-[var(--foreground)]/[0.08] text-[10px] font-bold text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.04] transition-all">
+                    <CalendarIcon className="h-3 w-3" /> {isAr ? 'كل الأيام' : 'All Days'}
+                  </button>
+                  <Link href={`/app/habits/${habit.id}`}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold text-white transition-all"
+                    style={{ background: `linear-gradient(135deg, ${hc}, ${hc}cc)` }}>
+                    <Maximize2 className="h-3 w-3" /> {isAr ? 'الصفحة' : 'Full Page'}
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Analytics — stacked compact */}
+            <div className="space-y-2.5">
+              {/* Repetitions */}
+              <div className="rounded-xl border border-[var(--foreground)]/[0.06] overflow-hidden" style={{ background: '#22c55e03' }}>
+                <div className="px-2.5 py-1.5 border-b border-[var(--foreground)]/[0.05] flex items-center gap-1">
+                  <Hash className="h-3 w-3 text-emerald-500" />
+                  <span className="text-[9px] font-bold text-[var(--foreground)]/50">{isAr ? 'التكرارات' : 'Reps'}</span>
+                </div>
+                <div className="p-2 grid grid-cols-4 gap-1">
+                  {[
+                    { l: isAr ? 'أسبوع' : 'Week', v: timeStats.reps.week },
+                    { l: isAr ? 'شهر' : 'Month', v: timeStats.reps.month },
+                    { l: isAr ? 'سنة' : 'Year', v: timeStats.reps.year },
+                    { l: isAr ? 'مجمل' : 'Total', v: timeStats.reps.total },
+                  ].map((r, i) => (
+                    <div key={i} className="text-center rounded-lg py-1.5 cursor-default" style={{ background: '#22c55e06', border: '1px solid #22c55e10' }}>
+                      <p className="text-sm font-black text-emerald-600 tabular-nums">{r.v}</p>
+                      <p className="text-[7px] text-[var(--foreground)]/35 font-bold">{r.l}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time spent */}
+              <div className="rounded-xl border border-[var(--foreground)]/[0.06] overflow-hidden" style={{ background: '#3b82f603' }}>
+                <div className="px-2.5 py-1.5 border-b border-[var(--foreground)]/[0.05] flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-blue-500" />
+                  <span className="text-[9px] font-bold text-[var(--foreground)]/50">{isAr ? 'الوقت' : 'Time'}</span>
+                </div>
+                <div className="p-2 grid grid-cols-4 gap-1">
+                  {[
+                    { l: isAr ? 'اليوم' : 'Today', v: formatMins(timeStats.mins.today) },
+                    { l: isAr ? 'أسبوع' : 'Week', v: formatMins(timeStats.mins.week) },
+                    { l: isAr ? 'شهر' : 'Month', v: formatMins(timeStats.mins.month) },
+                    { l: isAr ? 'سنة' : 'Year', v: formatMins(timeStats.mins.year) },
+                  ].map((r, i) => (
+                    <div key={i} className="text-center rounded-lg py-1.5 cursor-default" style={{ background: '#3b82f606', border: '1px solid #3b82f610' }}>
+                      <p className="text-xs font-black text-blue-600">{r.v}</p>
+                      <p className="text-[7px] text-[var(--foreground)]/35 font-bold">{r.l}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Weekday performance — compact bars */}
+              <div className="rounded-xl border border-[var(--foreground)]/[0.06] overflow-hidden" style={{ background: `${hc}03` }}>
+                <div className="px-2.5 py-1.5 border-b border-[var(--foreground)]/[0.05] flex items-center gap-1">
+                  <BarChart3 className="h-3 w-3" style={{ color: hc }} />
+                  <span className="text-[9px] font-bold text-[var(--foreground)]/50">{isAr ? 'حسب اليوم' : 'By Day'}</span>
+                </div>
+                <div className="p-3">
+                  <div className="flex items-end gap-1.5 h-16">
+                    {stats.completionsByWeekday.map((count, i) => {
+                      const max = Math.max(...stats.completionsByWeekday, 1);
+                      const height = (count / max) * 100;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
+                          <span className="text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-opacity tabular-nums" style={{ color: hc }}>{count}</span>
+                          <div className="w-full rounded-sm" style={{ height: `${Math.max(height, 8)}%`, background: `linear-gradient(to top, ${hc}, ${hc}88)` }} />
+                          <span className="text-[7px] font-bold text-[var(--foreground)]/30">{isAr ? DAY_LABELS.ar[i] : DAY_LABELS.en[i]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Best day insight — compact */}
+          <div className="rounded-xl p-3 border flex items-center gap-2.5"
+            style={{ borderColor: `${hc}10`, background: `${hc}05` }}>
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${hc}12` }}>
+              <Sparkles className="h-4 w-4" style={{ color: hc }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-[var(--foreground)]/75">
+                {isAr ? `أفضل يوم: ${stats.bestDay} — أضعف: ${stats.worstDay}` : `Best: ${stats.bestDay} — Weakest: ${stats.worstDay}`}
+              </p>
+              {habit.notes && <p className="text-[10px] text-[var(--foreground)]/35 truncate">{habit.notes}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Main return with design toggle ──
+  return (
+    <div className="relative">
+      {/* Design toggle buttons */}
+      <div className="sticky top-0 z-10 flex items-center justify-center gap-1 py-2 px-4" style={{ background: 'var(--color-background)' }}>
+        <button onClick={() => setModalDesign(1)}
+          className={cn('px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all',
+            modalDesign === 1 ? 'text-white shadow-md' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}
+          style={modalDesign === 1 ? { background: hc } : undefined}>
+          1
+        </button>
+        <button onClick={() => setModalDesign(2)}
+          className={cn('px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all',
+            modalDesign === 2 ? 'text-white shadow-md' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}
+          style={modalDesign === 2 ? { background: hc } : undefined}>
+          2
+        </button>
+      </div>
+      {modalDesign === 1 ? renderCompact() : renderOriginal()}
     </div>
   );
 }

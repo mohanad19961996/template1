@@ -216,71 +216,13 @@ export default function DashboardPage() {
                         done ? 'opacity-60' : 'hover:bg-[var(--foreground)]/[0.06]'
                       )}
                     >
-                      <button
-                        onClick={() => {
-                          if (done) return;
-                          if (isStrict) {
-                            const habitName = isAr ? habit.nameAr : habit.nameEn;
-                            if (habit.trackingType === 'timer') {
-                              toast.notifyWarning(
-                                isAr ? `⏱ ${habitName} — تتطلب مؤقت` : `⏱ ${habitName} — Timer Required`,
-                                isAr
-                                  ? `هذه العادة تعتمد على المؤقت. ابدأ المؤقت من صفحة العادات${habit.expectedDuration ? ` (المدة المطلوبة: ${habit.expectedDuration} دقيقة)` : ''}`
-                                  : `This habit is timer-based. Start the timer from the habits page${habit.expectedDuration ? ` (target: ${habit.expectedDuration} min)` : ''}`
-                              );
-                            } else if (habit.strictWindow && habit.windowStart && habit.windowEnd) {
-                              const now = new Date();
-                              const ct = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                              if (ct < habit.windowStart) {
-                                toast.notifyInfo(
-                                  isAr ? `🕐 ${habitName} — لم يحن الوقت بعد` : `🕐 ${habitName} — Not Yet`,
-                                  isAr
-                                    ? `النافذة الزمنية تبدأ الساعة ${to12h(habit.windowStart)} وتنتهي ${to12h(habit.windowEnd)}. انتظر حتى يحين الوقت`
-                                    : `Time window is ${to12h(habit.windowStart)} – ${to12h(habit.windowEnd)}. Wait until the window opens`
-                                );
-                              } else if (ct > habit.windowEnd) {
-                                toast.notifyError(
-                                  isAr ? `⛔ ${habitName} — فات الوقت` : `⛔ ${habitName} — Window Passed`,
-                                  isAr
-                                    ? `انتهت النافذة الزمنية (${to12h(habit.windowStart)} – ${to12h(habit.windowEnd)}). هذه العادة صارمة ولا يمكن إكمالها خارج الوقت المحدد`
-                                    : `Time window (${to12h(habit.windowStart)} – ${to12h(habit.windowEnd)}) has passed. This strict habit cannot be completed outside its scheduled window`
-                                );
-                              } else {
-                                toast.notifyWarning(
-                                  isAr ? `🔒 ${habitName} — نافذة زمنية صارمة` : `🔒 ${habitName} — Strict Window`,
-                                  isAr
-                                    ? `هذه العادة لها نافذة زمنية صارمة (${to12h(habit.windowStart)} – ${to12h(habit.windowEnd)}). أكملها من صفحة العادات أو عبر المؤقت`
-                                    : `This habit has a strict time window (${to12h(habit.windowStart)} – ${to12h(habit.windowEnd)}). Complete it from the habits page or via the timer`
-                                );
-                              }
-                            } else {
-                              toast.notifyWarning(
-                                isAr ? `🔒 ${habitName} — مقيّدة` : `🔒 ${habitName} — Restricted`,
-                                isAr
-                                  ? 'هذه العادة لها قيود زمنية صارمة. أكملها من صفحة العادات'
-                                  : 'This habit has strict time constraints. Complete it from the habits page'
-                              );
-                            }
-                            return;
-                          }
-                          store.logHabit({
-                            habitId: habit.id,
-                            date: today,
-                            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-                            note: '',
-                            reminderUsed: false,
-                            perceivedDifficulty: 'medium',
-                            completed: true,
-                          });
-                        }}
-                        className={cn('shrink-0', isStrict && !done && 'cursor-not-allowed')}
-                      >
+                      <span className="shrink-0">
                         {done ? (
                           <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                         ) : (
-                          <Circle className={cn('h-5 w-5 transition-colors', isStrict ? 'text-[var(--foreground)]/20' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')} />
+                          <Circle className="h-5 w-5 text-[var(--foreground)]/30" />
                         )}
-                      </button>
+                      </span>
                       <div
                         className="h-2 w-2 rounded-full shrink-0"
                         style={{ backgroundColor: habit.color }}

@@ -170,23 +170,7 @@ export default function TimersPage() {
       });
     }
 
-    // Auto-log habit if linked
-    if (hId && active.elapsed > 0) {
-      const durationMin = Math.max(1, Math.round(active.elapsed / 60));
-      const alreadyDone = store.habitLogs.some(l => l.habitId === hId && l.date === todayString() && l.completed);
-      if (!alreadyDone) {
-        store.logHabit({
-          habitId: hId,
-          date: todayString(),
-          time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-          duration: durationMin,
-          note: completionNote,
-          reminderUsed: false,
-          perceivedDifficulty: 'medium' as Difficulty,
-          completed: true,
-        });
-      }
-    }
+    // Habit completion is only allowed from the habit card — no auto-log here
 
     setShowComplete(false);
     setCompletionNote('');
