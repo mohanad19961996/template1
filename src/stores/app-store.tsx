@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   AppState, DEFAULT_APP_STATE, Habit, HabitLog, Skill, SkillSession,
   TimerSession, Reminder, Alarm, AlarmStatus, HormoneLog, NutritionLog, HydrationLog,
-  Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
+  Task, Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
   StreakInfo, HabitStats, SkillStats, DateString,
   HabitHistoryEntry, HabitChangeType,
 } from '@/types/app';
@@ -208,6 +208,14 @@ interface AppStore extends AppState {
   getHydrationForDate: (date: string) => HydrationLog | undefined;
   getNutritionForDate: (date: string) => NutritionLog[];
 
+  // Tasks
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'order'>) => Task;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
+  toggleTaskStatus: (id: string) => void;
+  reorderTasks: (orderedIds: string[]) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+
   // Goals
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'completed' | 'completedAt' | 'progress'>) => Goal;
   updateGoal: (id: string, updates: Partial<Goal>) => void;
@@ -367,7 +375,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       status: data.status ?? (data.completed ? 'completed' : 'pending'),
       source: data.source ?? 'manual',
     };
-    update(s => ({ ...s, habitLogs: [...s.habitLogs, log] }));
+    // For simple boolean completions (no value/duration tracking), replace existing log for same habit+date
+    // to prevent duplicate entries. Count/duration habits use value field and can have multiple logs per day.
+    const isSimpleLog = data.value === undefined && data.duration === undefined;
+    update(s => {
+      const filtered = isSimpleLog
+        ? s.habitLogs.filter(l => !(l.habitId === data.habitId && l.date === data.date && l.value === undefined && l.duration === undefined))
+        : s.habitLogs;
+      return { ...s, habitLogs: [...filtered, log] };
+    });
     apiPost(`/api/habits/${data.habitId}/logs`, { ...log, upsert: true });
     return log;
   }, [update]);
@@ -432,13 +448,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     // Current streak: go back from today, skip non-scheduled days
     let current = 0;
-    const checkDate = new Date(today);
+    const checkDate = new Date(today + 'T00:00:00');
     for (let i = 0; i < 400; i++) {
-      const dateStr = checkDate.toISOString().split('T')[0];
+      const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
       if (isScheduledDay(dateStr)) {
         if (uniqueDates.has(dateStr)) {
           current++;
-        } else if (i > 0 || dateStr === today) {
+        } else {
           // Today not done yet is OK, break on first missed scheduled day in the past
           if (dateStr !== today) break;
         }
@@ -470,10 +486,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     const habit = stateRef.current.habits.find(h => h.id === habitId);
     const daysSinceCreation = habit ? Math.max(1, Math.floor((Date.now() - new Date(habit.createdAt).getTime()) / 86400000)) : 1;
+    const uniqueCompletedDays = new Set(completedLogs.map(l => l.date)).size;
 
     return {
       totalCompletions: completedLogs.length,
-      completionRate: Math.round((completedLogs.length / daysSinceCreation) * 100),
+      completionRate: Math.min(100, Math.round((uniqueCompletedDays / daysSinceCreation) * 100)),
       streak,
       averageMoodBefore: moodsBefore.length ? moodsBefore.reduce((a, b) => a + b, 0) / moodsBefore.length : 0,
       averageMoodAfter: moodsAfter.length ? moodsAfter.reduce((a, b) => a + b, 0) / moodsAfter.length : 0,
@@ -583,8 +600,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       weekStart.setDate(weekStart.getDate() - (w * 7 + now.getDay()));
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
-      const startStr = weekStart.toISOString().split('T')[0];
-      const endStr = weekEnd.toISOString().split('T')[0];
+      const startStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+      const endStr = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
       const mins = sessions.filter(s => s.date >= startStr && s.date < endStr).reduce((a, s) => a + s.duration, 0);
       weeklyHours.push(Math.round(mins / 60 * 10) / 10);
     }
@@ -808,6 +825,67 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return stateRef.current.nutritionLogs.filter(n => n.date === date);
   }, []);
 
+  // ── Tasks ──
+
+  const addTask = useCallback((data: Omit<Task, 'id' | 'createdAt' | 'order'>): Task => {
+    const task: Task = {
+      ...data,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      order: stateRef.current.tasks.length + 1,
+    };
+    update(s => ({ ...s, tasks: [...s.tasks, task] }));
+    return task;
+  }, [update]);
+
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    update(s => ({ ...s, tasks: s.tasks.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t) }));
+  }, [update]);
+
+  const deleteTask = useCallback((id: string) => {
+    update(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id) }));
+  }, [update]);
+
+  const toggleTaskStatus = useCallback((id: string) => {
+    update(s => ({
+      ...s,
+      tasks: s.tasks.map(t => {
+        if (t.id !== id) return t;
+        const newStatus = t.status === 'completed' ? 'todo' : 'completed';
+        return {
+          ...t,
+          status: newStatus,
+          completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
+  }, [update]);
+
+  const reorderTasks = useCallback((orderedIds: string[]) => {
+    update(s => ({
+      ...s,
+      tasks: s.tasks.map(t => {
+        const idx = orderedIds.indexOf(t.id);
+        return idx >= 0 ? { ...t, order: idx + 1 } : t;
+      }),
+    }));
+  }, [update]);
+
+  const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
+    update(s => ({
+      ...s,
+      tasks: s.tasks.map(t => {
+        if (t.id !== taskId || !t.subtasks) return t;
+        return {
+          ...t,
+          subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, completed: !st.completed } : st),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
+  }, [update]);
+
   // ── Goals ──
 
   const addGoal = useCallback((data: Omit<Goal, 'id' | 'createdAt' | 'completed' | 'completedAt' | 'progress'>): Goal => {
@@ -908,6 +986,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     addAlarm, updateAlarm, deleteAlarm, toggleAlarm, triggerAlarm, snoozeAlarm, dismissAlarm, dismissAllAlarms,
     logHormone, deleteHormoneLog, getHormoneLogs,
     logNutrition, deleteNutritionLog, logHydration, getHydrationForDate, getNutritionForDate,
+    addTask, updateTask, deleteTask, toggleTaskStatus, reorderTasks, toggleSubtask,
     addGoal, updateGoal, deleteGoal, toggleGoalMilestone,
     logMood, getMoodForDate,
     addCustomCategory, deleteCustomCategory,
@@ -943,7 +1022,7 @@ function calculateBestStreak(sortedDatesDesc: string[], isScheduledDay?: (d: str
 
   // Walk through every day from first completion to last
   while (checkDate <= lastDate) {
-    const ds = checkDate.toISOString().split('T')[0];
+    const ds = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
     const scheduled = isScheduledDay ? isScheduledDay(ds) : true;
     if (scheduled) {
       if (completedSet.has(ds)) {

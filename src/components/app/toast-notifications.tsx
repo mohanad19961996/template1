@@ -84,11 +84,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((toast: Omit<Toast, 'id' | 'createdAt'>) => {
-    const id = `toast-${++toastCounter}-${Date.now()}`;
-    setToasts(prev => [...prev, { ...toast, id, createdAt: Date.now() }]);
-    // Play sound
-    const soundKey = TOAST_SOUNDS[toast.type];
-    if (soundKey) playSound(soundKey);
+    // Deduplicate: skip if same title + type already showing
+    setToasts(prev => {
+      const isDupe = prev.some(t => t.type === toast.type && t.title === toast.title && (Date.now() - t.createdAt) < 3000);
+      if (isDupe) return prev;
+      const id = `toast-${++toastCounter}-${Date.now()}`;
+      const newToast = { ...toast, id, createdAt: Date.now() };
+      // Play sound
+      const soundKey = TOAST_SOUNDS[toast.type];
+      if (soundKey) playSound(soundKey);
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        setToasts(p => p.filter(t => t.id !== id));
+      }, 5000);
+      return [...prev, newToast];
+    });
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -184,17 +194,19 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
       exit={{ opacity: 0, x: 60, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       className="pointer-events-auto rounded-2xl bg-[var(--color-background)] shadow-2xl overflow-hidden"
-      style={{ border: `2px solid ${color}30` }}
+      style={{ border: `1.5px solid ${color}25`, boxShadow: `0 8px 32px ${color}12, 0 2px 8px rgba(0,0,0,0.08)` }}
     >
-      {/* Color bar */}
-      <div className="h-1" style={{ background: color }} />
-      <div className="flex items-start gap-3 p-4">
-        {/* Icon */}
-        <div className="shrink-0 mt-0.5">{icon}</div>
+      {/* Top accent: theme color gradient with toast color */}
+      <div className="h-[3px]" style={{ background: `linear-gradient(90deg, var(--color-primary), ${color}, var(--color-primary))` }} />
+      <div className="flex items-start gap-3 p-3.5">
+        {/* Icon with theme-tinted background */}
+        <div className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: `${color}12`, border: `1px solid ${color}15` }}>
+          {icon}
+        </div>
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pt-0.5">
           <p className="text-sm font-bold">{toast.title}</p>
-          {toast.message && <p className="text-xs text-[var(--foreground)]/70 mt-0.5">{toast.message}</p>}
+          {toast.message && <p className="text-xs text-[var(--foreground)]/60 mt-0.5 leading-snug">{toast.message}</p>}
           {toast.action && (
             <button onClick={toast.action.onClick}
               className="text-xs font-bold mt-2 px-3 py-1 rounded-lg transition-all"
@@ -203,12 +215,15 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
             </button>
           )}
         </div>
-        {/* Close button */}
+        {/* Close button — theme colored */}
         <button onClick={() => onRemove(toast.id)}
-          className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-[var(--foreground)]/50 hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.08] transition-all">
-          <X className="h-4 w-4" />
+          className="shrink-0 h-6 w-6 rounded-md flex items-center justify-center transition-all hover:scale-110"
+          style={{ color: 'var(--color-primary)', background: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
+      {/* Bottom theme accent line */}
+      <div className="h-[2px] mx-3 mb-1 rounded-full" style={{ background: `linear-gradient(90deg, transparent, rgba(var(--color-primary-rgb) / 0.15), transparent)` }} />
     </motion.div>
   );
 }

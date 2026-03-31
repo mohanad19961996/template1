@@ -6,7 +6,7 @@
 
 export type HabitFrequency = 'daily' | 'weekly' | 'monthly' | 'custom';
 export type HabitType = 'positive' | 'avoidance';
-export type HabitTrackingType = 'boolean' | 'count' | 'timer';
+export type HabitTrackingType = 'boolean' | 'count' | 'timer' | 'checklist' | 'duration';
 export type HabitLogStatus = 'completed' | 'partial' | 'skipped' | 'missed' | 'pending';
 export type Priority = 'low' | 'medium' | 'high';
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -86,9 +86,10 @@ export interface Habit {
   icon: string;
   type: HabitType;
   // ── Tracking type (how completion is measured) ──
-  trackingType?: HabitTrackingType; // boolean = yes/no, count = numeric target, timer = time-based (default: boolean)
+  trackingType?: HabitTrackingType; // boolean = yes/no, count = numeric target, timer = time-based, checklist = multi-step, duration = manual minutes (default: boolean)
   targetValue?: number;             // 1 for boolean, 8 for "8 cups", 30 for "30 minutes" (default: 1)
   targetUnit?: string;              // 'times' | 'cups' | 'pages' | 'minutes' | 'steps' | custom (default: times)
+  checklistItems?: { id: string; titleEn: string; titleAr: string }[]; // for checklist tracking type
   // ── Schedule ──
   scheduleType?: 'daily' | 'weekly' | 'custom'; // how often (default: daily)
   scheduleDays?: WeekDay[];        // specific days if custom
@@ -152,6 +153,7 @@ export interface HabitLog {
   // ── New fields for proper tracking ──
   status?: HabitLogStatus;         // completed | partial | skipped | missed | pending (default: based on completed)
   value?: number;                  // actual value achieved (e.g. 6 cups out of 8)
+  checklistState?: Record<string, boolean>; // for checklist type: { itemId: true/false }
   source?: 'manual' | 'timer' | 'auto'; // how this log was created (default: manual)
 }
 
@@ -264,6 +266,36 @@ export interface Reminder {
   sound: string;
   enabled: boolean;
   createdAt: string;
+}
+
+// ── Task ──────────────────────────────────────────────────
+
+export type TaskStatus = 'todo' | 'in-progress' | 'completed' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface Task {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string;
+  descriptionAr?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  category?: string;
+  dueDate?: string;        // YYYY-MM-DD
+  dueTime?: string;        // HH:mm
+  completedAt?: string;     // ISO timestamp
+  estimatedMinutes?: number;
+  actualMinutes?: number;
+  subtasks?: { id: string; title: string; completed: boolean }[];
+  tags?: string[];
+  linkedHabitId?: string;
+  linkedSkillId?: string;
+  notes?: string;
+  color?: string;
+  createdAt: string;
+  updatedAt?: string;
+  order: number;
 }
 
 // ── Alarm ─────────────────────────────────────────────────
@@ -421,6 +453,7 @@ export interface AppState {
   hormoneLogs: HormoneLog[];
   nutritionLogs: NutritionLog[];
   hydrationLogs: HydrationLog[];
+  tasks: Task[];
   goals: Goal[];
   moodEntries: MoodEntry[];
   customCategories: string[];
@@ -481,7 +514,8 @@ export function generateId(): string {
 // ── Date Helpers ───────────────────────────────────────────
 
 export function todayString(): DateString {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function nowTimeString(): TimeString {
@@ -546,6 +580,7 @@ export const DEFAULT_APP_STATE: AppState = {
   hormoneLogs: [],
   nutritionLogs: [],
   hydrationLogs: [],
+  tasks: [],
   goals: [],
   moodEntries: [],
   customCategories: [],

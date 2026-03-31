@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ListChecks, GraduationCap, Timer, BarChart3,
   Calendar, Bell, Brain, Apple, Target, Settings,
-  Sparkles, X, AlarmClock,
+  Sparkles, X, AlarmClock, ClipboardList,
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,6 +34,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/app', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: LayoutDashboard },
       { href: '/app/habits', labelEn: 'Habits', labelAr: 'العادات', icon: ListChecks },
       { href: '/app/skills', labelEn: 'Skills', labelAr: 'المهارات', icon: GraduationCap },
+      { href: '/app/tasks', labelEn: 'Tasks', labelAr: 'المهام', icon: ClipboardList },
       { href: '/app/timers', labelEn: 'Timers', labelAr: 'المؤقتات', icon: Timer },
     ],
   },

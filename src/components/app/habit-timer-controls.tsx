@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
+import { useToast } from '@/components/app/toast-notifications';
 import { Habit, formatTimerDuration, resolveHabitColor } from '@/types/app';
 import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 
@@ -37,17 +38,34 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   };
   const pause = () => store.updateActiveTimer({ state: 'paused', runningStartedAt: undefined });
   const resume = () => store.updateActiveTimer({ state: 'running', runningStartedAt: new Date().toISOString() });
-  const cancel = () => store.cancelTimer();
-  const stop = (today: string, done: boolean) => {
-    if (!currentSession) return;
-    const secs = elapsed;
-    if (secs > 0 && !done && !habit.archived) {
-      const durationMin = hasDuration ? (habit.expectedDuration ?? Math.max(1, Math.round(secs / 60))) : Math.max(1, Math.round(secs / 60));
+  const cancel = () => {
+    // Save partial log even when cancelled — timer was started so record the attempt
+    if (currentSession && elapsed > 0 && !habit.archived) {
+      const today = new Date().toISOString().split('T')[0];
+      const durationMin = Math.max(1, Math.round(elapsed / 60));
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
         duration: durationMin,
-        note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: true,
+        note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: false,
+        source: 'timer',
+      });
+    }
+    store.cancelTimer();
+  };
+  const stop = (today: string, done: boolean) => {
+    if (!currentSession) return;
+    const secs = elapsed;
+    if (secs > 0 && !habit.archived) {
+      const durationMin = hasDuration ? (habit.expectedDuration ?? Math.max(1, Math.round(secs / 60))) : Math.max(1, Math.round(secs / 60));
+      // For duration habits: only mark completed if timer reached the target
+      // For stopwatch habits: mark completed when manually stopped
+      const isCompleted = hasDuration ? (secs >= targetSecs) : !done;
+      store.logHabit({
+        habitId: habit.id, date: today,
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        duration: durationMin,
+        note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
       });
     }
@@ -75,6 +93,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   habit: Habit; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string; done: boolean; size?: 'sm' | 'xs' | 'md'; disabled?: boolean;
 }) {
   const t = useHabitTimer(habit, store);
+  const toast = useToast();
   if (habit.archived) return null;
 
   // Check strict time window
@@ -95,6 +114,21 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
   // If locked or all reps done, don't show start button (but still show if timer is already running)
   const cantStart = isStrictLocked || allRepsDone;
+
+  // Notify user why the button is disabled
+  const notifyDisabled = () => {
+    if (t.anotherRunning) {
+      toast.notifyWarning(isAr ? 'مؤقت آخر نشط' : 'Another timer active', isAr ? 'أوقف المؤقت الحالي أولاً' : 'Stop the current timer first');
+    } else if (allRepsDone) {
+      toast.notifyInfo(isAr ? 'مكتمل اليوم ✓' : 'Completed today ✓', isAr ? 'لقد أكملت هذه العادة لهذا اليوم' : 'You have completed this habit for today');
+    } else if (isStrictLocked) {
+      if (habit.windowStart && habit.windowEnd) {
+        toast.notifyWarning(isAr ? 'خارج وقت النافذة' : 'Outside time window', isAr ? `متاحة فقط من ${habit.windowStart} إلى ${habit.windowEnd}` : `Available only from ${habit.windowStart} to ${habit.windowEnd}`);
+      } else {
+        toast.notifyWarning(isAr ? 'غير متاح حالياً' : 'Not available now');
+      }
+    }
+  };
 
   const remaining = t.hasDuration && t.isMyTimer ? Math.max(0, t.targetSecs - t.elapsed) : 0;
   const progress = t.hasDuration && t.isMyTimer && t.targetSecs > 0 ? Math.min(1, t.elapsed / t.targetSecs) : 0;
@@ -138,7 +172,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
         {/* Buttons */}
         <div className="flex items-center gap-2">
           {!t.isMyTimer && (
-            <button onClick={() => !cantStart && t.start()} disabled={t.anotherRunning || cantStart}
+            <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()}
               className={cn('flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all',
                 (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed')}
               style={{ background: `linear-gradient(135deg, ${habit.color}, ${habit.color}cc)`, boxShadow: `0 4px 14px ${habit.color}33` }}>
@@ -195,7 +229,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           </span>
         )}
         <div className="flex items-center gap-1">
-          {!t.isMyTimer && <button onClick={() => !cantStart && t.start()} disabled={t.anotherRunning || cantStart} className={cn('flex items-center font-semibold text-white', btnCls, (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed')} style={{ background: hc }}><Play className={iconCls} /></button>}
+          {!t.isMyTimer && <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()} className={cn('flex items-center font-semibold text-white', btnCls, (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed')} style={{ background: hc }}><Play className={iconCls} /></button>}
           {t.running && <button onClick={() => t.pause()} className={cn('flex items-center font-semibold bg-amber-500/15 text-amber-600', btnCls)}><Pause className={iconCls} /></button>}
           {t.paused && <><button onClick={() => t.resume()} className={cn('flex items-center font-semibold', btnCls)} style={{ background: `${hc}15`, color: hc }}><Play className={iconCls} /></button><button onClick={() => t.cancel()} className={cn('flex items-center font-semibold bg-red-500/10 text-red-500', btnCls)}><X className={iconCls} /></button></>}
         </div>
@@ -242,40 +276,40 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
   return (
     <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
-      {/* Timer display — always visible */}
-      <div className="hc-timer rounded-xl overflow-hidden relative" style={{ background: timerBg, border: `1.5px solid ${timerBorder}` }}>
+      {/* Timer display — fixed height for alignment across cards */}
+      <div className="hc-timer rounded-xl overflow-hidden relative h-[100px]" style={{ background: timerBg, border: `1.5px solid ${timerBorder}` }}>
         {/* Subtle animated background pulse when running */}
         {t.running && (
           <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
         )}
-        <div className="relative p-3.5">
+        <div className="relative p-2.5">
           {/* Header: status + icon */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full shrink-0" style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">{statusLabel}</span>
+              <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">{statusLabel}</span>
             </div>
-            <Timer className="h-3.5 w-3.5" style={{ color: isActive ? hc : `${hc}50` }} />
+            <Timer className="h-3 w-3" style={{ color: isActive ? hc : `${hc}50` }} />
           </div>
 
-          {/* Big time display */}
+          {/* Time display */}
           <div className={cn(
-            'text-2xl font-mono font-black tracking-tight text-center transition-all duration-300',
+            'text-lg font-mono font-black tracking-tight text-center transition-all duration-300',
             t.running && 'scale-105',
             isIdle && !done && !allRepsDone && 'opacity-40',
           )} style={{ color: (done || allRepsDone) ? '#22c55e' : hc }}>
             {(done || allRepsDone) && !isActive ? (
-              <div className="flex items-center justify-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <span className="text-lg">{isAr ? 'مكتمل' : 'Done'}</span>
+              <div className="flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
               </div>
             ) : displayTime}
           </div>
 
           {/* Target info for idle countdown */}
           {isIdle && t.hasDuration && !done && !allRepsDone && (
-            <div className="text-center mt-1">
-              <span className="text-[10px] font-semibold text-[var(--foreground)]/40">
+            <div className="text-center mt-0.5">
+              <span className="text-[9px] font-semibold text-[var(--foreground)]/40">
                 {isAr ? `الهدف: ${habit.expectedDuration} دقيقة` : `Target: ${habit.expectedDuration} min`}
               </span>
             </div>
@@ -283,26 +317,26 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
           {/* Progress bar — always visible for countdown habits */}
           {t.hasDuration && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-0.5">
                 {isActive && (
-                  <span className="text-[10px] font-bold" style={{ color: `${hc}80` }}>
+                  <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
                     {formatTimerDuration(t.elapsed)} / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
                 {!isActive && (
-                  <span className="text-[10px] font-bold text-[var(--foreground)]/30">
+                  <span className="text-[9px] font-bold text-[var(--foreground)]/30">
                     0:00 / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
-                <span className="text-[11px] font-black" style={{ color: isActive ? hc : `${hc}40` }}>
+                <span className="text-[10px] font-black" style={{ color: isActive ? hc : `${hc}40` }}>
                   {isActive ? `${pctText}%` : (done || allRepsDone) ? '100%' : '0%'}
                 </span>
               </div>
               {/* Segmented progress bar */}
               <div className="flex gap-[2px]">
                 {Array.from({ length: timerSegments }).map((_, si) => (
-                  <div key={si} className="flex-1 h-2.5 rounded-sm transition-all duration-300"
+                  <div key={si} className="flex-1 h-1.5 rounded-sm transition-all duration-300"
                     style={{
                       background: (done || allRepsDone) && !isActive
                         ? (si < timerSegments ? '#22c55e' : '#22c55e12')
@@ -316,8 +350,8 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
           {/* Stopwatch mode info */}
           {!t.hasDuration && isActive && (
-            <div className="mt-2 text-center">
-              <span className="text-[10px] font-bold" style={{ color: `${hc}80` }}>
+            <div className="mt-1 text-center">
+              <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
                 {Math.floor(t.elapsed / 60)} {isAr ? 'دقيقة' : 'min'} {Math.floor(t.elapsed % 60).toString().padStart(2, '0')} {isAr ? 'ثانية' : 'sec'}
               </span>
             </div>
@@ -325,27 +359,26 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="flex items-center gap-1.5">
+      {/* Buttons — fixed height for alignment */}
+      <div className="flex items-center gap-1.5 h-[32px]">
         {!t.isMyTimer && (
-          <button onClick={() => !cantStart && t.start()}
-            disabled={t.anotherRunning || cantStart}
-            className={cn('flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95',
+          <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()}
+            className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold text-white transition-all active:scale-95',
               (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed')}
             style={{ background: `linear-gradient(135deg, ${hc}, ${hc}cc)` }}>
-            <Play className="h-4 w-4" /> {cantStart ? (isAr ? 'غير متاح' : 'Unavailable') : (isAr ? 'ابدأ' : 'Start')}
+            <Play className="h-3.5 w-3.5" /> {cantStart ? (isAr ? 'غير متاح' : 'Unavailable') : (isAr ? 'ابدأ' : 'Start')}
           </button>
         )}
         {t.running && (
           <>
             <button onClick={() => t.pause()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-amber-500/15 text-amber-600 transition-all active:scale-95">
-              <Pause className="h-4 w-4" /> {isAr ? 'إيقاف' : 'Pause'}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-600 transition-all active:scale-95">
+              <Pause className="h-3.5 w-3.5" /> {isAr ? 'إيقاف' : 'Pause'}
             </button>
             {!t.hasDuration && (
               <button onClick={() => t.stop(today, done)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-                <Square className="h-4 w-4" /> {isAr ? 'إنهاء' : 'Stop'}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
+                <Square className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Stop'}
               </button>
             )}
           </>
@@ -353,24 +386,24 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
         {t.paused && (
           <>
             <button onClick={() => t.resume()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all active:scale-95"
               style={{ background: `${hc}15`, color: hc }}>
-              <Play className="h-4 w-4" /> {isAr ? 'استئناف' : 'Resume'}
+              <Play className="h-3.5 w-3.5" /> {isAr ? 'استئناف' : 'Resume'}
             </button>
             {!t.hasDuration && (
               <button onClick={() => t.stop(today, done)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-                <CheckCircle2 className="h-4 w-4" /> {isAr ? 'إنهاء' : 'Done'}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
+                <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Done'}
               </button>
             )}
             <button onClick={() => t.cancel()}
-              className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl text-xs font-bold bg-red-500/10 text-red-500 transition-all active:scale-95">
-              <X className="h-4 w-4" />
+              className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg text-[11px] font-bold bg-red-500/10 text-red-500 transition-all active:scale-95">
+              <X className="h-3.5 w-3.5" />
             </button>
           </>
         )}
         {!t.isMyTimer && t.anotherRunning && !done && (
-          <span className="text-xs font-bold text-amber-500">{isAr ? 'مؤقت آخر نشط' : 'Another timer active'}</span>
+          <span className="text-[11px] font-bold text-amber-500">{isAr ? 'مؤقت آخر نشط' : 'Another timer active'}</span>
         )}
       </div>
     </div>
