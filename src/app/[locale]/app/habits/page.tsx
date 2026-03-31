@@ -267,15 +267,20 @@ export default function HabitsPage() {
   }, []);
 
   // Auto-complete: when timed habit timer reaches expectedDuration, auto-log
+  // Auto-complete habit when timer-linked countdown reaches target.
+  // Uses an interval to check endsAt since elapsed is no longer in store state.
   const autoCompleteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!ht.activeHabitId || !ht.running) return;
-    const habit = store.habits.find(h => h.id === ht.activeHabitId);
-    if (!habit?.expectedDuration) return;
-    const targetSecs = habit.expectedDuration * 60;
-    if (ht.elapsed >= targetSecs && autoCompleteRef.current !== ht.activeHabitId) {
+    const check = () => {
+      const active = store.activeTimer;
+      if (!active || active.state !== 'running' || !active.endsAt) return;
+      if (new Date(active.endsAt).getTime() > Date.now()) return;
+      const habit = store.habits.find(h => h.id === ht.activeHabitId);
+      if (!habit?.expectedDuration) return;
+      if (autoCompleteRef.current === ht.activeHabitId) return;
       autoCompleteRef.current = ht.activeHabitId;
-      const durationMin = Math.max(1, Math.round(ht.elapsed / 60));
+      const durationMin = habit.expectedDuration;
       const alreadyDone = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
       if (!alreadyDone) {
         store.logHabit({
@@ -286,12 +291,14 @@ export default function HabitsPage() {
           source: 'timer',
         });
       }
-      // Complete the timer session in the store
       if (ht.currentSession) {
         store.completeTimer(ht.currentSession.id);
       }
-    }
-  }, [ht.elapsed, ht.activeHabitId, ht.running, store, today]);
+    };
+    check(); // check immediately
+    const id = setInterval(check, 1000);
+    return () => clearInterval(id);
+  }, [ht.activeHabitId, ht.running, store, today]);
 
   // Form state
   const [formData, setFormData] = useState({

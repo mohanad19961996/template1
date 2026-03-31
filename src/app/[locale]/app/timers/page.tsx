@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import {
   TimerMode, DEFAULT_POMODORO, formatTimerDuration, formatDuration,
-  todayString, MoodLevel, Difficulty,
+  todayString, MoodLevel, Difficulty, computeTimerElapsed,
 } from '@/types/app';
+import { useTimerDisplay } from '@/lib/use-timer-display';
 import { useSearchParams } from 'next/navigation';
 import {
   Play, Pause, Square, RotateCcw, Timer, Clock, Zap, Brain,
@@ -47,6 +48,9 @@ export default function TimersPage() {
   const isRunning = active?.state === 'running';
   const isPaused = active?.state === 'paused';
 
+  // Computed display values from absolute timestamps (refreshes every second)
+  const timer = useTimerDisplay(active);
+
   // Live clock
   useEffect(() => {
     setClockNow(new Date());
@@ -54,49 +58,53 @@ export default function TimersPage() {
     return () => clearInterval(cid);
   }, []);
 
-  // Timer tick is handled globally in app layout — only watch for completion here
+  // Watch for completion — derived from timestamps, not ticks
   useEffect(() => {
     if (!active || active.state !== 'running') return;
-    if (active.targetDuration && active.elapsed >= active.targetDuration) {
+    // Check if countdown/pomodoro has ended
+    if (active.endsAt && new Date(active.endsAt).getTime() <= Date.now()) {
       if (active.mode === 'pomodoro') {
         handlePomodoroPhaseComplete();
       } else {
         setShowComplete(true);
-        store.updateActiveTimer({ state: 'completed' });
+        store.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: active.targetDuration ? active.targetDuration * 1000 : 0, endsAt: undefined });
       }
     }
-  }, [active?.elapsed, active?.state, active?.targetDuration, active?.mode]);
+  }, [timer.now, active?.state, active?.mode]);
 
   const handlePomodoroPhaseComplete = useCallback(() => {
     if (!store.activeTimer) return;
     const phase = store.activeTimer.pomodoroPhase;
     const round = store.activeTimer.pomodoroRound ?? 1;
+    const now = Date.now();
+    const nowISO = new Date(now).toISOString();
 
     if (phase === 'work') {
-      if (round >= pomodoroConfig.roundsBeforeLongBreak) {
-        store.updateActiveTimer({
-          pomodoroPhase: 'long-break',
-          elapsed: 0,
-          targetDuration: pomodoroConfig.longBreakMinutes * 60,
-        });
-      } else {
-        store.updateActiveTimer({
-          pomodoroPhase: 'short-break',
-          elapsed: 0,
-          targetDuration: pomodoroConfig.shortBreakMinutes * 60,
-        });
-      }
+      const nextDuration = round >= pomodoroConfig.roundsBeforeLongBreak
+        ? pomodoroConfig.longBreakMinutes * 60
+        : pomodoroConfig.shortBreakMinutes * 60;
+      const nextPhase = round >= pomodoroConfig.roundsBeforeLongBreak ? 'long-break' : 'short-break';
+      store.updateActiveTimer({
+        pomodoroPhase: nextPhase,
+        targetDuration: nextDuration,
+        startedAt: nowISO,
+        endsAt: new Date(now + nextDuration * 1000).toISOString(),
+        remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
+      });
     } else if (phase === 'short-break') {
+      const nextDuration = pomodoroConfig.workMinutes * 60;
       store.updateActiveTimer({
         pomodoroPhase: 'work',
         pomodoroRound: round + 1,
-        elapsed: 0,
-        targetDuration: pomodoroConfig.workMinutes * 60,
+        targetDuration: nextDuration,
+        startedAt: nowISO,
+        endsAt: new Date(now + nextDuration * 1000).toISOString(),
+        remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
       });
     } else {
       // Long break done — session complete
       setShowComplete(true);
-      store.updateActiveTimer({ state: 'completed' });
+      store.updateActiveTimer({ state: 'completed', remainingMs: 0, endsAt: undefined });
     }
   }, [store, pomodoroConfig]);
 
@@ -128,16 +136,16 @@ export default function TimersPage() {
 
   const handlePauseResume = () => {
     if (isRunning) {
-      store.updateActiveTimer({ state: 'paused', runningStartedAt: undefined });
+      store.pauseTimer();
     } else if (isPaused) {
-      store.updateActiveTimer({ state: 'running', runningStartedAt: new Date().toISOString() });
+      store.resumeTimer();
     }
   };
 
   const handleStop = () => {
     setShowComplete(true);
     if (active) {
-      store.updateActiveTimer({ state: 'completed' });
+      store.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: elapsed * 1000, endsAt: undefined });
     }
   };
 
@@ -150,10 +158,11 @@ export default function TimersPage() {
     store.completeTimer(active.sessionId, completionNote, completionRating);
 
     // Auto-log to skill if linked
-    if (sId && active.elapsed > 60) {
-      const durationMin = Math.round(active.elapsed / 60);
+    const finalElapsed = computeTimerElapsed(active);
+    if (sId && finalElapsed > 60) {
+      const durationMin = Math.round(finalElapsed / 60);
       const now = new Date();
-      const startTime = new Date(now.getTime() - active.elapsed * 1000);
+      const startTime = new Date(now.getTime() - finalElapsed * 1000);
       store.logSkillSession({
         skillId: sId,
         date: todayString(),
@@ -184,12 +193,12 @@ export default function TimersPage() {
     setShowComplete(false);
   };
 
-  // Display values
-  const elapsed = active?.elapsed ?? 0;
+  // Display values — derived from absolute timestamps via useTimerDisplay
+  const elapsed = timer.elapsed;
   const target = active?.targetDuration;
-  const remaining = target ? Math.max(0, target - elapsed) : elapsed;
-  const displayTime = mode === 'stopwatch' || !target ? elapsed : remaining;
-  const progress = target ? Math.min(100, (elapsed / target) * 100) : 0;
+  const remaining = timer.remaining;
+  const displayTime = timer.displayTime;
+  const progress = timer.progress;
   const circumference = 2 * Math.PI * 120;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -534,12 +543,12 @@ export default function TimersPage() {
                   {active.targetDuration && (
                     <div className="mt-1">
                       <div className="flex items-center justify-between text-[10px] text-[var(--foreground)]/50 mb-1">
-                        <span>{formatTimerDuration(active.elapsed)}</span>
+                        <span>{formatTimerDuration(elapsed)}</span>
                         <span>{formatTimerDuration(active.targetDuration)}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.08] overflow-hidden">
                         <div className="h-full rounded-full bg-[var(--color-primary)] transition-all duration-1000 ease-linear"
-                          style={{ width: `${Math.min(100, (active.elapsed / active.targetDuration) * 100)}%` }} />
+                          style={{ width: `${Math.min(100, (elapsed / active.targetDuration) * 100)}%` }} />
                       </div>
                     </div>
                   )}

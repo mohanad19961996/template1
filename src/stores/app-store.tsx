@@ -7,6 +7,7 @@ import {
   Task, Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
   StreakInfo, HabitStats, SkillStats, DateString,
   HabitHistoryEntry, HabitChangeType,
+  computeTimerElapsed, computeTimerRemaining,
 } from '@/types/app';
 
 // ── Storage ────────────────────────────────────────────────
@@ -119,23 +120,21 @@ function diffHabit(old: Habit, updates: Partial<Habit>): Record<string, { from: 
 }
 
 // ── Timer Recovery ────────────────────────────────────────
+// On page load: check if a running countdown/pomodoro timer has already ended.
+// No need to "recover" elapsed — it's always computed from absolute timestamps.
 
 function recoverTimer(state: AppState): AppState {
   const t = state.activeTimer;
-  if (!t || t.state !== 'running' || !t.runningStartedAt) return state;
+  if (!t || t.state !== 'running') return state;
 
-  const now = Date.now();
-  const startedAt = new Date(t.runningStartedAt).getTime();
-  const secondsAway = Math.floor((now - startedAt) / 1000);
-
-  // If target duration would have been reached while away → auto-complete
-  if (t.targetDuration && (t.elapsed + secondsAway) >= t.targetDuration) {
+  // For countdown/pomodoro: check if endsAt has passed
+  if (t.endsAt && new Date(t.endsAt).getTime() <= Date.now()) {
     const session = state.timerSessions.find(s => s.id === t.sessionId);
     const endedAt = new Date().toISOString();
 
     // Auto-log habit completion if timer was linked to a habit
     let habitLogs = state.habitLogs;
-    if (session?.habitId) {
+    if (session?.habitId && t.targetDuration) {
       const today = todayString();
       const alreadyLogged = habitLogs.some(l => l.habitId === session.habitId && l.date === today && l.completed);
       if (!alreadyLogged) {
@@ -159,18 +158,20 @@ function recoverTimer(state: AppState): AppState {
     return {
       ...state,
       habitLogs,
-      activeTimer: { ...t, elapsed: t.targetDuration, state: 'completed', runningStartedAt: undefined },
+      activeTimer: {
+        ...t, state: 'completed',
+        elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0,
+        remainingMs: 0, endsAt: undefined, pausedAt: undefined,
+      },
       timerSessions: state.timerSessions.map(s =>
         s.id === t.sessionId ? { ...s, completed: true, endedAt, duration: t.targetDuration! } : s
       ),
     };
   }
 
-  // Count elapsed time since last tick and resume
-  return {
-    ...state,
-    activeTimer: { ...t, elapsed: t.elapsed + secondsAway, runningStartedAt: new Date().toISOString() },
-  };
+  // For stopwatch or countdown that hasn't ended: nothing to do.
+  // Elapsed is computed from startedAt/endsAt on every render.
+  return state;
 }
 
 // ── Context ────────────────────────────────────────────────
@@ -202,7 +203,8 @@ interface AppStore extends AppState {
   // Timers
   startTimer: (session: Omit<TimerSession, 'id' | 'completed' | 'distractionCount' | 'note'>) => string;
   updateActiveTimer: (updates: Partial<ActiveTimer>) => void;
-  tickActiveTimer: () => void;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
   completeTimer: (sessionId: string, note?: string, productivityRating?: number) => void;
   cancelTimer: () => void;
   addDistraction: () => void;
@@ -283,6 +285,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const recovered = recoverTimer(local);
     setState(recovered);
     setMounted(true);
+
+    // Fetch active timer from DB (source of truth for timers)
+    fetch('/api/timer').then(r => r.json()).then(res => {
+      if (res.data) {
+        setState(prev => {
+          const withDbTimer = { ...prev, activeTimer: res.data };
+          return recoverTimer(withDbTimer);
+        });
+      }
+    }).catch(() => { /* use local state */ });
 
     // Then load habits & logs from API (separate collections) for latest data
     Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI()]).then(([habits, logs]) => {
@@ -649,18 +661,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const startTimer = useCallback((data: Omit<TimerSession, 'id' | 'completed' | 'distractionCount' | 'note'>): string => {
     const now = new Date().toISOString();
+    const nowMs = Date.now();
     const session: TimerSession = { ...data, id: generateId(), completed: false, distractionCount: 0, note: '', events: [{ action: 'start', at: now }] };
     const active: ActiveTimer = {
       sessionId: session.id,
       state: 'running',
-      elapsed: 0,
-      targetDuration: data.targetDuration,
       mode: data.mode,
+      startedAt: now,
+      endsAt: data.targetDuration ? new Date(nowMs + data.targetDuration * 1000).toISOString() : undefined,
+      targetDuration: data.targetDuration,
       pomodoroPhase: data.mode === 'pomodoro' ? 'work' : undefined,
       pomodoroRound: data.mode === 'pomodoro' ? 1 : undefined,
-      runningStartedAt: now,
     };
     update(s => ({ ...s, timerSessions: [...s.timerSessions, session], activeTimer: active }));
+    // Persist to DB
+    apiPost('/api/timer', active);
     return session.id;
   }, [update]);
 
@@ -668,7 +683,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     update(s => {
       if (!s.activeTimer) return s;
       const now = new Date().toISOString();
-      // Record events on the session when pausing/resuming
       let updatedSessions = s.timerSessions;
       if (updates.state === 'paused' || updates.state === 'running') {
         const action = updates.state === 'paused' ? 'pause' as const : 'resume' as const;
@@ -682,51 +696,110 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : t.totalPausedTime,
         } : t);
       }
-      return { ...s, timerSessions: updatedSessions, activeTimer: { ...s.activeTimer, ...updates } };
+      const newActive = { ...s.activeTimer, ...updates };
+      apiPatch('/api/timer', newActive);
+      return { ...s, timerSessions: updatedSessions, activeTimer: newActive };
     });
   }, [update]);
 
-  const tickActiveTimer = useCallback(() => {
+  const pauseTimer = useCallback(() => {
     update(s => {
-      if (!s.activeTimer || s.activeTimer.state !== 'running' || !s.activeTimer.runningStartedAt) return s;
+      const t = s.activeTimer;
+      if (!t || t.state !== 'running') return s;
       const now = Date.now();
-      const segmentStart = new Date(s.activeTimer.runningStartedAt).getTime();
-      const newElapsed = s.activeTimer.elapsed + Math.floor((now - segmentStart) / 1000);
-      return { ...s, activeTimer: { ...s.activeTimer, elapsed: newElapsed, runningStartedAt: new Date().toISOString() } };
+      const nowISO = new Date(now).toISOString();
+
+      let paused: ActiveTimer;
+      if (t.mode === 'stopwatch') {
+        // Store total elapsed ms
+        const elapsedMs = now - new Date(t.startedAt).getTime();
+        paused = { ...t, state: 'paused', pausedAt: nowISO, elapsedMs, endsAt: undefined };
+      } else {
+        // Store remaining ms for countdown/pomodoro
+        const remainingMs = t.endsAt ? Math.max(0, new Date(t.endsAt).getTime() - now) : 0;
+        paused = { ...t, state: 'paused', pausedAt: nowISO, remainingMs, endsAt: undefined };
+      }
+
+      const updatedSessions = s.timerSessions.map(sess => sess.id === t.sessionId ? {
+        ...sess,
+        events: [...(sess.events || []), { action: 'pause' as const, at: nowISO }],
+        pausedAt: nowISO,
+      } : sess);
+
+      apiPatch('/api/timer', paused);
+      return { ...s, activeTimer: paused, timerSessions: updatedSessions };
+    });
+  }, [update]);
+
+  const resumeTimer = useCallback(() => {
+    update(s => {
+      const t = s.activeTimer;
+      if (!t || t.state !== 'paused') return s;
+      const now = Date.now();
+      const nowISO = new Date(now).toISOString();
+
+      let resumed: ActiveTimer;
+      if (t.mode === 'stopwatch') {
+        // Shift startedAt forward so elapsed = now - startedAt stays correct
+        const newStartedAt = new Date(now - (t.elapsedMs ?? 0)).toISOString();
+        resumed = { ...t, state: 'running', startedAt: newStartedAt, pausedAt: undefined, elapsedMs: undefined };
+      } else {
+        // Set new absolute end time from remaining
+        const endsAt = new Date(now + (t.remainingMs ?? 0)).toISOString();
+        resumed = { ...t, state: 'running', startedAt: nowISO, endsAt, pausedAt: undefined, remainingMs: undefined };
+      }
+
+      const updatedSessions = s.timerSessions.map(sess => sess.id === t.sessionId ? {
+        ...sess,
+        events: [...(sess.events || []), { action: 'resume' as const, at: nowISO }],
+        resumedAt: nowISO,
+        totalPausedTime: sess.pausedAt
+          ? (sess.totalPausedTime || 0) + Math.floor((now - new Date(sess.pausedAt).getTime()) / 1000)
+          : sess.totalPausedTime,
+      } : sess);
+
+      apiPatch('/api/timer', resumed);
+      return { ...s, activeTimer: resumed, timerSessions: updatedSessions };
     });
   }, [update]);
 
   const completeTimer = useCallback((sessionId: string, note?: string, productivityRating?: number) => {
     const now = new Date().toISOString();
-    update(s => ({
-      ...s,
-      timerSessions: s.timerSessions.map(t => t.id === sessionId ? {
-        ...t, completed: true, endedAt: now,
-        duration: s.activeTimer?.elapsed ?? t.duration,
-        note: note ?? t.note,
-        productivityRating: productivityRating as any ?? t.productivityRating,
-        events: [...(t.events || []), { action: 'finish' as const, at: now }],
-      } : t),
-      activeTimer: null,
-    }));
+    update(s => {
+      const elapsed = computeTimerElapsed(s.activeTimer);
+      return {
+        ...s,
+        timerSessions: s.timerSessions.map(t => t.id === sessionId ? {
+          ...t, completed: true, endedAt: now,
+          duration: elapsed,
+          note: note ?? t.note,
+          productivityRating: productivityRating as any ?? t.productivityRating,
+          events: [...(t.events || []), { action: 'finish' as const, at: now }],
+        } : t),
+        activeTimer: null,
+      };
+    });
+    apiDelete('/api/timer');
   }, [update]);
 
   const cancelTimer = useCallback(() => {
     const now = new Date().toISOString();
     update(s => {
       if (!s.activeTimer) return s;
+      const elapsed = computeTimerElapsed(s.activeTimer);
       return {
         ...s,
         timerSessions: s.timerSessions.map(t => t.id === s.activeTimer!.sessionId ? {
           ...t,
           endedAt: now,
-          duration: s.activeTimer!.elapsed,
+          duration: elapsed,
           completed: false,
           events: [...(t.events || []), { action: 'cancel' as const, at: now }],
         } : t),
         activeTimer: null,
       };
     });
+    apiDelete('/api/timer');
   }, [update]);
 
   const addDistraction = useCallback(() => {
@@ -1011,7 +1084,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     isHabitCompletedToday, getTodayCompletionRate,
     addSkill, updateSkill, deleteSkill,
     logSkillSession, deleteSkillSession, getSkillSessions, getSkillStats,
-    startTimer, updateActiveTimer, tickActiveTimer, completeTimer, cancelTimer, addDistraction,
+    startTimer, updateActiveTimer, pauseTimer, resumeTimer, completeTimer, cancelTimer, addDistraction,
     addReminder, updateReminder, deleteReminder, toggleReminder,
     addAlarm, updateAlarm, deleteAlarm, toggleAlarm, triggerAlarm, snoozeAlarm, dismissAlarm, dismissAllAlarms,
     logHormone, deleteHormoneLog, getHormoneLogs,

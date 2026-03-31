@@ -464,12 +464,55 @@ export interface AppState {
 export interface ActiveTimer {
   sessionId: string;
   state: TimerState;
-  elapsed: number;          // seconds
-  targetDuration?: number;  // seconds
   mode: TimerMode;
+  // ── Absolute timestamps (source of truth) ──
+  startedAt: string;         // ISO — when the current running segment began
+  endsAt?: string;           // ISO — absolute end time (countdown/pomodoro only, set when running)
+  pausedAt?: string;         // ISO — when timer was paused
+  remainingMs?: number;      // ms remaining at pause (countdown/pomodoro)
+  elapsedMs?: number;        // ms elapsed at pause (stopwatch) or total elapsed for completed
+  targetDuration?: number;   // seconds — total target for countdown/pomodoro
+  // ── Pomodoro ──
   pomodoroPhase?: 'work' | 'short-break' | 'long-break';
   pomodoroRound?: number;
-  runningStartedAt?: string; // ISO timestamp — when the current run segment started
+}
+
+/** Compute elapsed seconds from an ActiveTimer's absolute timestamps */
+export function computeTimerElapsed(t: ActiveTimer | null, now?: number): number {
+  if (!t) return 0;
+  const ts = now ?? Date.now();
+  if (t.state === 'completed') {
+    return t.targetDuration ?? Math.floor((t.elapsedMs ?? 0) / 1000);
+  }
+  if (t.state === 'paused') {
+    if (t.mode === 'stopwatch') return Math.floor((t.elapsedMs ?? 0) / 1000);
+    // countdown/pomodoro: elapsed = target - remaining
+    return t.targetDuration ? Math.max(0, t.targetDuration - Math.floor((t.remainingMs ?? 0) / 1000)) : 0;
+  }
+  if (t.state === 'running') {
+    if (t.mode === 'stopwatch') {
+      return Math.floor((ts - new Date(t.startedAt).getTime()) / 1000);
+    }
+    // countdown/pomodoro: elapsed = target - (endsAt - now)
+    if (t.endsAt && t.targetDuration) {
+      const remainMs = Math.max(0, new Date(t.endsAt).getTime() - ts);
+      return Math.max(0, t.targetDuration - Math.floor(remainMs / 1000));
+    }
+    return 0;
+  }
+  return 0;
+}
+
+/** Compute remaining seconds for countdown/pomodoro timers */
+export function computeTimerRemaining(t: ActiveTimer | null, now?: number): number {
+  if (!t || !t.targetDuration) return 0;
+  const ts = now ?? Date.now();
+  if (t.state === 'completed') return 0;
+  if (t.state === 'paused') return Math.max(0, Math.floor((t.remainingMs ?? 0) / 1000));
+  if (t.state === 'running' && t.endsAt) {
+    return Math.max(0, Math.floor((new Date(t.endsAt).getTime() - ts) / 1000));
+  }
+  return 0;
 }
 
 // ── Utility Types ──────────────────────────────────────────

@@ -4,7 +4,8 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import { useToast } from '@/components/app/toast-notifications';
-import { Habit, formatTimerDuration, resolveHabitColor } from '@/types/app';
+import { Habit, formatTimerDuration, resolveHabitColor, computeTimerElapsed, computeTimerRemaining } from '@/types/app';
+import { useTimerDisplay } from '@/lib/use-timer-display';
 import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 
 // Per-habit timer state & actions
@@ -17,13 +18,15 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   const anotherRunning = hasActiveTimer && !isMyTimer;
   const running = isMyTimer && active?.state === 'running';
   const paused = isMyTimer && active?.state === 'paused';
-  const elapsed = isMyTimer ? (active?.elapsed ?? 0) : 0;
+
+  // Computed elapsed from absolute timestamps
+  const { elapsed } = useTimerDisplay(isMyTimer ? active : null);
+
   const hasDuration = !!habit.expectedDuration;
   const targetSecs = hasDuration ? habit.expectedDuration! * 60 : 0;
 
   const start = () => {
     if (anotherRunning) return;
-    // Check strict window
     if (habit.strictWindow && habit.windowStart && habit.windowEnd) {
       const now = new Date();
       const ct = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -36,10 +39,9 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
       targetDuration: hasDuration ? targetSecs : undefined,
     });
   };
-  const pause = () => store.updateActiveTimer({ state: 'paused', runningStartedAt: undefined });
-  const resume = () => store.updateActiveTimer({ state: 'running', runningStartedAt: new Date().toISOString() });
+  const pause = () => store.pauseTimer();
+  const resume = () => store.resumeTimer();
   const cancel = () => {
-    // Save partial log even when cancelled — timer was started so record the attempt
     if (currentSession && elapsed > 0 && !habit.archived) {
       const today = new Date().toISOString().split('T')[0];
       const durationMin = Math.max(1, Math.round(elapsed / 60));
@@ -58,8 +60,6 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     const secs = elapsed;
     if (secs > 0 && !habit.archived) {
       const durationMin = hasDuration ? (habit.expectedDuration ?? Math.max(1, Math.round(secs / 60))) : Math.max(1, Math.round(secs / 60));
-      // For duration habits: only mark completed if timer reached the target
-      // For stopwatch habits: mark completed when manually stopped
       const isCompleted = hasDuration ? (secs >= targetSecs) : !done;
       store.logHabit({
         habitId: habit.id, date: today,
@@ -82,7 +82,8 @@ export function useStoreHabitTimer(store: ReturnType<typeof useAppStore>) {
   const activeHabitId = currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null;
   const running = active?.state === 'running';
   const paused = active?.state === 'paused';
-  const elapsed = active?.elapsed ?? 0;
+  // Compute elapsed from timestamps
+  const elapsed = computeTimerElapsed(active);
   const hasActiveTimer = !!active && active.state !== 'completed';
 
   return { activeHabitId, running, paused, elapsed, hasActiveTimer, currentSession };
@@ -96,26 +97,20 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const toast = useToast();
   if (habit.archived) return null;
 
-  // Check strict time window
   const isStrictLocked = (() => {
     if (disabled) return true;
     if (!habit.strictWindow || !habit.windowStart || !habit.windowEnd) return false;
     const now = new Date();
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    // Outside window entirely
     if (currentTime < habit.windowStart || currentTime > habit.windowEnd) return true;
     return false;
   })();
 
-  // Check max daily reps
   const maxReps = habit.maxDailyReps || 1;
   const todayReps = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
   const allRepsDone = todayReps >= maxReps;
-
-  // If locked or all reps done, don't show start button (but still show if timer is already running)
   const cantStart = isStrictLocked || allRepsDone;
 
-  // Notify user why the button is disabled
   const notifyDisabled = () => {
     if (t.anotherRunning) {
       toast.notifyWarning(isAr ? 'مؤقت آخر نشط' : 'Another timer active', isAr ? 'أوقف المؤقت الحالي أولاً' : 'Stop the current timer first');
@@ -137,27 +132,21 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   if (size === 'md') {
     return (
       <div className="flex flex-col gap-3" onClick={e => e.stopPropagation()}>
-        {/* Active timer display */}
         {t.isMyTimer && (t.running || t.paused) && (() => {
           const mdHc = resolveHabitColor(habit.color);
           const mdSegs = 30;
           const mdFilled = Math.min(mdSegs, Math.round(progress * mdSegs));
           return (
             <div className="rounded-2xl p-5 text-center" style={{ background: `linear-gradient(135deg, ${mdHc}18, ${mdHc}08)`, border: `1.5px solid ${mdHc}30` }}>
-              {/* Big time */}
               <div className={cn('text-4xl font-mono font-black tracking-tight', t.running && 'animate-pulse')} style={{ color: mdHc }}>
                 {t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed)}
               </div>
-              {/* Segmented progress bar */}
               {t.hasDuration && (
                 <div className="mt-3 space-y-1.5">
                   <div className="flex gap-[2px]">
                     {Array.from({ length: mdSegs }).map((_, si) => (
                       <div key={si} className="flex-1 h-3.5 rounded-sm transition-all duration-300"
-                        style={{
-                          background: si < mdFilled ? mdHc : `${mdHc}12`,
-                          transitionDelay: `${si * 15}ms`,
-                        }} />
+                        style={{ background: si < mdFilled ? mdHc : `${mdHc}12`, transitionDelay: `${si * 15}ms` }} />
                     ))}
                   </div>
                   <div className="flex justify-between text-[11px] font-bold" style={{ color: `${mdHc}99` }}>
@@ -169,7 +158,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             </div>
           );
         })()}
-        {/* Buttons */}
         <div className="flex items-center gap-2">
           {!t.isMyTimer && (
             <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()}
@@ -244,7 +232,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const timerSegments = 20;
   const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
 
-  // Status label
   const statusLabel = t.running
     ? (isAr ? 'قيد التشغيل' : 'Running')
     : t.paused
@@ -255,15 +242,12 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           ? (isAr ? 'غير متاح' : 'Unavailable')
           : (isAr ? 'جاهز' : 'Ready');
 
-  // Status dot color
   const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : (done || allRepsDone) ? '#22c55e' : cantStart ? '#ef4444' : `${hc}60`;
 
-  // Display time
   const displayTime = isActive
     ? (t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed))
     : (t.hasDuration ? formatTimerDuration(t.targetSecs) : '00:00');
 
-  // Background gradient based on state
   const timerBg = t.running
     ? `linear-gradient(135deg, ${hc}15, ${hc}08)`
     : t.paused
@@ -276,14 +260,11 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
   return (
     <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
-      {/* Timer display — fixed height for alignment across cards */}
       <div className="hc-timer rounded-xl overflow-hidden relative h-[100px]" style={{ background: timerBg, border: `1.5px solid ${timerBorder}` }}>
-        {/* Subtle animated background pulse when running */}
         {t.running && (
           <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
         )}
         <div className="relative p-2.5">
-          {/* Header: status + icon */}
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
@@ -292,7 +273,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             <Timer className="h-3 w-3" style={{ color: isActive ? hc : `${hc}50` }} />
           </div>
 
-          {/* Time display */}
           <div className={cn(
             'text-lg font-mono font-black tracking-tight text-center transition-all duration-300',
             t.running && 'scale-105',
@@ -306,7 +286,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             ) : displayTime}
           </div>
 
-          {/* Target info for idle countdown */}
           {isIdle && t.hasDuration && !done && !allRepsDone && (
             <div className="text-center mt-0.5">
               <span className="text-[9px] font-semibold text-[var(--foreground)]/40">
@@ -315,7 +294,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             </div>
           )}
 
-          {/* Progress bar — always visible for countdown habits */}
           {t.hasDuration && (
             <div className="mt-2">
               <div className="flex items-center justify-between mb-0.5">
@@ -333,7 +311,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
                   {isActive ? `${pctText}%` : (done || allRepsDone) ? '100%' : '0%'}
                 </span>
               </div>
-              {/* Segmented progress bar */}
               <div className="flex gap-[2px]">
                 {Array.from({ length: timerSegments }).map((_, si) => (
                   <div key={si} className="flex-1 h-1.5 rounded-sm transition-all duration-300"
@@ -348,7 +325,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             </div>
           )}
 
-          {/* Stopwatch mode info */}
           {!t.hasDuration && isActive && (
             <div className="mt-1 text-center">
               <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
@@ -359,7 +335,6 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
         </div>
       </div>
 
-      {/* Buttons — fixed height for alignment */}
       <div className="flex items-center gap-1.5 h-[32px]">
         {!t.isMyTimer && (
           <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()}

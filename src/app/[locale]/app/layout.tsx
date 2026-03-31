@@ -8,26 +8,29 @@ import { ToastProvider } from '@/components/app/toast-notifications';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
+import { computeTimerRemaining } from '@/types/app';
 
-// Global timer tick — runs as long as activeTimer is 'running', regardless of page
-// Browser naturally throttles setInterval in background tabs (~1/min), so the timer
-// barely increments when the tab is hidden. recoverTimer handles full browser close.
-function useGlobalTimerTick() {
+// Global timer completion checker — polls every second to detect when a
+// countdown/pomodoro timer reaches zero (based on absolute timestamps).
+// This does NOT tick or mutate elapsed — display is computed from timestamps.
+function useGlobalTimerCompletionCheck() {
   const store = useAppStore();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isRunning = store.activeTimer?.state === 'running';
-  const tickRef = useRef(store.tickActiveTimer);
-  tickRef.current = store.tickActiveTimer;
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => { tickRef.current(); }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning]);
+    const id = setInterval(() => {
+      const s = storeRef.current;
+      const t = s.activeTimer;
+      if (!t || t.state !== 'running' || !t.endsAt) return;
+      if (new Date(t.endsAt).getTime() <= Date.now()) {
+        // Timer has ended — mark as completed in the store
+        // (The timers page / habit page will handle UI & auto-complete logic)
+        s.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0, endsAt: undefined });
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 }
 
 // Global alarm checker — checks every second whether any alarm should fire
@@ -108,7 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Global timer tick — persists across all /app/* pages
-  useGlobalTimerTick();
+  useGlobalTimerCompletionCheck();
   // Global alarm checker — fires alarms at correct time across all pages
   useGlobalAlarmChecker();
 
