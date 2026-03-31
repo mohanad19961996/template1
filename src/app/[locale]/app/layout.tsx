@@ -9,26 +9,43 @@ import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
 
-// Global timer tick — runs as long as activeTimer is 'running', regardless of page
+// Global timer tick — only ticks while the page is visible (tab is active)
 function useGlobalTimerTick() {
   const store = useAppStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRunning = store.activeTimer?.state === 'running';
-  // Keep a stable ref to tickActiveTimer to avoid stale closures in setInterval
   const tickRef = useRef(store.tickActiveTimer);
   tickRef.current = store.tickActiveTimer;
 
+  const startTicking = () => {
+    if (intervalRef.current) return;
+    intervalRef.current = setInterval(() => { tickRef.current(); }, 1000);
+  };
+  const stopTicking = () => {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  };
+
   useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        tickRef.current();
-      }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (isRunning && !document.hidden) {
+      startTicking();
+    } else {
+      stopTicking();
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => stopTicking();
   }, [isRunning]);
+
+  // Pause ticking when tab is hidden, resume when visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopTicking();
+      } else if (store.activeTimer?.state === 'running') {
+        startTicking();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 }
 
 // Global alarm checker — checks every second whether any alarm should fire

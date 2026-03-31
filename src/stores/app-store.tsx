@@ -126,23 +126,50 @@ function recoverTimer(state: AppState): AppState {
 
   const now = Date.now();
   const startedAt = new Date(t.runningStartedAt).getTime();
-  const secondsPassed = Math.floor((now - startedAt) / 1000);
-  const newElapsed = t.elapsed + secondsPassed;
+  const secondsAway = Math.floor((now - startedAt) / 1000);
 
-  // For countdown/pomodoro: cap at target and auto-complete if exceeded
-  if (t.targetDuration && newElapsed >= t.targetDuration) {
+  // If target duration would have been reached while away → auto-complete
+  if (t.targetDuration && (t.elapsed + secondsAway) >= t.targetDuration) {
+    const session = state.timerSessions.find(s => s.id === t.sessionId);
+    const endedAt = new Date().toISOString();
+
+    // Auto-log habit completion if timer was linked to a habit
+    let habitLogs = state.habitLogs;
+    if (session?.habitId) {
+      const today = todayString();
+      const alreadyLogged = habitLogs.some(l => l.habitId === session.habitId && l.date === today && l.completed);
+      if (!alreadyLogged) {
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        habitLogs = [...habitLogs, {
+          id: generateId(),
+          habitId: session.habitId,
+          date: today,
+          time: nowTime,
+          duration: Math.round(t.targetDuration / 60),
+          note: 'Auto-completed by timer',
+          reminderUsed: false,
+          perceivedDifficulty: 'medium' as const,
+          completed: true,
+          status: 'completed' as const,
+          source: 'timer' as const,
+        }];
+      }
+    }
+
     return {
       ...state,
+      habitLogs,
       activeTimer: { ...t, elapsed: t.targetDuration, state: 'completed', runningStartedAt: undefined },
       timerSessions: state.timerSessions.map(s =>
-        s.id === t.sessionId ? { ...s, completed: true, endedAt: new Date().toISOString(), duration: t.targetDuration! } : s
+        s.id === t.sessionId ? { ...s, completed: true, endedAt, duration: t.targetDuration! } : s
       ),
     };
   }
 
+  // Otherwise just resume from where it was — don't count time away
   return {
     ...state,
-    activeTimer: { ...t, elapsed: newElapsed, runningStartedAt: new Date().toISOString() },
+    activeTimer: { ...t, runningStartedAt: new Date().toISOString() },
   };
 }
 
