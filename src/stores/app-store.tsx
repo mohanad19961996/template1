@@ -688,8 +688,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const tickActiveTimer = useCallback(() => {
     update(s => {
-      if (!s.activeTimer || s.activeTimer.state !== 'running') return s;
-      return { ...s, activeTimer: { ...s.activeTimer, elapsed: s.activeTimer.elapsed + 1, runningStartedAt: new Date().toISOString() } };
+      if (!s.activeTimer || s.activeTimer.state !== 'running' || !s.activeTimer.runningStartedAt) return s;
+      const now = Date.now();
+      const segmentStart = new Date(s.activeTimer.runningStartedAt).getTime();
+      const newElapsed = s.activeTimer.elapsed + Math.floor((now - segmentStart) / 1000);
+      return { ...s, activeTimer: { ...s.activeTimer, elapsed: newElapsed, runningStartedAt: new Date().toISOString() } };
     });
   }, [update]);
 
