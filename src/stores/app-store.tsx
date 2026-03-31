@@ -166,10 +166,10 @@ function recoverTimer(state: AppState): AppState {
     };
   }
 
-  // Otherwise just resume from where it was — don't count time away
+  // Count elapsed time since last tick and resume
   return {
     ...state,
-    activeTimer: { ...t, runningStartedAt: new Date().toISOString() },
+    activeTimer: { ...t, elapsed: t.elapsed + secondsAway, runningStartedAt: new Date().toISOString() },
   };
 }
 
