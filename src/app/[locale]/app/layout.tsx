@@ -14,6 +14,8 @@ function useGlobalTimerTick() {
   const store = useAppStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isRunning = store.activeTimer?.state === 'running';
+  const isRunningRef = useRef(isRunning);
+  isRunningRef.current = isRunning;
   const tickRef = useRef(store.tickActiveTimer);
   tickRef.current = store.tickActiveTimer;
 
@@ -39,7 +41,7 @@ function useGlobalTimerTick() {
     const handleVisibility = () => {
       if (document.hidden) {
         stopTicking();
-      } else if (store.activeTimer?.state === 'running') {
+      } else if (isRunningRef.current) {
         startTicking();
       }
     };

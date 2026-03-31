@@ -15,6 +15,17 @@ import {
   MapPin, Repeat, Gift, Lightbulb, History, Eye, CheckCircle2, Circle,
   Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare,
 } from 'lucide-react';
+import { useToast } from '@/components/app/toast-notifications';
+
+function to12h(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  const period = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m} ${period}`;
+}
 
 // ── Labels ──
 const CATEGORY_LABELS: Record<string, { en: string; ar: string }> = {
@@ -98,6 +109,7 @@ export default function HabitDetailPage() {
   const store = useAppStore();
   const today = todayString();
 
+  const toast = useToast();
   const habit = store.habits.find(h => h.id === habitId);
   const [history, setHistory] = useState<HabitHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -312,24 +324,81 @@ export default function HabitDetailPage() {
           </button>
         )}
 
-        {/* Completion status (read-only — completion only from habit card) */}
-        {(!habit.expectedDuration || !isViewingToday) && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--foreground)]/50">
-              {isAr ? 'حالة الإنجاز' : 'Completion Status'}
-            </span>
-            <span className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold',
-                viewingDateDone
-                  ? 'bg-emerald-500/15 text-emerald-600'
-                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40'
-              )}>
-              {viewingDateDone ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-              {viewingDateDone ? (isAr ? 'مكتملة ✓' : 'Done ✓') : (isAr ? 'لم تكتمل' : 'Not Done')}
-            </span>
-          </div>
-        )}
+        {/* Completion status */}
+        {(() => {
+          const hasDuration = !!habit.expectedDuration;
+          const isCount = habit.trackingType === 'count';
+          const isBooleanHabit = !hasDuration && !isCount;
 
-        {/* Timer info — read-only (completion only from habit card) */}
+          // Time window checks (only for today)
+          const now = new Date();
+          const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          const inWindow = !habit.windowStart || !habit.windowEnd || (currentTime >= habit.windowStart && currentTime <= habit.windowEnd);
+          const windowExpired = habit.windowStart && habit.windowEnd && currentTime > habit.windowEnd;
+          const strictLocked = isViewingToday && habit.strictWindow && habit.windowStart && habit.windowEnd && windowExpired && !viewingDateDone;
+          const strictNotYet = isViewingToday && habit.strictWindow && habit.windowStart && habit.windowEnd && !inWindow && !windowExpired && !viewingDateDone;
+          const isBooleanBefore9pm = isViewingToday && isBooleanHabit && !viewingDateDone && now.getHours() < 21;
+          const isTimerHabit = isViewingToday && hasDuration && !viewingDateDone;
+
+          const isDisabled = !!strictLocked || !!strictNotYet || isBooleanBefore9pm || isTimerHabit;
+
+          const handleClick = () => {
+            if (isBooleanBefore9pm) {
+              toast.notifyInfo(
+                isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM',
+                isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day'
+              );
+            } else if (strictLocked) {
+              toast.notifyWarning(
+                isAr ? 'فات الوقت' : 'Window passed',
+                isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`
+              );
+            } else if (strictNotYet) {
+              toast.notifyInfo(
+                isAr ? 'لم يحن الوقت بعد' : 'Not yet',
+                isAr ? `النافذة تبدأ الساعة ${to12h(habit.windowStart!)}` : `Window starts at ${to12h(habit.windowStart!)}`
+              );
+            } else if (isTimerHabit) {
+              toast.notifyInfo(
+                isAr ? 'استخدم المؤقت' : 'Use the timer',
+                isAr ? `هذه العادة تحتاج مؤقت (${habit.expectedDuration} دقيقة) لإكمالها` : `This habit requires the timer (${habit.expectedDuration} min) to complete`
+              );
+            } else {
+              handleToggleDay();
+            }
+          };
+
+          return (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[var(--foreground)]/50">
+                {isAr ? 'حالة الإنجاز' : 'Completion Status'}
+              </span>
+              <button onClick={handleClick}
+                className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                  viewingDateDone
+                    ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25'
+                    : isDisabled
+                      ? 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40 cursor-not-allowed'
+                      : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'
+                )}>
+                {viewingDateDone ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                {viewingDateDone
+                  ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo')
+                  : isBooleanBefore9pm
+                    ? (isAr ? 'متاح بعد ٩ مساءً' : 'After 9 PM')
+                    : strictNotYet
+                      ? (isAr ? `متاح من ${to12h(habit.windowStart!)}` : `From ${to12h(habit.windowStart!)}`)
+                      : strictLocked
+                        ? (isAr ? 'فات الوقت' : 'Window Passed')
+                        : isTimerHabit
+                          ? (isAr ? 'استخدم المؤقت' : 'Use Timer')
+                          : (isAr ? 'تسجيل إنجاز' : 'Mark Done')}
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Timer info for timed habits */}
         {isViewingToday && habit.expectedDuration && (
           <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
             <div className="flex items-center gap-2">

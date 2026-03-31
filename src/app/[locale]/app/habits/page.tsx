@@ -5151,28 +5151,53 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
             )}
 
             {/* Boolean habit — big completion button */}
-            {!isCountHabit && !hasDuration && !habit.archived && (
-              <motion.button
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (done) {
-                    const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
-                    if (log) store.deleteHabitLog(log.id);
-                  } else {
-                    store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true });
-                  }
-                }}
-                className={cn('w-full flex items-center justify-center gap-3 py-5 rounded-2xl text-base font-black transition-all duration-300',
-                  done ? 'bg-emerald-500/10 text-emerald-600 border-2 border-emerald-500/25 hover:bg-emerald-500/15' : 'text-white shadow-xl hover:shadow-2xl')}
-                style={!done ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 12px 32px ${hc}30` } : undefined}
-              >
-                <motion.div animate={done ? { rotate: [0, 360] } : {}} transition={{ duration: 0.5 }}>
-                  <CheckCircle2 className="h-6 w-6" />
-                </motion.div>
-                {done ? (isAr ? 'مكتملة — اضغط للتراجع' : 'Completed — Click to Undo') : (isAr ? 'أنجز العادة الآن' : 'Mark as Done')}
-              </motion.button>
-            )}
+            {!isCountHabit && !hasDuration && !habit.archived && (() => {
+              const now = new Date();
+              const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+              const inWindow = !habit.windowStart || !habit.windowEnd || (currentTime >= habit.windowStart && currentTime <= habit.windowEnd);
+              const windowExpired = habit.windowStart && habit.windowEnd && currentTime > habit.windowEnd;
+              const strictLocked = habit.strictWindow && habit.windowStart && habit.windowEnd && windowExpired && !done;
+              const strictNotYet = habit.strictWindow && habit.windowStart && habit.windowEnd && !inWindow && !windowExpired && !done;
+              const isBooleanBefore9pm = !done && now.getHours() < 21;
+              const btnDisabled = !!strictLocked || !!strictNotYet || isBooleanBefore9pm;
+
+              const handleClick = () => {
+                if (done) {
+                  const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
+                  if (log) store.deleteHabitLog(log.id);
+                } else if (isBooleanBefore9pm) {
+                  toast.notifyInfo(isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM', isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day');
+                } else if (strictLocked) {
+                  toast.notifyWarning(isAr ? 'فات الوقت' : 'Window passed', isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`);
+                } else if (strictNotYet) {
+                  toast.notifyInfo(isAr ? 'لم يحن الوقت بعد' : 'Not yet', isAr ? `النافذة تبدأ الساعة ${to12h(habit.windowStart!)}` : `Window starts at ${to12h(habit.windowStart!)}`);
+                } else {
+                  store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true });
+                }
+              };
+
+              return (
+                <motion.button
+                  whileHover={!btnDisabled ? { scale: 1.02, y: -1 } : {}}
+                  whileTap={!btnDisabled ? { scale: 0.98 } : {}}
+                  onClick={handleClick}
+                  className={cn('w-full flex items-center justify-center gap-3 py-5 rounded-2xl text-base font-black transition-all duration-300',
+                    done ? 'bg-emerald-500/10 text-emerald-600 border-2 border-emerald-500/25 hover:bg-emerald-500/15'
+                      : btnDisabled ? 'opacity-40 border-2 border-[var(--foreground)]/[0.08] text-[var(--foreground)]/40'
+                      : 'text-white shadow-xl hover:shadow-2xl')}
+                  style={!done && !btnDisabled ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 12px 32px ${hc}30` } : undefined}
+                >
+                  <motion.div animate={done ? { rotate: [0, 360] } : {}} transition={{ duration: 0.5 }}>
+                    <CheckCircle2 className="h-6 w-6" />
+                  </motion.div>
+                  {done ? (isAr ? 'مكتملة — اضغط للتراجع' : 'Completed — Click to Undo')
+                    : isBooleanBefore9pm ? (isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM')
+                    : strictNotYet ? (isAr ? `متاح من ${to12h(habit.windowStart!)}` : `Available from ${to12h(habit.windowStart!)}`)
+                    : strictLocked ? (isAr ? 'فات الوقت' : 'Window Passed')
+                    : (isAr ? 'أنجز العادة الآن' : 'Mark as Done')}
+                </motion.button>
+              );
+            })()}
 
             {/* Completed time info */}
             {todayLog && (
@@ -5619,16 +5644,47 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
                 </button>
               </div>
             )}
-            {!isCountHabit && !hasDuration && !habit.archived && (
-              <button
-                onClick={() => { if (done) { const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed); if (log) store.deleteHabitLog(log.id); } else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); } }}
-                className={cn('w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all',
-                  done ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'text-white')}
-                style={!done ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 4px 16px ${hc}25` } : undefined}>
-                <CheckCircle2 className="h-4 w-4" />
-                {done ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo') : (isAr ? 'أنجز الآن' : 'Mark Done')}
-              </button>
-            )}
+            {!isCountHabit && !hasDuration && !habit.archived && (() => {
+              const now = new Date();
+              const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+              const inWindow = !habit.windowStart || !habit.windowEnd || (currentTime >= habit.windowStart && currentTime <= habit.windowEnd);
+              const windowExpired = habit.windowStart && habit.windowEnd && currentTime > habit.windowEnd;
+              const strictLocked = habit.strictWindow && habit.windowStart && habit.windowEnd && windowExpired && !done;
+              const strictNotYet = habit.strictWindow && habit.windowStart && habit.windowEnd && !inWindow && !windowExpired && !done;
+              const isBooleanBefore9pm = !done && now.getHours() < 21;
+              const isDisabled = !!strictLocked || !!strictNotYet || isBooleanBefore9pm;
+
+              const handleClick = () => {
+                if (done) {
+                  const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
+                  if (log) store.deleteHabitLog(log.id);
+                } else if (isBooleanBefore9pm) {
+                  toast.notifyInfo(isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM', isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day');
+                } else if (strictLocked) {
+                  toast.notifyWarning(isAr ? 'فات الوقت' : 'Window passed', isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`);
+                } else if (strictNotYet) {
+                  toast.notifyInfo(isAr ? 'لم يحن الوقت بعد' : 'Not yet', isAr ? `النافذة تبدأ الساعة ${to12h(habit.windowStart!)}` : `Window starts at ${to12h(habit.windowStart!)}`);
+                } else {
+                  store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true });
+                }
+              };
+
+              return (
+                <button onClick={handleClick}
+                  className={cn('w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all',
+                    done ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      : isDisabled ? 'opacity-40 border border-[var(--foreground)]/[0.08] text-[var(--foreground)]/40'
+                      : 'text-white')}
+                  style={!done && !isDisabled ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 4px 16px ${hc}25` } : undefined}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  {done ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo')
+                    : isBooleanBefore9pm ? (isAr ? 'متاح بعد ٩ مساءً' : 'After 9 PM')
+                    : strictNotYet ? (isAr ? `متاح من ${to12h(habit.windowStart!)}` : `From ${to12h(habit.windowStart!)}`)
+                    : strictLocked ? (isAr ? 'فات الوقت' : 'Window Passed')
+                    : (isAr ? 'أنجز الآن' : 'Mark Done')}
+                </button>
+              );
+            })()}
             {todayLog && (
               <div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-[var(--foreground)]/35">
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {to12h(todayLog.time)}</span>
