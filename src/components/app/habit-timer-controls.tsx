@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import { useToast } from '@/components/app/toast-notifications';
-import { Habit, formatTimerDuration, resolveHabitColor, computeTimerElapsed, computeTimerRemaining } from '@/types/app';
+import { Habit, formatTimerDuration, resolveHabitColor, computeTimerElapsed, computeTimerRemaining, todayString } from '@/types/app';
 import { useTimerDisplay } from '@/lib/use-timer-display';
 import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 
@@ -43,7 +43,7 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   const resume = () => store.resumeTimer();
   const cancel = () => {
     if (currentSession && elapsed > 0 && !habit.archived) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayString();
       const durationMin = Math.max(1, Math.round(elapsed / 60));
       store.logHabit({
         habitId: habit.id, date: today,

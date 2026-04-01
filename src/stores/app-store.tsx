@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   AppState, DEFAULT_APP_STATE, Habit, HabitLog, Skill, SkillSession,
   TimerSession, Reminder, Alarm, AlarmStatus, HormoneLog, NutritionLog, HydrationLog,
-  Task, Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString,
+  Task, Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString, parseLocalDate,
   StreakInfo, HabitStats, SkillStats, DateString,
   HabitHistoryEntry, HabitChangeType,
   computeTimerElapsed, computeTimerRemaining,
@@ -467,7 +467,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const isScheduledDay = (dateStr: string) => {
       if (scheduleType === 'daily') return true;
       if (habit?.frequency === 'custom' && habit?.customScheduleType) {
-        const d = new Date(dateStr);
+        const d = parseLocalDate(dateStr);
         if (habit.customScheduleType === 'weekdays' && habit.customDays?.length) {
           return habit.customDays.includes(d.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6);
         }
@@ -479,7 +479,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (scheduleType === 'custom' && scheduleDays.length > 0) {
-        const dayOfWeek = new Date(dateStr).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        const dayOfWeek = parseLocalDate(dateStr).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
         return scheduleDays.includes(dayOfWeek);
       }
       return true; // weekly/monthly: treat all days as eligible for streak
@@ -487,7 +487,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     // Current streak: go back from today, skip non-scheduled days
     let current = 0;
-    const checkDate = new Date(today + 'T00:00:00');
+    const checkDate = parseLocalDate(today);
     for (let i = 0; i < 400; i++) {
       const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
       if (isScheduledDay(dateStr)) {
@@ -512,7 +512,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
     completedLogs.forEach(l => {
-      const day = new Date(l.date).getDay();
+      const day = parseLocalDate(l.date).getDay();
       weekdayCounts[day]++;
     });
 
@@ -543,7 +543,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const today = todayString();
     const activeHabits = stateRef.current.habits.filter(h => !h.archived);
     if (activeHabits.length === 0) return 0;
-    const todayDate = new Date(today);
+    const todayDate = parseLocalDate(today);
     const todayHabits = activeHabits.filter(h => {
       if (h.frequency === 'daily') return true;
       if (h.frequency === 'weekly') {
@@ -627,7 +627,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const avgF = sessions.length ? sessions.reduce((a, s) => a + s.focusRating, 0) / sessions.length : 0;
 
     const weekdayMin = [0, 0, 0, 0, 0, 0, 0];
-    sessions.forEach(s => { weekdayMin[new Date(s.date).getDay()] += s.duration; });
+    sessions.forEach(s => { weekdayMin[parseLocalDate(s.date).getDay()] += s.duration; });
     const bestDayIdx = weekdayMin.indexOf(Math.max(...weekdayMin));
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

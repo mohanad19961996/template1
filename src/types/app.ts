@@ -556,13 +556,26 @@ export function generateId(): string {
 
 // ── Date Helpers ───────────────────────────────────────────
 
-export function todayString(): DateString {
-  const d = new Date();
+/** Parse "YYYY-MM-DD" as a local date (avoids UTC-midnight ambiguity of new Date("YYYY-MM-DD")) */
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Format a local Date as "YYYY-MM-DD" without UTC conversion (unlike toISOString) */
+export function formatLocalDate(d: Date): DateString {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function nowTimeString(): TimeString {
-  return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+/** Get today's date string, consistent across client & server using Intl timezone */
+export function todayString(timezone?: string): DateString {
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()) as DateString;
+}
+
+export function nowTimeString(timezone?: string): TimeString {
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: tz });
 }
 
 export function formatDuration(minutes: number): string {
@@ -586,7 +599,7 @@ export function getDaysInMonth(year: number, month: number): number {
 }
 
 export function getWeekDay(date: string): WeekDay {
-  return new Date(date).getDay() as WeekDay;
+  return parseLocalDate(date).getDay() as WeekDay;
 }
 
 // ── Default Values ─────────────────────────────────────────

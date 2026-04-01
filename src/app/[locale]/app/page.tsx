@@ -7,7 +7,7 @@ import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import { useToast } from '@/components/app/toast-notifications';
-import { todayString, formatDuration } from '@/types/app';
+import { todayString, formatDuration, parseLocalDate } from '@/types/app';
 import {
   CheckCircle2, Circle, Flame, TrendingUp, Timer, Target,
   Brain, Zap, ArrowRight, ArrowLeft, Plus, BarChart3, Star,
@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const todayHabits = useMemo(() => activeHabits.filter(h => {
     if (h.frequency === 'daily') return true;
     if (h.frequency === 'weekly') {
-      const dow = new Date(today).getDay();
+      const dow = parseLocalDate(today).getDay();
       return h.customDays?.includes(dow as any) ?? true;
     }
     return true;

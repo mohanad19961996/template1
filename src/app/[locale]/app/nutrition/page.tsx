@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
-import { todayString, MealType, MoodLevel } from '@/types/app';
+import { todayString, MealType, MoodLevel, formatLocalDate } from '@/types/app';
 import {
   Apple, Droplets, Plus, X, Coffee, Sun, Moon, Cookie,
   Flame, TrendingUp, CheckCircle2, Minus, Heart,
@@ -46,7 +46,7 @@ export default function NutritionPage() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(d);
       const meals = store.nutritionLogs.filter(n => n.date === dateStr);
       if (meals.length > 0 && meals.every(m => m.healthy)) count++;
     }

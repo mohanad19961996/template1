@@ -11,7 +11,7 @@ import { useToast } from '@/components/app/toast-notifications';
 import {
   Habit, HabitLog, DEFAULT_HABIT_CATEGORIES, HabitCategory, HabitFrequency,
   HabitType, HabitTrackingType, Priority, Difficulty, todayString, generateId, ITEM_COLORS,
-  WeekDay, CustomScheduleType, formatDuration, formatTimerDuration, resolveHabitColor,
+  WeekDay, CustomScheduleType, formatDuration, formatTimerDuration, resolveHabitColor, parseLocalDate, formatLocalDate,
 } from '@/types/app';
 import {
   Plus, CheckCircle2, Circle, Flame, Filter, Search, X, Archive,
@@ -76,7 +76,7 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
 
   // Week start (Sunday)
   const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay());
-  const weekStart = ws.toISOString().split('T')[0];
+  const weekStart = `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
   // Month start
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
   // Year start
@@ -2850,7 +2850,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const ds = d.toISOString().split('T')[0];
+      const ds = formatLocalDate(d);
       const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === ds && l.completed);
       const color = getCompletionColor(habit, log, ds);
       days.push({ date: ds, done: !!log, color });
@@ -3456,8 +3456,8 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               </div>
               <div className="flex items-center justify-between gap-1.5">
                 {weekDays.map((d, i) => {
-                  const dayLabel = new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
-                  const dayNum = new Date(d.date).getDate();
+                  const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
+                  const dayNum = parseLocalDate(d.date).getDate();
                   const isToday = d.date === today;
                   return (
                     <div key={i} className={cn('flex-1 flex flex-col items-center gap-1 rounded-lg py-1.5 transition-all',
@@ -3844,7 +3844,7 @@ function HabitListRow({ habit, index, isAr, store, today, onEdit, onArchive, onD
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
+      const ds = formatLocalDate(d);
       const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === ds && l.completed);
       days.push(getCompletionColor(habit, log, ds));
     }
@@ -4146,7 +4146,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     // This week completions
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekStartStr = formatLocalDate(weekStart);
     const thisWeek = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).length;
     const thisWeekMinutes = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
@@ -4200,7 +4200,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
       for (let d = 0; d < 7; d++) {
         const dt = new Date(weekStart);
         dt.setDate(dt.getDate() + d);
-        const ds = dt.toISOString().split('T')[0];
+        const ds = formatLocalDate(dt);
         days.push({
           date: ds,
           count: ds <= today ? allLogs.filter(l => l.date === ds).length : -1,
@@ -4240,8 +4240,8 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const start = d.toISOString().split('T')[0];
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+      const start = formatLocalDate(d);
+      const end = formatLocalDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
       const mLogs = allLogs.filter(l => l.date >= start && l.date <= end);
       months.push({
         label: d.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'short' }),
@@ -4464,7 +4464,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
         for (let i = 0; i < 90; i++) {
           const d = new Date(now);
           d.setDate(d.getDate() - i);
-          const ds = d.toISOString().split('T')[0];
+          const ds = formatLocalDate(d);
           const dow = d.getDay();
           dayTotal[dow]++;
           dayCompletions[dow] += allLogs.filter(l => l.date === ds).length;
@@ -4518,9 +4518,9 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
         lastWeekStart.setDate(lastWeekStart.getDate() - 7);
         const lastWeekEnd = new Date(thisWeekStart);
         lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
-        const twStr = thisWeekStart.toISOString().split('T')[0];
-        const lwStr = lastWeekStart.toISOString().split('T')[0];
-        const lweStr = lastWeekEnd.toISOString().split('T')[0];
+        const twStr = formatLocalDate(thisWeekStart);
+        const lwStr = formatLocalDate(lastWeekStart);
+        const lweStr = formatLocalDate(lastWeekEnd);
         const todayStr = todayString();
 
         const thisWeekCount = allLogs.filter(l => l.date >= twStr && l.date <= todayStr).length;
@@ -4570,12 +4570,12 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
   // Calculate dates for current page
   const pageDates = useMemo(() => {
     const dates: string[] = [];
-    const base = new Date(today);
+    const base = parseLocalDate(today);
     base.setDate(base.getDate() - (DAYS_PER_PAGE - 1) + pageOffset * DAYS_PER_PAGE);
     for (let i = 0; i < DAYS_PER_PAGE; i++) {
       const d = new Date(base);
       d.setDate(d.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
+      dates.push(formatLocalDate(d));
     }
     return dates;
   }, [today, pageOffset]);
@@ -4998,8 +4998,8 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
                 {/* This week strip */}
                 <div className="flex items-center gap-1 mt-3">
                   {weekDays.map((d, i) => {
-                    const dayLabel = new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'short' });
-                    const dayNum = new Date(d.date).getDate();
+                    const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'short' });
+                    const dayNum = parseLocalDate(d.date).getDate();
                     const isToday = d.date === today;
                     const isPast = d.date < today;
                     return (
@@ -5596,7 +5596,7 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
           {/* Week strip — compact */}
           <div className="flex items-center gap-0.5 mt-2.5">
             {weekDays.map((d, i) => {
-              const dayLabel = new Date(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
+              const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
               const isToday = d.date === today;
               const isPast = d.date < today;
               return (
@@ -5611,7 +5611,7 @@ function HabitDetail({ habit, onClose, onViewFull }: { habit: Habit; onClose: ()
                     isPast ? 'bg-red-400/30 text-red-500/70' :
                     isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
                     'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/25')}>
-                    {d.done ? <Check className="h-2.5 w-2.5" /> : new Date(d.date).getDate()}
+                    {d.done ? <Check className="h-2.5 w-2.5" /> : parseLocalDate(d.date).getDate()}
                   </div>
                 </div>
               );

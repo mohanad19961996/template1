@@ -8,7 +8,7 @@ import { ToastProvider } from '@/components/app/toast-notifications';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
-import { computeTimerRemaining } from '@/types/app';
+import { computeTimerRemaining, formatLocalDate } from '@/types/app';
 
 // Global timer completion checker — polls every second to detect when a
 // countdown/pomodoro timer reaches zero (based on absolute timestamps).
@@ -46,7 +46,7 @@ function useGlobalAlarmChecker() {
       const mm = String(now.getMinutes()).padStart(2, '0');
       const currentTime = `${hh}:${mm}`;
       const currentDay = now.getDay() as WeekDay;
-      const todayStr = now.toISOString().split('T')[0];
+      const todayStr = formatLocalDate(now);
       const s = storeRef.current;
 
       s.alarms.forEach(alarm => {
@@ -70,7 +70,7 @@ function useGlobalAlarmChecker() {
           if (alarm.lastTriggered) {
             const lastFired = new Date(alarm.lastTriggered);
             const lastTime = `${String(lastFired.getHours()).padStart(2, '0')}:${String(lastFired.getMinutes()).padStart(2, '0')}`;
-            const lastDate = lastFired.toISOString().split('T')[0];
+            const lastDate = formatLocalDate(lastFired);
             if (lastTime === currentTime && lastDate === todayStr) return false;
           }
 

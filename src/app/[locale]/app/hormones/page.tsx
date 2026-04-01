@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
-import { HormoneType, HORMONE_ACTIVITIES, todayString, MoodLevel, generateId } from '@/types/app';
+import { HormoneType, HORMONE_ACTIVITIES, todayString, MoodLevel, generateId, formatLocalDate } from '@/types/app';
 import {
   Brain, Heart, Sun, Zap, Smile, Activity, Plus, X,
   CheckCircle2, TrendingUp, Star, Calendar, Dumbbell,
@@ -128,7 +128,7 @@ export default function HormonesPage() {
   const weekLogs = useMemo(() => {
     const start = new Date(today);
     start.setDate(start.getDate() - 7);
-    return store.hormoneLogs.filter(l => l.date >= start.toISOString().split('T')[0]);
+    return store.hormoneLogs.filter(l => l.date >= formatLocalDate(start));
   }, [store.hormoneLogs, today]);
 
   const handleLog = () => {

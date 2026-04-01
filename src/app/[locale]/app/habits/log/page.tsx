@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
-import { Habit, HabitLog, todayString, resolveHabitColor } from '@/types/app';
+import { Habit, HabitLog, todayString, resolveHabitColor, formatLocalDate, parseLocalDate } from '@/types/app';
 import {
   ChevronLeft, CheckCircle2, Circle, Clock, Flame, ArrowRight,
   Timer, Calendar as CalendarIcon, X, Play, Pause, Square, Sparkles,
@@ -42,7 +42,7 @@ export default function HabitsLogPage() {
     for (let i = 0; i < daysBack; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      result.push(d.toISOString().split('T')[0]);
+      result.push(formatLocalDate(d));
     }
     return result;
   }, [daysBack]);
@@ -80,14 +80,14 @@ export default function HabitsLogPage() {
   const formatDur = (secs: number) => { const m = Math.floor(secs / 60); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
 
   const getDayName = (date: string) => {
-    const d = new Date(date);
+    const d = parseLocalDate(date);
     return isAr ? DAY_NAMES_AR[d.getDay()] : DAY_NAMES_EN[d.getDay()];
   };
 
   const getYesterday = () => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
+    return formatLocalDate(d);
   };
   const yesterday = getYesterday();
 

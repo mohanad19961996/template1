@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import {
   TimerMode, DEFAULT_POMODORO, formatTimerDuration, formatDuration,
-  todayString, MoodLevel, Difficulty, computeTimerElapsed,
+  todayString, MoodLevel, Difficulty, computeTimerElapsed, formatLocalDate,
 } from '@/types/app';
 import { useTimerDisplay } from '@/lib/use-timer-display';
 import { useSearchParams } from 'next/navigation';
@@ -231,7 +231,7 @@ export default function TimersPage() {
   const weekTotal = useMemo(() => {
     const now = new Date();
     const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay());
-    const weekStart = ws.toISOString().split('T')[0];
+    const weekStart = formatLocalDate(ws);
     return store.timerSessions.filter(t => t.completed && t.startedAt >= weekStart).reduce((a, t) => a + t.duration, 0);
   }, [store.timerSessions]);
 

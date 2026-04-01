@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
-import { todayString, formatDuration } from '@/types/app';
+import { todayString, formatDuration, parseLocalDate, formatLocalDate } from '@/types/app';
 import {
   BarChart3, TrendingUp, Clock, CheckCircle2, Flame, Star,
   Calendar, Target, Brain, Zap, Award, Activity,
@@ -25,12 +25,12 @@ export default function AnalyticsPage() {
 
   // Date range
   const dateRange = useMemo(() => {
-    const end = new Date(today);
-    const start = new Date(today);
+    const end = parseLocalDate(today);
+    const start = parseLocalDate(today);
     if (period === 'week') start.setDate(start.getDate() - 7);
     else if (period === 'month') start.setDate(start.getDate() - 30);
     else start.setDate(start.getDate() - 365);
-    return { start: start.toISOString().split('T')[0], end: today };
+    return { start: formatLocalDate(start), end: today };
   }, [today, period]);
 
   // Core stats
@@ -52,11 +52,11 @@ export default function AnalyticsPage() {
   const dailyCompletion = useMemo(() => {
     const days: { date: string; count: number; total: number }[] = [];
     const numDays = period === 'week' ? 7 : period === 'month' ? 30 : 52;
-    const d = new Date(today);
+    const d = parseLocalDate(today);
     for (let i = numDays - 1; i >= 0; i--) {
       const dt = new Date(d);
       dt.setDate(dt.getDate() - i);
-      const dateStr = dt.toISOString().split('T')[0];
+      const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
       const completed = store.habitLogs.filter(l => l.date === dateStr && l.completed).length;
       days.push({ date: dateStr, count: completed, total: activeHabits.length });
     }
@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
     const stats = [0, 0, 0, 0, 0, 0, 0];
     const counts = [0, 0, 0, 0, 0, 0, 0];
     periodLogs.forEach(l => {
-      const day = new Date(l.date).getDay();
+      const day = parseLocalDate(l.date).getDay();
       stats[day]++;
     });
     return stats;
