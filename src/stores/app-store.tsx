@@ -147,14 +147,15 @@ function recoverTimer(state: AppState): AppState {
 
     // Auto-log habit completion if timer was linked to a habit
     let habitLogs = state.habitLogs;
-    if (session?.habitId && t.targetDuration) {
+    const linkedHabitId = t.habitId ?? session?.habitId;
+    if (linkedHabitId && t.targetDuration) {
       const today = todayString();
-      const alreadyLogged = habitLogs.some(l => l.habitId === session.habitId && l.date === today && l.completed);
+      const alreadyLogged = habitLogs.some(l => l.habitId === linkedHabitId && l.date === today && l.completed);
       if (!alreadyLogged) {
         const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
         habitLogs = [...habitLogs, {
           id: generateId(),
-          habitId: session.habitId,
+          habitId: linkedHabitId,
           date: today,
           time: nowTime,
           duration: Math.round(t.targetDuration / 60),
@@ -302,12 +303,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     // Fetch active timer from DB (source of truth for timers)
     fetch('/api/timer').then(r => r.json()).then(res => {
-      if (res.data) {
-        setState(prev => {
+      setState(prev => {
+        if (res.data) {
+          // DB has an active timer — use it as source of truth
           const withDbTimer = { ...prev, activeTimer: res.data };
           return recoverTimer(withDbTimer);
-        });
-      }
+        } else {
+          // DB has no active timer — clear any stale local timer
+          if (prev.activeTimer && prev.activeTimer.state !== 'completed') {
+            return { ...prev, activeTimer: null };
+          }
+          return prev;
+        }
+      });
     }).catch(() => { /* use local state */ });
 
     // Then load habits, logs & tasks from API for latest data
@@ -688,6 +696,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       sessionId: session.id,
       state: 'running',
       mode: data.mode,
+      habitId: data.habitId,
+      labelEn: data.labelEn,
+      labelAr: data.labelAr,
       startedAt: now,
       endsAt: data.targetDuration ? new Date(nowMs + data.targetDuration * 1000).toISOString() : undefined,
       targetDuration: data.targetDuration,

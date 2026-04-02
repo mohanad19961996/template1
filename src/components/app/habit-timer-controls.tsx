@@ -11,13 +11,21 @@ import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 // Per-habit timer state & actions
 export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore>) {
   const active = store.activeTimer;
+  // Session lookup (fallback for old data without habitId on ActiveTimer, and for cancel/stop logging)
   const currentSession = active ? store.timerSessions.find(t => t.id === active.sessionId) : null;
-  const activeHabitId = currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null;
-  const isMyTimer = activeHabitId === habit.id;
+  // Prefer ActiveTimer.habitId, fall back to session lookup for backward compat
+  const activeHabitId = active?.habitId ?? (currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null);
+  const isMyTimer = !!activeHabitId && activeHabitId === habit.id;
   const hasActiveTimer = !!active && active.state !== 'completed';
   const anotherRunning = hasActiveTimer && !isMyTimer;
   const running = isMyTimer && active?.state === 'running';
   const paused = isMyTimer && active?.state === 'paused';
+
+  // Info about the blocking habit (when another timer is active)
+  const blockingLabelEn = active?.labelEn || currentSession?.labelEn || '';
+  const blockingLabelAr = active?.labelAr || currentSession?.labelAr || '';
+  const blockingHabitName = anotherRunning && (blockingLabelEn || blockingLabelAr) ? { en: blockingLabelEn, ar: blockingLabelAr } : null;
+  const blockingTimerState = anotherRunning ? active?.state : null;
 
   // Computed elapsed from absolute timestamps
   const { elapsed } = useTimerDisplay(isMyTimer ? active : null);
@@ -72,14 +80,14 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     store.completeTimer(currentSession.id);
   };
 
-  return { isMyTimer, anotherRunning, running, paused, elapsed, targetSecs, hasDuration, start, pause, resume, cancel, stop };
+  return { isMyTimer, anotherRunning, running, paused, elapsed, targetSecs, hasDuration, blockingHabitName, blockingTimerState, start, pause, resume, cancel, stop };
 }
 
 // Global timer state — for auto-complete logic
 export function useStoreHabitTimer(store: ReturnType<typeof useAppStore>) {
   const active = store.activeTimer;
   const currentSession = active ? store.timerSessions.find(t => t.id === active.sessionId) : null;
-  const activeHabitId = currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null;
+  const activeHabitId = active?.habitId ?? (currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null);
   const running = active?.state === 'running';
   const paused = active?.state === 'paused';
   // Compute elapsed from timestamps
@@ -112,7 +120,17 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const cantStart = isStrictLocked || allRepsDone;
 
   const notifyDisabled = () => {
-    if (t.anotherRunning) {
+    if (t.anotherRunning && t.blockingHabitName) {
+      const habitLabel = isAr ? t.blockingHabitName.ar : t.blockingHabitName.en;
+      const isPaused = t.blockingTimerState === 'paused';
+      const stateLabel = isPaused
+        ? (isAr ? 'متوقف مؤقتًا' : 'paused')
+        : (isAr ? 'قيد التشغيل' : 'running');
+      toast.notifyWarning(
+        isAr ? `مؤقت "${habitLabel}" ${stateLabel}` : `"${habitLabel}" timer is ${stateLabel}`,
+        isAr ? `أوقف أو أنهِ مؤقت "${habitLabel}" أولاً` : `Stop or finish the "${habitLabel}" timer first`
+      );
+    } else if (t.anotherRunning) {
       toast.notifyWarning(isAr ? 'مؤقت آخر نشط' : 'Another timer active', isAr ? 'أوقف المؤقت الحالي أولاً' : 'Stop the current timer first');
     } else if (allRepsDone) {
       toast.notifyInfo(isAr ? 'مكتمل اليوم ✓' : 'Completed today ✓', isAr ? 'لقد أكملت هذه العادة لهذا اليوم' : 'You have completed this habit for today');
@@ -196,7 +214,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             </>
           )}
           {!t.isMyTimer && t.anotherRunning && !done && (
-            <span className="text-xs font-medium text-amber-500">{isAr ? 'مؤقت آخر نشط' : 'Another timer active'}</span>
+            <span className="text-xs font-medium text-amber-500">{t.blockingHabitName ? (isAr ? `مؤقت "${t.blockingHabitName.ar}" نشط` : `"${t.blockingHabitName.en}" timer active`) : (isAr ? 'مؤقت آخر نشط' : 'Another timer active')}</span>
           )}
         </div>
       </div>
@@ -378,7 +396,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           </>
         )}
         {!t.isMyTimer && t.anotherRunning && !done && (
-          <span className="text-[11px] font-bold text-amber-500">{isAr ? 'مؤقت آخر نشط' : 'Another timer active'}</span>
+          <span className="text-[11px] font-bold text-amber-500">{t.blockingHabitName ? (isAr ? `مؤقت "${t.blockingHabitName.ar}" نشط` : `"${t.blockingHabitName.en}" timer active`) : (isAr ? 'مؤقت آخر نشط' : 'Another timer active')}</span>
         )}
       </div>
     </div>

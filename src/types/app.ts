@@ -470,6 +470,10 @@ export interface ActiveTimer {
   sessionId: string;
   state: TimerState;
   mode: TimerMode;
+  // ── Linked habit/skill info (stored here so DB alone is enough) ──
+  habitId?: string;
+  labelEn?: string;
+  labelAr?: string;
   // ── Absolute timestamps (source of truth) ──
   startedAt: string;         // ISO — when the current running segment began
   endsAt?: string;           // ISO — absolute end time (countdown/pomodoro only, set when running)
