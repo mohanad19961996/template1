@@ -457,6 +457,8 @@ export interface AppState {
   goals: Goal[];
   moodEntries: MoodEntry[];
   customCategories: string[];
+  categoryOrder: string[];
+  deletedCategories: string[];
   settings: UserSettings;
   activeTimer: ActiveTimer | null;
 }
@@ -640,6 +642,8 @@ export const DEFAULT_APP_STATE: AppState = {
   goals: [],
   moodEntries: [],
   customCategories: [],
+  categoryOrder: [],
+  deletedCategories: [],
   settings: DEFAULT_SETTINGS,
   activeTimer: null,
 };

@@ -53,6 +53,8 @@ function normalizeState(state: AppState): AppState {
       status: l.status ?? (l.completed ? 'completed' : 'missed'),
       source: l.source ?? 'manual',
     })),
+    categoryOrder: state.categoryOrder ?? [],
+    deletedCategories: state.deletedCategories ?? [],
   };
 }
 
@@ -269,6 +271,7 @@ interface AppStore extends AppState {
   // Custom categories
   addCustomCategory: (name: string) => void;
   deleteCustomCategory: (name: string) => void;
+  reorderCategories: (orderedCategories: string[]) => void;
 
   // Settings
   updateSettings: (updates: Partial<UserSettings>) => void;
@@ -1067,7 +1070,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, [update]);
 
   const deleteCustomCategory = useCallback((name: string) => {
-    update(s => ({ ...s, customCategories: s.customCategories.filter(c => c !== name) }));
+    update(s => ({
+      ...s,
+      customCategories: s.customCategories.filter(c => c !== name),
+      deletedCategories: s.deletedCategories?.includes(name) ? s.deletedCategories : [...(s.deletedCategories ?? []), name],
+      categoryOrder: (s.categoryOrder ?? []).filter(c => c !== name),
+    }));
+  }, [update]);
+
+  const reorderCategories = useCallback((orderedCategories: string[]) => {
+    update(s => ({ ...s, categoryOrder: orderedCategories }));
   }, [update]);
 
   // ── Settings ──
@@ -1119,7 +1131,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     addTask, updateTask, deleteTask, toggleTaskStatus, reorderTasks, toggleSubtask,
     addGoal, updateGoal, deleteGoal, toggleGoalMilestone,
     logMood, getMoodForDate,
-    addCustomCategory, deleteCustomCategory,
+    addCustomCategory, deleteCustomCategory, reorderCategories,
     updateSettings,
     getLogsForDate, exportData, importData, resetData,
   };
