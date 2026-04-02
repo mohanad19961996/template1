@@ -58,7 +58,16 @@ CREATE TABLE IF NOT EXISTS timer_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_timer_habit ON timer_sessions(habit_id, user_id);
 
--- 6. APP STATE — one row per user (settings, preferences)
+-- 6. TASKS — stores full task objects as JSONB
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL DEFAULT 'default-user',
+  data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
+
+-- 7. APP STATE — one row per user (settings, preferences)
 CREATE TABLE IF NOT EXISTS app_state (
   user_id TEXT PRIMARY KEY DEFAULT 'default-user',
   data JSONB NOT NULL DEFAULT '{}',
@@ -71,6 +80,7 @@ ALTER TABLE habit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habit_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE active_timer ENABLE ROW LEVEL SECURITY;
 ALTER TABLE timer_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_state ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
@@ -95,6 +105,9 @@ DO $$ BEGIN
     CREATE POLICY allow_all_sessions ON timer_sessions FOR ALL USING (true) WITH CHECK (true);
   END IF;
   -- app_state
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'allow_all_tasks') THEN
+    CREATE POLICY allow_all_tasks ON tasks FOR ALL USING (true) WITH CHECK (true);
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'app_state' AND policyname = 'allow_all_state') THEN
     CREATE POLICY allow_all_state ON app_state FOR ALL USING (true) WITH CHECK (true);
   END IF;

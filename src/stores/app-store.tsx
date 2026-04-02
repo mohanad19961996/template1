@@ -80,6 +80,17 @@ async function fetchLogsFromAPI(): Promise<HabitLog[] | null> {
   }
 }
 
+async function fetchTasksFromAPI(): Promise<Task[] | null> {
+  try {
+    const res = await fetch('/api/tasks');
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 // Fire-and-forget API calls for mutations (optimistic local updates)
 function apiPost(url: string, body: unknown) {
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -296,27 +307,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       }
     }).catch(() => { /* use local state */ });
 
-    // Then load habits & logs from API (separate collections) for latest data
-    Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI()]).then(([habits, logs]) => {
-      if (habits && habits.length > 0 || logs && logs.length > 0) {
+    // Then load habits, logs & tasks from API for latest data
+    Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI(), fetchTasksFromAPI()]).then(([habits, logs, tasks]) => {
+      if ((habits && habits.length > 0) || (logs && logs.length > 0) || (tasks && tasks.length > 0)) {
         setState(prev => {
           const updated = {
             ...prev,
             ...(habits && habits.length > 0 ? { habits } : {}),
             ...(logs && logs.length > 0 ? { habitLogs: logs } : {}),
+            ...(tasks && tasks.length > 0 ? { tasks } : {}),
           };
           const normalized = normalizeState(updated);
           saveState(normalized);
           return normalized;
         });
-      } else if (recovered.habits.length > 0 || recovered.habitLogs.length > 0) {
-        // MongoDB is empty but localStorage has data — sync it up
+      } else if (recovered.habits.length > 0 || recovered.habitLogs.length > 0 || recovered.tasks.length > 0) {
+        // DB is empty but localStorage has data — sync it up
         fetch('/api/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             habits: recovered.habits,
             habitLogs: recovered.habitLogs,
+            tasks: recovered.tasks,
           }),
         }).catch(() => {});
       }
@@ -938,31 +951,36 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       order: stateRef.current.tasks.length + 1,
     };
     update(s => ({ ...s, tasks: [...s.tasks, task] }));
+    apiPost('/api/tasks', task);
     return task;
   }, [update]);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     update(s => ({ ...s, tasks: s.tasks.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t) }));
+    apiPatch(`/api/tasks/${id}`, updates);
   }, [update]);
 
   const deleteTask = useCallback((id: string) => {
     update(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id) }));
+    apiDelete(`/api/tasks/${id}`);
   }, [update]);
 
   const toggleTaskStatus = useCallback((id: string) => {
+    let updatedFields: Partial<Task> = {};
     update(s => ({
       ...s,
       tasks: s.tasks.map(t => {
         if (t.id !== id) return t;
         const newStatus = t.status === 'completed' ? 'todo' : 'completed';
-        return {
-          ...t,
+        updatedFields = {
           status: newStatus,
           completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined,
           updatedAt: new Date().toISOString(),
         };
+        return { ...t, ...updatedFields };
       }),
     }));
+    apiPatch(`/api/tasks/${id}`, updatedFields);
   }, [update]);
 
   const reorderTasks = useCallback((orderedIds: string[]) => {
@@ -973,20 +991,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         return idx >= 0 ? { ...t, order: idx + 1 } : t;
       }),
     }));
+    // Sync all reordered tasks
+    const current = stateRef.current.tasks;
+    orderedIds.forEach((id, idx) => {
+      const task = current.find(t => t.id === id);
+      if (task) apiPatch(`/api/tasks/${id}`, { order: idx + 1 });
+    });
   }, [update]);
 
   const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
+    let updatedSubtasks: Task['subtasks'];
     update(s => ({
       ...s,
       tasks: s.tasks.map(t => {
         if (t.id !== taskId || !t.subtasks) return t;
+        updatedSubtasks = t.subtasks.map(st => st.id === subtaskId ? { ...st, completed: !st.completed } : st);
         return {
           ...t,
-          subtasks: t.subtasks.map(st => st.id === subtaskId ? { ...st, completed: !st.completed } : st),
+          subtasks: updatedSubtasks,
           updatedAt: new Date().toISOString(),
         };
       }),
     }));
+    apiPatch(`/api/tasks/${taskId}`, { subtasks: updatedSubtasks });
   }, [update]);
 
   // ── Goals ──
