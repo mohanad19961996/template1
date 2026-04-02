@@ -7,7 +7,8 @@ import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import { useToast } from '@/components/app/toast-notifications';
-import { todayString, formatDuration, parseLocalDate } from '@/types/app';
+import { todayString, formatDuration, formatTimerDuration, parseLocalDate, resolveHabitColor, computeTimerElapsed } from '@/types/app';
+import { useTimerDisplay } from '@/lib/use-timer-display';
 import {
   CheckCircle2, Circle, Flame, TrendingUp, Timer, Target,
   Brain, Zap, ArrowRight, ArrowLeft, Plus, BarChart3, Star,
@@ -29,6 +30,72 @@ const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }),
 };
+
+// ── Active Timer Card ──
+function ActiveTimerCard({ store, isAr }: { store: ReturnType<typeof useAppStore>; isAr: boolean }) {
+  const active = store.activeTimer;
+  const { elapsed } = useTimerDisplay(active && active.state !== 'completed' ? active : null);
+  if (!active || active.state === 'completed') return null;
+
+  const habitId = active.habitId;
+  const habit = habitId ? store.habits.find(h => h.id === habitId) : null;
+  const habitName = habit ? (isAr ? habit.nameAr : habit.nameEn) : (isAr ? active.labelAr : active.labelEn) || (isAr ? 'مؤقت' : 'Timer');
+  const hc = habit ? resolveHabitColor(habit.color) : '#8B5CF6';
+  const isPaused = active.state === 'paused';
+  const isRunning = active.state === 'running';
+  const hasDuration = !!active.targetDuration;
+  const targetSecs = active.targetDuration ?? 0;
+  const remaining = hasDuration ? Math.max(0, targetSecs - elapsed) : 0;
+  const progress = hasDuration && targetSecs > 0 ? Math.min(1, elapsed / targetSecs) : 0;
+  const displayTime = hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(elapsed);
+
+  return (
+    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4.5}
+      className="sticky top-16 z-[190] mb-6 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
+      style={{ background: `linear-gradient(135deg, ${hc}12, rgba(var(--color-background-rgb, 255 255 255) / 0.85))`, border: `1.5px solid ${hc}25` }}
+    >
+      <div className="px-5 py-4 flex items-center gap-4">
+        <div className="relative shrink-0">
+          <div className="h-12 w-12 rounded-xl flex items-center justify-center" style={{ background: `${hc}20` }}>
+            <Timer className={cn('h-6 w-6', isRunning && 'animate-pulse')} style={{ color: hc }} />
+          </div>
+          <div className="absolute -top-1 -end-1 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-gray-900"
+            style={{ background: isRunning ? '#22c55e' : '#f59e0b' }} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-[var(--foreground)]/60 uppercase tracking-wider mb-0.5">
+            {isPaused ? (isAr ? 'مؤقت متوقف' : 'Timer Paused') : (isAr ? 'مؤقت نشط' : 'Active Timer')}
+          </p>
+          <p className="text-sm font-bold truncate">{habitName}</p>
+          {hasDuration && (
+            <div className="mt-1.5 flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: `${hc}15` }}>
+                <div className="h-full rounded-full transition-all duration-1000 ease-linear" style={{ width: `${progress * 100}%`, background: hc }} />
+              </div>
+              <span className="text-[10px] font-bold" style={{ color: hc }}>{Math.round(progress * 100)}%</span>
+            </div>
+          )}
+        </div>
+
+        <div className="text-end shrink-0">
+          <div className={cn('text-2xl font-mono font-black tracking-tight', isRunning && 'animate-pulse')} style={{ color: hc }}>
+            {displayTime}
+          </div>
+          <p className="text-[10px] font-medium text-[var(--foreground)]/50 mt-0.5">
+            {hasDuration ? `${formatTimerDuration(elapsed)} / ${formatTimerDuration(targetSecs)}` : (isAr ? 'ساعة إيقاف' : 'Stopwatch')}
+          </p>
+        </div>
+      </div>
+
+      <Link href={habitId ? `/app/habits?openHabit=${habitId}` : '/app/habits'}
+        className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold transition-colors hover:bg-[var(--foreground)]/[0.04]"
+        style={{ color: hc, borderTop: `1px solid ${hc}15` }}>
+        {isAr ? 'عرض التفاصيل' : 'View Details'} <ArrowRight className="h-3 w-3" />
+      </Link>
+    </motion.div>
+  );
+}
 
 export default function DashboardPage() {
   const locale = useLocale();
@@ -99,6 +166,9 @@ export default function DashboardPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto">
+      {/* Active Timer */}
+      <ActiveTimerCard store={store} isAr={isAr} />
+
       {/* Header */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-8">
         <div className="flex items-center gap-3 mb-1">
