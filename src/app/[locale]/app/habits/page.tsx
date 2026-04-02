@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import { useHabitTimer, useStoreHabitTimer, HabitTimerControls } from '@/components/app/habit-timer-controls';
+import { useTimerDisplay } from '@/lib/use-timer-display';
 import { useToast } from '@/components/app/toast-notifications';
 import {
   Habit, HabitLog, DEFAULT_HABIT_CATEGORIES, HabitCategory, HabitFrequency,
@@ -88,25 +90,24 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   const thisMonthCompleted = completed.filter(l => l.date >= monthStart && l.date <= todayStr);
   const thisYearCompleted = completed.filter(l => l.date >= yearStart && l.date <= todayStr);
 
-  // Sum time per unique completed date: use logged duration, fallback to current expectedDuration
-  const sumMinByDate = (arr: HabitLog[]) => {
-    const dateMap = new Map<string, number>();
-    for (const l of arr) {
-      if (!l.completed) continue;
-      const dur = l.duration ?? 0;
-      const existing = dateMap.get(l.date) ?? 0;
-      if (dur > existing || !dateMap.has(l.date)) dateMap.set(l.date, dur);
-    }
+  // Sum ALL logged time (completed or not) — every timer session counts toward time stats
+  const sumAllMins = (arr: HabitLog[]) => {
     let total = 0;
-    for (const [, dur] of dateMap) {
-      total += dur > 0 ? dur : (expectedDuration ?? 0);
+    for (const l of arr) {
+      const dur = l.duration ?? 0;
+      if (dur > 0) total += dur;
+      else if (l.completed) total += (expectedDuration ?? 0);
     }
     return total;
   };
 
+  const thisWeekAll = habitLogs.filter(l => l.date >= weekStart && l.date <= todayStr);
+  const thisMonthAll = habitLogs.filter(l => l.date >= monthStart && l.date <= todayStr);
+  const thisYearAll = habitLogs.filter(l => l.date >= yearStart && l.date <= todayStr);
+
   return {
     reps: { week: uniqueDates(thisWeekCompleted), month: uniqueDates(thisMonthCompleted), year: uniqueDates(thisYearCompleted), total: uniqueDates(completed) },
-    mins: { today: sumMinByDate(habitLogs.filter(l => l.date === todayStr)), week: sumMinByDate(completed.filter(l => l.date >= weekStart && l.date <= todayStr)), month: sumMinByDate(completed.filter(l => l.date >= monthStart && l.date <= todayStr)), year: sumMinByDate(completed.filter(l => l.date >= yearStart && l.date <= todayStr)), total: sumMinByDate(completed) },
+    mins: { today: sumAllMins(habitLogs.filter(l => l.date === todayStr)), week: sumAllMins(thisWeekAll), month: sumAllMins(thisMonthAll), year: sumAllMins(thisYearAll), total: sumAllMins(habitLogs) },
   };
 }
 
@@ -515,6 +516,74 @@ function CategoryPicker({ isAr, allCategories, value, onChange, store }: { isAr:
   );
 }
 
+// ── Sticky Active Timer Banner ──
+function ActiveTimerBanner({ store, isAr, today, onDetail }: {
+  store: ReturnType<typeof useAppStore>; isAr: boolean; today: string; onDetail: (h: Habit) => void;
+}) {
+  const active = store.activeTimer;
+  const { elapsed } = useTimerDisplay(active && active.state !== 'completed' ? active : null);
+  if (!active || active.state === 'completed') return null;
+
+  const habitId = active.habitId;
+  const habit = habitId ? store.habits.find(h => h.id === habitId) : null;
+  const habitName = habit ? (isAr ? habit.nameAr : habit.nameEn) : (isAr ? active.labelAr : active.labelEn) || '';
+  const hc = habit ? resolveHabitColor(habit.color) : 'var(--color-primary)';
+  const isPaused = active.state === 'paused';
+  const isRunning = active.state === 'running';
+  const hasDuration = !!active.targetDuration;
+  const targetSecs = active.targetDuration ?? 0;
+  const remaining = hasDuration ? Math.max(0, targetSecs - elapsed) : 0;
+  const progress = hasDuration && targetSecs > 0 ? Math.min(1, elapsed / targetSecs) : 0;
+  const displayTime = hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(elapsed);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+      className="sticky top-16 z-[190] mb-4 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
+      style={{ background: `linear-gradient(135deg, ${hc}15, rgba(var(--color-background-rgb, 255 255 255) / 0.85))`, border: `1.5px solid ${hc}30` }}
+    >
+      <div className="px-4 py-3 flex items-center gap-3">
+        {/* Pulsing indicator */}
+        <div className="relative shrink-0">
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `${hc}20` }}>
+            <Timer className={cn('h-5 w-5', isRunning && 'animate-pulse')} style={{ color: hc }} />
+          </div>
+          <div className="absolute -top-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900"
+            style={{ background: isRunning ? '#22c55e' : '#f59e0b' }} />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => habit && onDetail(habit)}>
+          <p className="text-sm font-bold truncate">{habitName}</p>
+          <p className="text-[10px] font-semibold" style={{ color: hc }}>
+            {isPaused ? (isAr ? 'متوقف مؤقتًا' : 'Paused') : (isAr ? 'قيد التشغيل' : 'Running')}
+            {hasDuration && ` · ${Math.round(progress * 100)}%`}
+          </p>
+        </div>
+
+        {/* Live time */}
+        <div className={cn('text-xl font-mono font-black tracking-tight', isRunning && 'animate-pulse')} style={{ color: hc }}>
+          {displayTime}
+        </div>
+
+        {/* Controls */}
+        {habit && (
+          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+            <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={false} size="xs" />
+          </div>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      {hasDuration && (
+        <div className="h-1 w-full" style={{ background: `${hc}10` }}>
+          <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${progress * 100}%`, background: hc }} />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function HabitsPage() {
   const locale = useLocale();
   const isAr = locale === 'ar';
@@ -563,6 +632,20 @@ export default function HabitsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
+  const searchParams = useSearchParams();
+  // Auto-open habit detail modal from query param (e.g. ?openHabit=abc123)
+  const openHabitHandled = useRef(false);
+  useEffect(() => {
+    if (openHabitHandled.current) return;
+    const openId = searchParams.get('openHabit');
+    if (openId) {
+      const habit = store.habits.find(h => h.id === openId);
+      if (habit) {
+        setDetailHabit(habit);
+        openHabitHandled.current = true;
+      }
+    }
+  }, [searchParams, store.habits]);
   const [showFullTable, setShowFullTable] = useState(false);
   const [fullCalendarHabit, setFullCalendarHabit] = useState<Habit | null>(null);
   const [activeTab, setActiveTab] = useState<'habits' | 'insights'>('habits');
@@ -895,6 +978,9 @@ export default function HabitsPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto">
+      {/* ═══ Sticky Active Timer Banner ═══ */}
+      <ActiveTimerBanner store={store} isAr={isAr} today={today} onDetail={(h) => setDetailHabit(h)} />
+
       {/* ═══ Hero Title Section ═══ */}
       <motion.div
         initial={{ opacity: 0, y: -30 }}
@@ -3265,7 +3351,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             '--habit-border-color': done || allRepsDone ? '#22c55e' : isDisabled ? '#ef4444' : hc,
             background: minimized ? 'var(--color-background)' : `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 120px)`,
             boxShadow: `0 2px 12px ${hc}10`,
-            maxHeight: minimized ? '180px' : undefined,
+            maxHeight: minimized ? '220px' : undefined,
           } as React.CSSProperties}
         >
           {/* Color accent bar */}
@@ -3320,7 +3406,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               </div>
             </div>
 
-            {/* Minimized: status + details button */}
+            {/* Minimized: status + timer + details button */}
             {minimized && (
               <div className="flex flex-col gap-2 py-1">
                 <div className="flex items-center justify-between">
@@ -3331,6 +3417,11 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                   )}
                   {streak.current > 0 && <span className="text-xs font-bold text-orange-500">🔥 {streak.current}</span>}
                 </div>
+                {!habit.archived && (
+                  <div onClick={e => e.stopPropagation()}>
+                    <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done || allRepsDone} size="xs" disabled={isDisabled} />
+                  </div>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); onDetail(); }}
                   className="group/detbtn w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 ease-out cursor-pointer"
@@ -4013,7 +4104,7 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
         {/* ── Completion Controls by Type ── */}
         <div className="mb-2" onClick={e => e.stopPropagation()}>
           {/* Timer */}
-          {(tt === 'timer' || hasDuration) && !habit.archived && (
+          {!habit.archived && (
             <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={isComplete} size="xs" />
           )}
 
@@ -4457,6 +4548,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
   const today = todayString();
   const activeHabits = store.habits.filter(h => !h.archived);
   const allLogs = store.habitLogs.filter(l => l.completed);
+  const allHabitLogs = store.habitLogs; // All logs including incomplete — for time tracking
 
   // ── Time-based stats ──
   const stats = useMemo(() => {
@@ -4466,8 +4558,8 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     // Total completions
     const totalCompletions = allLogs.length;
 
-    // Total hours (from duration field in logs)
-    const totalMinutes = allLogs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
+    // Total hours — count ALL logged time (completed or not)
+    const totalMinutes = allHabitLogs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
     const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
 
     // This week completions
@@ -4475,17 +4567,17 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     const wd = weekStart.getDay(); weekStart.setDate(weekStart.getDate() - (wd === 0 ? 6 : wd - 1));
     const weekStartStr = formatLocalDate(weekStart);
     const thisWeek = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).length;
-    const thisWeekMinutes = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
+    const thisWeekMinutes = allHabitLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // This month
     const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
     const thisMonth = allLogs.filter(l => l.date >= monthStart && l.date <= todayStr).length;
-    const thisMonthMinutes = allLogs.filter(l => l.date >= monthStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
+    const thisMonthMinutes = allHabitLogs.filter(l => l.date >= monthStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // This year
     const yearStart = `${now.getFullYear()}-01-01`;
     const thisYear = allLogs.filter(l => l.date >= yearStart && l.date <= todayStr).length;
-    const thisYearMinutes = allLogs.filter(l => l.date >= yearStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
+    const thisYearMinutes = allHabitLogs.filter(l => l.date >= yearStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // Active days (unique dates with at least one completion)
     const activeDays = new Set(allLogs.map(l => l.date)).size;
@@ -4750,7 +4842,8 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
         const categoryData = usedCategories.map(cat => {
           const catHabits = activeHabits.filter(h => h.category === cat);
           const catLogs = allLogs.filter(l => catHabits.some(h => h.id === l.habitId));
-          const totalMins = catLogs.reduce((s, l) => s + (l.duration ?? 0), 0);
+          const catAllLogs = allHabitLogs.filter(l => catHabits.some(h => h.id === l.habitId));
+          const totalMins = catAllLogs.reduce((s, l) => s + (l.duration ?? 0), 0);
           const avgRate = catHabits.length > 0
             ? Math.round(catHabits.reduce((s, h) => s + store.getHabitStats(h.id).completionRate, 0) / catHabits.length)
             : 0;
