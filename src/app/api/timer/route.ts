@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise, { getDbName } from '@/lib/mongodb';
+import { supabase } from '@/lib/supabase';
 
-const COLLECTION = 'active_timer';
 const USER_ID = 'default-user';
 
 /** GET — fetch current active timer */
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-    const doc = await db.collection(COLLECTION).findOne({ userId: USER_ID });
-    if (!doc) return NextResponse.json({ data: null });
-    const { _id, userId, ...timer } = doc;
-    return NextResponse.json({ data: timer });
+    const { data, error } = await supabase
+      .from('active_timer')
+      .select('data')
+      .eq('user_id', USER_ID)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return NextResponse.json({ data: data?.data || null });
   } catch (error) {
     console.error('Timer GET error:', error);
     return NextResponse.json({ error: 'Failed to load timer' }, { status: 500 });
@@ -23,13 +24,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-    await db.collection(COLLECTION).updateOne(
-      { userId: USER_ID },
-      { $set: { ...body, userId: USER_ID, updatedAt: new Date().toISOString() } },
-      { upsert: true }
-    );
+
+    const { error } = await supabase.from('active_timer').upsert({
+      user_id: USER_ID,
+      data: { ...body, updatedAt: new Date().toISOString() },
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Timer POST error:', error);
@@ -37,16 +39,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** PATCH — update timer state (pause/resume/complete/phase change) */
+/** PATCH — update timer state */
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-    await db.collection(COLLECTION).updateOne(
-      { userId: USER_ID },
-      { $set: { ...body, updatedAt: new Date().toISOString() } }
-    );
+
+    // Fetch current timer data and merge
+    const { data: existing } = await supabase
+      .from('active_timer')
+      .select('data')
+      .eq('user_id', USER_ID)
+      .single();
+
+    const merged = { ...(existing?.data || {}), ...body, updatedAt: new Date().toISOString() };
+
+    const { error } = await supabase
+      .from('active_timer')
+      .update({ data: merged, updated_at: new Date().toISOString() })
+      .eq('user_id', USER_ID);
+
+    if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Timer PATCH error:', error);
@@ -54,12 +66,15 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-/** DELETE — clear active timer (cancel/complete) */
+/** DELETE — clear active timer */
 export async function DELETE() {
   try {
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-    await db.collection(COLLECTION).deleteOne({ userId: USER_ID });
+    const { error } = await supabase
+      .from('active_timer')
+      .delete()
+      .eq('user_id', USER_ID);
+
+    if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Timer DELETE error:', error);

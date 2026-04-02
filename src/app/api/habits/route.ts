@@ -1,36 +1,26 @@
 import { NextRequest } from 'next/server';
-import clientPromise, { getDbName } from '@/lib/mongodb';
+import { supabase } from '@/lib/supabase';
 import { getUserId, errorResponse, successResponse, requireString } from '@/lib/api-helpers';
-
-const COLLECTION = 'habits';
 
 // GET /api/habits — fetch all habits for the user
 export async function GET(request: NextRequest) {
   try {
     const userId = getUserId();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-
     const { searchParams } = new URL(request.url);
-    const active = searchParams.get('active'); // 'true' | 'false' | null (all)
+    const active = searchParams.get('active');
     const category = searchParams.get('category');
 
-    const filter: Record<string, unknown> = { userId };
-    if (active === 'true') filter.archived = false;
-    if (active === 'false') filter.archived = true;
-    if (category) filter.category = category;
+    let query = supabase.from('habits').select('*').eq('user_id', userId);
 
-    const habits = await db.collection(COLLECTION)
-      .find(filter)
-      .sort({ order: 1, createdAt: -1 })
-      .toArray();
+    if (active === 'true') query = query.eq('data->>archived', 'false');
+    if (active === 'false') query = query.eq('data->>archived', 'true');
+    if (category) query = query.eq('data->>category', category);
 
-    // Map _id to id for frontend compatibility
-    const mapped = habits.map(({ _id, userId: _u, ...rest }) => ({
-      ...rest,
-      id: rest.id || _id.toString(),
-    }));
+    const { data, error } = await query.order('data->>order', { ascending: true });
 
+    if (error) throw error;
+
+    const mapped = (data || []).map(row => ({ ...row.data, id: row.id }));
     return successResponse(mapped);
   } catch (error) {
     console.error('GET /api/habits error:', error);
@@ -44,28 +34,25 @@ export async function POST(request: NextRequest) {
     const userId = getUserId();
     const body = await request.json();
 
-    // Validate required fields
     const titleError = requireString(body.nameEn || body.nameAr, 'name (nameEn or nameAr)');
     if (titleError && !body.nameAr) return errorResponse(titleError);
 
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-
     // Get next order number
-    const lastHabit = await db.collection(COLLECTION)
-      .findOne({ userId }, { sort: { order: -1 } });
-    const nextOrder = (lastHabit?.order ?? -1) + 1;
+    const { data: lastHabit } = await supabase
+      .from('habits')
+      .select('data->>order')
+      .eq('user_id', userId)
+      .order('data->>order', { ascending: false })
+      .limit(1)
+      .single();
 
+    const nextOrder = (lastHabit?.order ? Number(lastHabit.order) + 1 : 0);
     const now = new Date().toISOString();
-    // Use client-provided id if available, otherwise generate one
     const habitId = body.id || generateId();
 
-    // Accept all fields from client, apply defaults only for missing values
-    const { _id, ...bodyWithoutMongo } = body;
     const habit = {
-      ...bodyWithoutMongo,
+      ...body,
       id: habitId,
-      userId,
       nameEn: body.nameEn || '',
       nameAr: body.nameAr || '',
       category: body.category || 'other',
@@ -80,13 +67,13 @@ export async function POST(request: NextRequest) {
       order: body.order ?? nextOrder,
     };
 
-    // Upsert to handle duplicate ids (e.g. re-syncing from localStorage)
-    await db.collection(COLLECTION).updateOne(
-      { id: habitId, userId },
-      { $set: { ...habit, _id: habitId as any } },
-      { upsert: true }
-    );
+    const { error } = await supabase.from('habits').upsert({
+      id: habitId,
+      user_id: userId,
+      data: habit,
+    });
 
+    if (error) throw error;
     return successResponse(habit, 201);
   } catch (error) {
     console.error('POST /api/habits error:', error);

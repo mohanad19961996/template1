@@ -1,41 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-import clientPromise, { getDbName } from '@/lib/mongodb';
+import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 const USER_ID = 'default-user';
 
-// POST /api/sync — push localStorage state to MongoDB (upsert all habits & logs)
+// POST /api/sync — push localStorage state to Supabase (upsert all habits & logs)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-
     const results = { habits: 0, logs: 0 };
 
     // Upsert habits
     if (Array.isArray(body.habits) && body.habits.length > 0) {
-      const ops = body.habits.map((h: any) => ({
-        updateOne: {
-          filter: { id: h.id, userId: USER_ID },
-          update: { $set: { ...h, userId: USER_ID } },
-          upsert: true,
-        },
+      const rows = body.habits.map((h: any) => ({
+        id: h.id,
+        user_id: USER_ID,
+        data: { ...h, id: h.id },
       }));
-      const res = await db.collection('habits').bulkWrite(ops);
-      results.habits = res.upsertedCount + res.modifiedCount;
+
+      const { error } = await supabase.from('habits').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+      results.habits = rows.length;
     }
 
     // Upsert habit logs
     if (Array.isArray(body.habitLogs) && body.habitLogs.length > 0) {
-      const ops = body.habitLogs.map((l: any) => ({
-        updateOne: {
-          filter: { id: l.id, userId: USER_ID },
-          update: { $set: { ...l, userId: USER_ID } },
-          upsert: true,
-        },
+      const rows = body.habitLogs.map((l: any) => ({
+        id: l.id,
+        user_id: USER_ID,
+        habit_id: l.habitId,
+        date: l.date,
+        data: { ...l, id: l.id },
       }));
-      const res = await db.collection('habit_logs').bulkWrite(ops);
-      results.logs = res.upsertedCount + res.modifiedCount;
+
+      const { error } = await supabase.from('habit_logs').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+      results.logs = rows.length;
     }
 
     return NextResponse.json({ success: true, synced: results });

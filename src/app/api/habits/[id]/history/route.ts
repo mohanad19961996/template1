@@ -1,10 +1,8 @@
 import { NextRequest } from 'next/server';
-import clientPromise, { getDbName } from '@/lib/mongodb';
+import { supabase } from '@/lib/supabase';
 import { getUserId, errorResponse, successResponse } from '@/lib/api-helpers';
 
-const COLLECTION = 'habit_history';
-
-// GET /api/habits/:id/history — fetch edit history for a habit
+// GET /api/habits/:id/history
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,19 +10,17 @@ export async function GET(
   try {
     const { id: habitId } = await params;
     const userId = getUserId();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
 
-    const history = await db.collection(COLLECTION)
-      .find({ habitId, userId })
-      .sort({ timestamp: -1 })
-      .toArray();
+    const { data, error } = await supabase
+      .from('habit_history')
+      .select('*')
+      .eq('habit_id', habitId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-    const mapped = history.map(({ _id, userId: _u, ...rest }) => ({
-      ...rest,
-      id: rest.id || _id.toString(),
-    }));
+    if (error) throw error;
 
+    const mapped = (data || []).map(row => ({ ...row.data, id: row.id }));
     return successResponse(mapped);
   } catch (error) {
     console.error('GET /api/habits/[id]/history error:', error);
@@ -32,7 +28,7 @@ export async function GET(
   }
 }
 
-// POST /api/habits/:id/history — record a history entry
+// POST /api/habits/:id/history
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,13 +37,12 @@ export async function POST(
     const { id: habitId } = await params;
     const userId = getUserId();
     const body = await request.json();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
 
     const now = new Date().toISOString();
+    const entryId = body.id || generateId();
+
     const entry = {
-      id: body.id || generateId(),
-      userId,
+      id: entryId,
       habitId,
       changeType: body.changeType || 'edited',
       date: now.split('T')[0],
@@ -56,8 +51,14 @@ export async function POST(
       snapshot: body.snapshot || {},
     };
 
-    await db.collection(COLLECTION).insertOne({ ...entry, _id: entry.id as any });
+    const { error } = await supabase.from('habit_history').insert({
+      id: entryId,
+      user_id: userId,
+      habit_id: habitId,
+      data: entry,
+    });
 
+    if (error) throw error;
     return successResponse(entry, 201);
   } catch (error) {
     console.error('POST /api/habits/[id]/history error:', error);

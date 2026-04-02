@@ -1,10 +1,8 @@
 import { NextRequest } from 'next/server';
-import clientPromise, { getDbName } from '@/lib/mongodb';
+import { supabase } from '@/lib/supabase';
 import { getUserId, errorResponse, successResponse, isValidDateKey } from '@/lib/api-helpers';
 
-const COLLECTION = 'habit_logs';
-
-// GET /api/habits/:id/logs — fetch logs for a habit
+// GET /api/habits/:id/logs
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,32 +10,28 @@ export async function GET(
   try {
     const { id: habitId } = await params;
     const userId = getUserId();
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const date = searchParams.get('date'); // single date
+    const date = searchParams.get('date');
 
-    const filter: Record<string, unknown> = { habitId, userId };
+    let query = supabase
+      .from('habit_logs')
+      .select('*')
+      .eq('habit_id', habitId)
+      .eq('user_id', userId);
+
     if (date) {
-      filter.date = date;
+      query = query.eq('date', date);
     } else {
-      if (startDate) filter.date = { ...((filter.date as object) || {}), $gte: startDate };
-      if (endDate) filter.date = { ...((filter.date as object) || {}), $lte: endDate };
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lte('date', endDate);
     }
 
-    const logs = await db.collection(COLLECTION)
-      .find(filter)
-      .sort({ date: -1, time: -1 })
-      .toArray();
+    const { data, error } = await query.order('date', { ascending: false });
+    if (error) throw error;
 
-    const mapped = logs.map(({ _id, userId: _u, ...rest }) => ({
-      ...rest,
-      id: rest.id || _id.toString(),
-    }));
-
+    const mapped = (data || []).map(row => ({ ...row.data, id: row.id }));
     return successResponse(mapped);
   } catch (error) {
     console.error('GET /api/habits/[id]/logs error:', error);
@@ -45,7 +39,7 @@ export async function GET(
   }
 }
 
-// POST /api/habits/:id/logs — create or update a log for a specific date
+// POST /api/habits/:id/logs
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,17 +49,19 @@ export async function POST(
     const userId = getUserId();
     const body = await request.json();
 
-    // Validate date
     const date = body.date;
     if (!date || !isValidDateKey(date)) {
       return errorResponse('date is required and must be in YYYY-MM-DD format');
     }
 
-    const client = await clientPromise;
-    const db = client.db(getDbName());
-
     // Verify habit exists
-    const habit = await db.collection('habits').findOne({ id: habitId, userId });
+    const { data: habit } = await supabase
+      .from('habits')
+      .select('id')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single();
+
     if (!habit) return errorResponse('Habit not found', 404);
 
     const now = new Date().toISOString();
@@ -73,7 +69,6 @@ export async function POST(
 
     const log = {
       id: logId,
-      userId,
       habitId,
       date,
       time: body.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
@@ -82,7 +77,7 @@ export async function POST(
       moodBefore: body.moodBefore,
       moodAfter: body.moodAfter,
       reminderUsed: body.reminderUsed ?? false,
-      perceivedDifficulty: body.perceivedDifficulty || habit.difficulty || 'medium',
+      perceivedDifficulty: body.perceivedDifficulty || 'medium',
       completed: body.completed ?? false,
       status: body.status || (body.completed ? 'completed' : 'pending'),
       value: body.value,
@@ -91,16 +86,37 @@ export async function POST(
       updatedAt: now,
     };
 
-    // Upsert: if a log exists for this habit+date+status=completed, update it
-    // Otherwise insert a new one
     if (body.upsert) {
-      await db.collection(COLLECTION).updateOne(
-        { habitId, userId, date },
-        { $set: log },
-        { upsert: true }
-      );
+      // Find existing log for this habit+date and update, or insert
+      const { data: existing } = await supabase
+        .from('habit_logs')
+        .select('id')
+        .eq('habit_id', habitId)
+        .eq('user_id', userId)
+        .eq('date', date)
+        .limit(1)
+        .single();
+
+      if (existing) {
+        await supabase.from('habit_logs').update({ data: log }).eq('id', existing.id);
+      } else {
+        await supabase.from('habit_logs').insert({
+          id: logId,
+          user_id: userId,
+          habit_id: habitId,
+          date,
+          data: log,
+        });
+      }
     } else {
-      await db.collection(COLLECTION).insertOne({ ...log, _id: logId as any });
+      const { error } = await supabase.from('habit_logs').insert({
+        id: logId,
+        user_id: userId,
+        habit_id: habitId,
+        date,
+        data: log,
+      });
+      if (error) throw error;
     }
 
     return successResponse(log, 201);
@@ -110,7 +126,7 @@ export async function POST(
   }
 }
 
-// DELETE /api/habits/:id/logs?logId=xxx — delete a specific log
+// DELETE /api/habits/:id/logs?logId=xxx
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -123,12 +139,14 @@ export async function DELETE(
 
     if (!logId) return errorResponse('logId query parameter is required');
 
-    const client = await clientPromise;
-    const db = client.db(getDbName());
+    const { error, count } = await supabase
+      .from('habit_logs')
+      .delete()
+      .eq('id', logId)
+      .eq('habit_id', habitId)
+      .eq('user_id', userId);
 
-    const result = await db.collection(COLLECTION).deleteOne({ id: logId, habitId, userId });
-    if (result.deletedCount === 0) return errorResponse('Log not found', 404);
-
+    if (error) throw error;
     return successResponse({ deleted: true });
   } catch (error) {
     console.error('DELETE /api/habits/[id]/logs error:', error);
