@@ -74,8 +74,8 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   const now = new Date();
   const todayStr = todayString();
 
-  // Week start (Sunday)
-  const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay());
+  // Week start (Monday)
+  const ws = new Date(now); const day = ws.getDay(); ws.setDate(ws.getDate() - (day === 0 ? 6 : day - 1));
   const weekStart = `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
   // Month start
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -88,16 +88,15 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   const thisMonthCompleted = completed.filter(l => l.date >= monthStart && l.date <= todayStr);
   const thisYearCompleted = completed.filter(l => l.date >= yearStart && l.date <= todayStr);
 
-  // Sum time per unique completed date: use logged duration if available, else expectedDuration
+  // Sum time per unique completed date: use logged duration, fallback to current expectedDuration
   const sumMinByDate = (arr: HabitLog[]) => {
     const dateMap = new Map<string, number>();
     for (const l of arr) {
       if (!l.completed) continue;
-      const existing = dateMap.get(l.date) ?? 0;
       const dur = l.duration ?? 0;
-      if (dur > existing) dateMap.set(l.date, dur);
+      const existing = dateMap.get(l.date) ?? 0;
+      if (dur > existing || !dateMap.has(l.date)) dateMap.set(l.date, dur);
     }
-    // For dates with 0 logged duration, use expectedDuration as fallback
     let total = 0;
     for (const [, dur] of dateMap) {
       total += dur > 0 ? dur : (expectedDuration ?? 0);
@@ -670,6 +669,8 @@ export default function HabitsPage() {
     streakGoal2: '' as string | number, streakRewardEn2: '', streakRewardAr2: '',
     streakGoal3: '' as string | number, streakRewardEn3: '', streakRewardAr3: '',
     notes: '',
+    goalReps: '' as string | number,
+    goalHours: '' as string | number,
   });
 
   const resetForm = () => {
@@ -691,6 +692,8 @@ export default function HabitsPage() {
       streakGoal2: '', streakRewardEn2: '', streakRewardAr2: '',
       streakGoal3: '', streakRewardEn3: '', streakRewardAr3: '',
       notes: '',
+      goalReps: '',
+      goalHours: '',
     });
     setEditingHabit(null);
   };
@@ -752,6 +755,8 @@ export default function HabitsPage() {
       streakGoal2: habit.streakGoal2 ?? '', streakRewardEn2: habit.streakRewardEn2 ?? '', streakRewardAr2: habit.streakRewardAr2 ?? '',
       streakGoal3: habit.streakGoal3 ?? '', streakRewardEn3: habit.streakRewardEn3 ?? '', streakRewardAr3: habit.streakRewardAr3 ?? '',
       notes: habit.notes ?? '',
+      goalReps: habit.goalReps ?? '',
+      goalHours: habit.goalHours ?? '',
     });
     setEditingHabit(habit);
     setShowForm(true);
@@ -763,20 +768,25 @@ export default function HabitsPage() {
       toast.notifyError(isAr ? 'الاسم مطلوب' : 'Name required', isAr ? 'أدخل اسم العادة بالعربية أو الإنجليزية' : 'Enter a habit name in English or Arabic');
       return;
     }
-    // Block save if order number is 0 or duplicate
-    if (formData.orderNumber !== '' && formData.orderNumber !== undefined) {
+    // Auto-resolve order number: assign next available if empty, bump conflicts if taken
+    if (formData.orderNumber === '' || formData.orderNumber === undefined) {
+      const usedOrders = store.habits.filter(h => !editingHabit || h.id !== editingHabit.id).map(h => h.order).filter(Boolean);
+      formData.orderNumber = usedOrders.length > 0 ? Math.max(...usedOrders) + 1 : 1;
+    } else {
       const num = Number(formData.orderNumber);
       if (isNaN(num) || num < 1) {
         toast.notifyError(isAr ? 'رقم الترتيب غير صالح' : 'Invalid order number', isAr ? 'يجب أن يكون رقم الترتيب 1 أو أكثر' : 'Order number must be 1 or greater');
         return;
       }
+      // Auto-bump conflicting habits
       const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
       if (conflict) {
-        toast.notifyError(isAr ? 'رقم الترتيب مكرر' : 'Duplicate order number', isAr ? `العادة "${isAr ? conflict.nameAr : conflict.nameEn}" تستخدم نفس الرقم` : `Habit "${conflict.nameEn || conflict.nameAr}" already uses this number`);
-        return;
+        const usedOrders = store.habits.map(h => h.order).filter(Boolean);
+        const nextFree = Math.max(...usedOrders) + 1;
+        store.updateHabit(conflict.id, { order: nextFree });
       }
     }
-    const { orderNumber, streakGoal, streakGoal2, streakGoal3, maxDailyReps, newChecklistItem, ...rest } = formData;
+    const { orderNumber, streakGoal, streakGoal2, streakGoal3, maxDailyReps, newChecklistItem, goalReps, goalHours, ...rest } = formData;
     const isCustom = formData.frequency === 'custom';
     const data = {
       ...rest,
@@ -805,6 +815,8 @@ export default function HabitsPage() {
       streakRewardEn3: formData.streakRewardEn3 || undefined,
       streakRewardAr3: formData.streakRewardAr3 || undefined,
       notes: formData.notes || undefined,
+      goalReps: goalReps !== '' ? Number(goalReps) : undefined,
+      goalHours: goalHours !== '' ? Number(goalHours) : undefined,
     };
     if (editingHabit) {
       store.updateHabit(editingHabit.id, data);
@@ -2495,76 +2507,12 @@ export default function HabitsPage() {
                     type="number"
                     min="1"
                     value={formData.orderNumber}
-                    onChange={e => { const v = e.target.value; if (v !== '' && Number(v) < 1) return; setFormData(f => ({ ...f, orderNumber: v })); setConflictNewOrder(''); }}
-                    className={cn('app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm',
-                      (() => {
-                        const val = formData.orderNumber;
-                        if (val === '' || val === undefined) return '';
-                        const num = Number(val);
-                        const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
-                        return conflict ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : '';
-                      })()
-                    )}
-                    placeholder={isAr ? 'مثال: 1, 2, 3...' : 'e.g., 1, 2, 3...'}
+                    onChange={e => { const v = e.target.value; if (v !== '' && Number(v) < 1) return; setFormData(f => ({ ...f, orderNumber: v })); }}
+                    className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                    placeholder={isAr ? 'تلقائي — أو اختر رقمًا' : 'Auto — or choose a number'}
                   />
-                  {(() => {
-                    const val = formData.orderNumber;
-                    if (val === '' || val === undefined) return null;
-                    const num = Number(val);
-                    const conflict = store.habits.find(h => h.order === num && (!editingHabit || h.id !== editingHabit.id));
-                    if (!conflict) return null;
-                    const conflictName = isAr ? conflict.nameAr : conflict.nameEn;
-                    // Check if the new number typed for conflict is also taken
-                    const conflictNewNum = conflictNewOrder !== '' ? Number(conflictNewOrder) : null;
-                    const conflictNewTaken = conflictNewNum !== null && conflictNewNum !== num
-                      ? store.habits.find(h => h.order === conflictNewNum && h.id !== conflict.id && (!editingHabit || h.id !== editingHabit.id))
-                      : null;
-                    return (
-                      <div className="mt-1.5 rounded-lg border border-red-500/20 bg-red-500/5 p-2.5 space-y-2">
-                        <p className="text-[10px] font-bold text-red-500 flex items-center gap-1">
-                          ⚠ {isAr ? `الرقم ${num} مستخدم بالفعل في "${conflictName}"` : `Number ${num} is already used by "${conflictName}"`}
-                        </p>
-                        <div>
-                          <label className="text-[10px] font-semibold text-[var(--foreground)] mb-1 block">
-                            {isAr ? `اختر رقم جديد لـ "${conflictName}":` : `Choose a new number for "${conflictName}":`}
-                          </label>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min="1"
-                              value={conflictNewOrder}
-                              onChange={e => setConflictNewOrder(e.target.value)}
-                              className={cn('app-input flex-1 rounded-lg bg-transparent px-2.5 py-1.5 text-xs',
-                                conflictNewTaken ? 'border-red-500' : '')}
-                              placeholder={isAr ? 'رقم جديد...' : 'New number...'}
-                            />
-                            <button
-                              type="button"
-                              disabled={!conflictNewOrder || conflictNewNum === num || !!conflictNewTaken}
-                              onClick={() => {
-                                if (conflictNewOrder && conflictNewNum && !conflictNewTaken) {
-                                  store.updateHabit(conflict.id, { order: conflictNewNum });
-                                  setConflictNewOrder('');
-                                }
-                              }}
-                              className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                            >
-                              {isAr ? 'تطبيق' : 'Apply'}
-                            </button>
-                          </div>
-                          {conflictNewTaken && (
-                            <p className="text-[9px] font-bold text-red-500 mt-1">
-                              ⚠ {isAr
-                                ? `الرقم ${conflictNewNum} مستخدم أيضًا في "${isAr ? conflictNewTaken.nameAr : conflictNewTaken.nameEn}"`
-                                : `Number ${conflictNewNum} is also used by "${isAr ? conflictNewTaken.nameAr : conflictNewTaken.nameEn}"`}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
                   <p className="text-[9px] text-[var(--foreground)] mt-1">
-                    {isAr ? 'رقم أصغر = يظهر أولاً عند الترتيب حسب الرقم' : 'Lower number = appears first when sorting by order'}
+                    {isAr ? 'يُعيَّن تلقائيًا إذا تُرك فارغًا، ويُحل التعارض تلقائيًا' : 'Auto-assigned if empty, conflicts resolved automatically'}
                   </p>
                 </div>
                 </div>
@@ -2719,17 +2667,65 @@ export default function HabitsPage() {
 
                   {/* Max daily repetitions */}
                   <div className="mt-3">
-                    <label className="text-xs font-medium mb-1.5 block">
-                      {isAr ? 'أقصى عدد تكرارات يوميًا (اختياري)' : 'Max Daily Repetitions (optional)'}
+                    <label className="flex items-center gap-2 cursor-pointer mb-1.5">
+                      <input type="checkbox"
+                        checked={formData.maxDailyReps !== '' && formData.maxDailyReps !== undefined}
+                        onChange={e => setFormData(f => ({ ...f, maxDailyReps: e.target.checked ? (f.maxDailyReps || 2) : '' }))}
+                        className="h-4 w-4 rounded border-[var(--foreground)]/20 accent-violet-500"
+                      />
+                      <span className="text-xs font-medium">{isAr ? 'تحديد أقصى عدد تكرارات يوميًا' : 'Limit daily repetitions'}</span>
                     </label>
-                    <input type="number" min="1"
-                      value={formData.maxDailyReps}
-                      onChange={e => setFormData(f => ({ ...f, maxDailyReps: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
-                      placeholder={isAr ? 'مثال: 3 جلسات دراسة يوميًا' : 'e.g., 3 study sessions per day'} />
+                    {formData.maxDailyReps !== '' && formData.maxDailyReps !== undefined && (
+                      <input type="number" min="1"
+                        value={formData.maxDailyReps}
+                        onChange={e => setFormData(f => ({ ...f, maxDailyReps: e.target.value }))}
+                        className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                        placeholder={isAr ? 'مثال: 3 جلسات دراسة يوميًا' : 'e.g., 3 study sessions per day'} />
+                    )}
                     <p className="text-[9px] text-[var(--foreground)] mt-1">
-                      {isAr ? 'اتركه فارغًا للعادات التي تُنجز مرة واحدة يوميًا' : 'Leave empty for habits done once per day'}
+                      {isAr ? 'إذا لم يُفعَّل، غير محدود' : 'If unchecked, unlimited'}
                     </p>
+                  </div>
+                </div>
+
+                {/* ── Section: Overall Goal ── */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-5 w-5 rounded-md bg-indigo-500/10 flex items-center justify-center"><Target className="h-3 w-3 text-indigo-500" /></div>
+                    <span className="text-xs font-bold">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--foreground)] mb-3">
+                    {isAr ? 'حدد أهدافاً إجمالية لهذه العادة — يمكنك اختيار أحدهما أو كليهما' : 'Set total goals for this habit — choose one or both'}
+                  </p>
+                  <div className="space-y-3">
+                    {/* Repetitions goal */}
+                    <div className="p-3 rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Hash className="h-3.5 w-3.5 text-indigo-500" />
+                        <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'هدف التكرارات' : 'Repetitions Goal'}</span>
+                      </div>
+                      <input type="number" min={1}
+                        value={formData.goalReps}
+                        onChange={e => setFormData(f => ({ ...f, goalReps: e.target.value }))}
+                        className="w-full rounded-lg app-input px-3 py-2 text-sm"
+                        placeholder={isAr ? 'مثال: 100 تكرار إجمالي' : 'e.g., 100 total reps'}
+                      />
+                    </div>
+                    {/* Hours goal — only for habits that track time */}
+                    {(formData.trackingType === 'timer' || formData.trackingType === 'duration') && (
+                      <div className="p-3 rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="h-3.5 w-3.5 text-violet-500" />
+                          <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'هدف الساعات' : 'Hours Goal'}</span>
+                        </div>
+                        <input type="number" min={1} step="0.5"
+                          value={formData.goalHours}
+                          onChange={e => setFormData(f => ({ ...f, goalHours: e.target.value }))}
+                          className="w-full rounded-lg app-input px-3 py-2 text-sm"
+                          placeholder={isAr ? 'مثال: 50 ساعة إجمالية' : 'e.g., 50 total hours'}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3213,11 +3209,11 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
   const isDisabled = !!strictLocked || !!strictNotYet;
 
   // Daily repetitions tracking
-  const maxReps = habit.maxDailyReps || 1;
+  const maxReps = habit.maxDailyReps || Infinity;
   const todayCompletedReps = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
-  const repsRemaining = Math.max(0, maxReps - todayCompletedReps);
-  const allRepsDone = todayCompletedReps >= maxReps;
-  const hasMultipleReps = maxReps > 1;
+  const repsRemaining = maxReps === Infinity ? Infinity : Math.max(0, maxReps - todayCompletedReps);
+  const allRepsDone = maxReps !== Infinity && todayCompletedReps >= maxReps;
+  const hasMultipleReps = habit.maxDailyReps !== undefined && habit.maxDailyReps > 1;
 
   const handleCheck = () => {
     if (hasDuration || habit.archived || isDisabled) return;
@@ -4476,7 +4472,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
 
     // This week completions
     const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const wd = weekStart.getDay(); weekStart.setDate(weekStart.getDate() - (wd === 0 ? 6 : wd - 1));
     const weekStartStr = formatLocalDate(weekStart);
     const thisWeek = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).length;
     const thisWeekMinutes = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
@@ -4526,7 +4522,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     const base = new Date();
     for (let w = 11; w >= 0; w--) {
       const weekStart = new Date(base);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay() - w * 7);
+      const wd4529 = weekStart.getDay(); weekStart.setDate(weekStart.getDate() - (wd4529 === 0 ? 6 : wd4529 - 1) - w * 7);
       const days: { date: string; count: number; isToday: boolean }[] = [];
       for (let d = 0; d < 7; d++) {
         const dt = new Date(weekStart);
@@ -4844,7 +4840,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
       {(() => {
         const now = new Date();
         const thisWeekStart = new Date(now);
-        thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+        const wd4847 = thisWeekStart.getDay(); thisWeekStart.setDate(thisWeekStart.getDate() - (wd4847 === 0 ? 6 : wd4847 - 1));
         const lastWeekStart = new Date(thisWeekStart);
         lastWeekStart.setDate(lastWeekStart.getDate() - 7);
         const lastWeekEnd = new Date(thisWeekStart);
@@ -5530,7 +5526,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
 
           {/* Badges row — compact inline */}
           <div className="flex items-center gap-1 mt-2.5 flex-wrap">
-            {[catLabel, freqLabel, typeLabel, `${priLabel}`, `${diffLabel}`, ...(habit.expectedDuration ? [`${habit.expectedDuration}${isAr ? 'د' : 'm'}`] : []), `${habitAge}${isAr ? 'يوم' : 'd'}`].map((b, i) => (
+            {[catLabel, freqLabel, typeLabel, `${priLabel}`, `${diffLabel}`, ...(habit.expectedDuration ? [`${habit.expectedDuration}${isAr ? 'د' : 'm'}`] : []), habit.maxDailyReps ? `${isAr ? 'أقصى عدد جلسات: ' : 'Max sessions: '}${habit.maxDailyReps}${isAr ? '/يوم' : '/day'}` : (isAr ? 'أقصى عدد جلسات: غير محدود' : 'Max sessions: Unlimited'), `${habitAge}${isAr ? 'يوم' : 'd'}`].map((b, i) => (
               <span key={i} className="text-xs font-bold px-2 py-0.5 rounded-md cursor-default" style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}15` }}>{b}</span>
             ))}
           </div>
@@ -5868,6 +5864,11 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                   <Clock className="h-3 w-3" style={{ color: hc }} />
                   <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الوقت' : 'Time'}</span>
                 </div>
+                {!habit.expectedDuration && habit.trackingType !== 'duration' ? (
+                  <div className="p-3 text-center">
+                    <p className="text-xs font-semibold opacity-50">{isAr ? 'هذه العادة لا تتضمن وقتاً' : 'This habit does not track time'}</p>
+                  </div>
+                ) : (
                 <div className="p-2 grid grid-cols-4 gap-1">
                   {[
                     { l: isAr ? 'اليوم' : 'Today', v: formatMins(timeStats.mins.today) },
@@ -5881,30 +5882,99 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                     </div>
                   ))}
                 </div>
+                )}
               </div>
 
-              {/* Weekday performance — compact bars */}
-              <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-                <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
-                  <BarChart3 className="h-3 w-3" style={{ color: hc }} />
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'حسب اليوم' : 'By Day'}</span>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-end gap-1.5 h-16">
-                    {stats.completionsByWeekday.map((count, i) => {
-                      const max = Math.max(...stats.completionsByWeekday, 1);
-                      const height = (count / max) * 100;
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
-                          <span className="text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity tabular-nums" style={{ color: hc }}>{count}</span>
-                          <div className="w-full rounded-sm" style={{ height: `${Math.max(height, 8)}%`, background: `linear-gradient(to top, ${hc}, ${hc}88)` }} />
-                          <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? DAY_LABELS.ar[i] : DAY_LABELS.en[i]}</span>
-                        </div>
-                      );
-                    })}
+              {/* Overall Goal Progress */}
+              {(() => {
+                const hasRepsGoal = habit.goalReps && habit.goalReps > 0;
+                const tracksTime = !!habit.expectedDuration || habit.trackingType === 'duration';
+                const hasHoursGoal = tracksTime && habit.goalHours && habit.goalHours > 0;
+                const hasAnyGoal = hasRepsGoal || hasHoursGoal;
+
+                if (!hasAnyGoal) return (
+                  <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
+                    <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
+                      <Target className="h-3 w-3" style={{ color: hc }} />
+                      <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                    </div>
+                    <div className="p-4 flex flex-col items-center justify-center gap-1">
+                      <Target className="h-4 w-4 text-[var(--foreground)]" />
+                      <p className="text-[10px] italic text-[var(--foreground)] text-center">{isAr ? 'لم يتم تحديد هدف كلي' : 'No overall goal set'}</p>
+                      <p className="text-[9px] text-[var(--foreground)] text-center">{isAr ? 'حدد هدف تكرارات أو ساعات من التعديل' : 'Set a reps or hours goal from Edit'}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+
+                const repsCurrentVal = stats.totalCompletions;
+                const repsTarget = habit.goalReps ?? 0;
+                const repsPct = repsTarget > 0 ? Math.min(100, Math.round((repsCurrentVal / repsTarget) * 100)) : 0;
+                const repsDone = repsTarget > 0 && repsCurrentVal >= repsTarget;
+
+                const totalMins = timeStats.mins.total;
+                const hoursCurrentVal = Math.round(totalMins / 60 * 10) / 10;
+                const hoursTarget = habit.goalHours ?? 0;
+                const hoursPct = hoursTarget > 0 ? Math.min(100, Math.round((hoursCurrentVal / hoursTarget) * 100)) : 0;
+                const hoursDone = hoursTarget > 0 && hoursCurrentVal >= hoursTarget;
+
+                return (
+                  <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
+                    <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
+                      <Target className="h-3 w-3" style={{ color: hc }} />
+                      <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      {/* Reps goal */}
+                      {hasRepsGoal && (
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: `${repsDone ? '#22c55e' : hc}15` }}>
+                                <Hash className="h-3 w-3" style={{ color: repsDone ? '#22c55e' : hc }} />
+                              </div>
+                              <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'التكرارات' : 'Repetitions'}</span>
+                            </div>
+                            {repsDone && <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">{isAr ? 'تحقق ✓' : 'Done ✓'}</span>}
+                          </div>
+                          <div className="flex items-baseline gap-1.5 mb-1.5">
+                            <span className="text-xl font-black tabular-nums" style={{ color: repsDone ? '#22c55e' : hc }}>{repsCurrentVal}</span>
+                            <span className="text-xs font-bold text-[var(--foreground)]">/ {repsTarget}</span>
+                            <span className="text-xs text-[var(--foreground)]">{isAr ? 'تكرار' : 'reps'}</span>
+                            <span className="text-xs font-black tabular-nums ml-auto" style={{ color: repsDone ? '#22c55e' : hc }}>{repsPct}%</span>
+                          </div>
+                          <div className="h-3 rounded-full overflow-hidden" style={{ background: `${repsDone ? '#22c55e' : hc}12` }}>
+                            <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${repsPct}%`, background: repsDone ? 'linear-gradient(90deg, #22c55e, #16a34a)' : `linear-gradient(90deg, ${hc}, ${hc}cc)` }} />
+                          </div>
+                        </div>
+                      )}
+                      {/* Hours goal */}
+                      {hasHoursGoal && (
+                        <div>
+                          {hasRepsGoal && <div className="border-t border-[var(--foreground)]/[0.06] my-1" />}
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}15` }}>
+                                <Clock className="h-3 w-3" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }} />
+                              </div>
+                              <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'الساعات' : 'Hours'}</span>
+                            </div>
+                            {hoursDone && <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">{isAr ? 'تحقق ✓' : 'Done ✓'}</span>}
+                          </div>
+                          <div className="flex items-baseline gap-1.5 mb-1.5">
+                            <span className="text-xl font-black tabular-nums" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursCurrentVal}</span>
+                            <span className="text-xs font-bold text-[var(--foreground)]">/ {hoursTarget}</span>
+                            <span className="text-xs text-[var(--foreground)]">{isAr ? 'ساعة' : 'hrs'}</span>
+                            <span className="text-xs font-black tabular-nums ml-auto" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursPct}%</span>
+                          </div>
+                          <div className="h-3 rounded-full overflow-hidden" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}12` }}>
+                            <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${hoursPct}%`, background: hoursDone ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #8b5cf6, #7c3aed)' }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

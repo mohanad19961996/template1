@@ -377,7 +377,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const updateHabit = useCallback((id: string, updates: Partial<Habit>) => {
     const oldHabit = stateRef.current.habits.find(h => h.id === id);
     update(s => ({ ...s, habits: s.habits.map(h => h.id === id ? { ...h, ...updates } : h) }));
-    apiPatch(`/api/habits/${id}`, updates);
+    // Convert undefined to null so JSON.stringify includes them and DB clears old values
+    const apiUpdates: Record<string, unknown> = {};
+    for (const key of Object.keys(updates)) {
+      apiUpdates[key] = (updates as Record<string, unknown>)[key] ?? null;
+    }
+    apiPatch(`/api/habits/${id}`, apiUpdates);
     if (oldHabit) {
       const changes = diffHabit(oldHabit, updates);
       if (Object.keys(changes).length > 0) {
@@ -652,7 +657,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const now = new Date();
     for (let w = 11; w >= 0; w--) {
       const weekStart = new Date(now);
-      weekStart.setDate(weekStart.getDate() - (w * 7 + now.getDay()));
+      const wd = now.getDay(); weekStart.setDate(weekStart.getDate() - (w * 7 + (wd === 0 ? 6 : wd - 1)));
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
       const startStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;

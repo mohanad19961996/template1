@@ -51,7 +51,12 @@ export async function PATCH(
 
     if (fetchErr || !existing) return errorResponse('Habit not found', 404);
 
-    const updated = { ...existing.data, ...body, updatedAt: new Date().toISOString() };
+    const merged = { ...existing.data, ...body, updatedAt: new Date().toISOString() };
+    // Remove keys explicitly set to null (field was cleared by user)
+    const updated: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(merged)) {
+      if (v !== null) updated[k] = v;
+    }
 
     const { error } = await supabase
       .from('habits')

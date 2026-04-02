@@ -130,6 +130,9 @@ export interface Habit {
   streakRewardAr3?: string;
   // Habit notes (persistent, not daily)
   notes?: string;
+  // Overall goals (total repetitions and/or total hours)
+  goalReps?: number;  // target total repetitions
+  goalHours?: number; // target total hours
   // Card display size
   colSpan?: number; // 1-4 columns this card spans
   rowSpan?: number; // 1-3 rows this card spans

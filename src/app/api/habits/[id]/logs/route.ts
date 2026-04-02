@@ -67,20 +67,19 @@ export async function POST(
     const now = new Date().toISOString();
     const logId = body.id || generateId();
 
+    // Spread all fields from body to capture checklistState, source, value, etc.
+    const { upsert: _upsert, ...rest } = body;
     const log = {
+      ...rest,
       id: logId,
       habitId,
       date,
       time: body.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-      duration: body.duration,
       note: body.note || '',
-      moodBefore: body.moodBefore,
-      moodAfter: body.moodAfter,
       reminderUsed: body.reminderUsed ?? false,
       perceivedDifficulty: body.perceivedDifficulty || 'medium',
       completed: body.completed ?? false,
       status: body.status || (body.completed ? 'completed' : 'pending'),
-      value: body.value,
       source: body.source || 'manual',
       createdAt: body.createdAt || now,
       updatedAt: now,

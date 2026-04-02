@@ -59,7 +59,7 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     if (!currentSession) return;
     const secs = elapsed;
     if (secs > 0 && !habit.archived) {
-      const durationMin = hasDuration ? (habit.expectedDuration ?? Math.max(1, Math.round(secs / 60))) : Math.max(1, Math.round(secs / 60));
+      const durationMin = Math.max(1, Math.round(secs / 60));
       const isCompleted = hasDuration ? (secs >= targetSecs) : !done;
       store.logHabit({
         habitId: habit.id, date: today,
@@ -106,9 +106,9 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
     return false;
   })();
 
-  const maxReps = habit.maxDailyReps || 1;
+  const maxReps = habit.maxDailyReps || Infinity;
   const todayReps = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
-  const allRepsDone = todayReps >= maxReps;
+  const allRepsDone = maxReps !== Infinity && todayReps >= maxReps;
   const cantStart = isStrictLocked || allRepsDone;
 
   const notifyDisabled = () => {

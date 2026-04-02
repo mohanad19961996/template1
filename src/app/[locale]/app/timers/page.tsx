@@ -230,7 +230,7 @@ export default function TimersPage() {
 
   const weekTotal = useMemo(() => {
     const now = new Date();
-    const ws = new Date(now); ws.setDate(ws.getDate() - ws.getDay());
+    const ws = new Date(now); const wd = ws.getDay(); ws.setDate(ws.getDate() - (wd === 0 ? 6 : wd - 1));
     const weekStart = formatLocalDate(ws);
     return store.timerSessions.filter(t => t.completed && t.startedAt >= weekStart).reduce((a, t) => a + t.duration, 0);
   }, [store.timerSessions]);
