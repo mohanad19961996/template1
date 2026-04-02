@@ -146,27 +146,25 @@ function recoverTimer(state: AppState): AppState {
     const endedAt = new Date().toISOString();
 
     // Auto-log habit completion if timer was linked to a habit
+    // Always create a new log — timer habits can be done multiple times per day
     let habitLogs = state.habitLogs;
     const linkedHabitId = t.habitId ?? session?.habitId;
     if (linkedHabitId && t.targetDuration) {
       const today = todayString();
-      const alreadyLogged = habitLogs.some(l => l.habitId === linkedHabitId && l.date === today && l.completed);
-      if (!alreadyLogged) {
-        const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        habitLogs = [...habitLogs, {
-          id: generateId(),
-          habitId: linkedHabitId,
-          date: today,
-          time: nowTime,
-          duration: Math.round(t.targetDuration / 60),
-          note: 'Auto-completed by timer',
-          reminderUsed: false,
-          perceivedDifficulty: 'medium' as const,
-          completed: true,
-          status: 'completed' as const,
-          source: 'timer' as const,
-        }];
-      }
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      habitLogs = [...habitLogs, {
+        id: generateId(),
+        habitId: linkedHabitId,
+        date: today,
+        time: nowTime,
+        duration: t.targetDuration, // exact seconds
+        note: 'Auto-completed by timer',
+        reminderUsed: false,
+        perceivedDifficulty: 'medium' as const,
+        completed: true,
+        status: 'completed' as const,
+        source: 'timer' as const,
+      }];
     }
 
     return {
@@ -444,7 +442,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       source: data.source ?? 'manual',
     };
     // For simple boolean completions (no value/duration tracking), replace existing log for same habit+date
-    // to prevent duplicate entries. Count/duration habits use value field and can have multiple logs per day.
+    // to prevent duplicate entries. Count/duration/timer habits can have multiple logs per day.
     const isSimpleLog = data.value === undefined && data.duration === undefined;
     update(s => {
       const filtered = isSimpleLog
@@ -452,7 +450,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         : s.habitLogs;
       return { ...s, habitLogs: [...filtered, log] };
     });
-    apiPost(`/api/habits/${data.habitId}/logs`, { ...log, upsert: true });
+    // Only upsert simple boolean logs; timer/count/duration logs always insert new rows
+    apiPost(`/api/habits/${data.habitId}/logs`, { ...log, upsert: isSimpleLog });
     return log;
   }, [update]);
 

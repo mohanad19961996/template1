@@ -146,7 +146,7 @@ export interface HabitLog {
   habitId: string;
   date: string;       // YYYY-MM-DD (dateKey)
   time: string;       // HH:mm
-  duration?: number;   // minutes
+  duration?: number;   // seconds (stored as exact seconds so no time is ever lost)
   note: string;
   moodBefore?: MoodLevel;
   moodAfter?: MoodLevel;

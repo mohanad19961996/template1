@@ -86,18 +86,21 @@ export async function POST(
     };
 
     if (body.upsert) {
-      // Find existing log for this habit+date and update, or insert
+      // Find existing simple (non-timer/non-duration) log for this habit+date and update, or insert.
+      // Only matches logs without duration to avoid overwriting timer session logs.
       const { data: existing } = await supabase
         .from('habit_logs')
-        .select('id')
+        .select('id, data')
         .eq('habit_id', habitId)
         .eq('user_id', userId)
         .eq('date', date)
-        .limit(1)
-        .single();
+        .limit(10);
 
-      if (existing) {
-        await supabase.from('habit_logs').update({ data: log }).eq('id', existing.id);
+      // Find a simple log (no duration) to upsert against
+      const simpleLog = (existing || []).find(row => !row.data?.duration);
+
+      if (simpleLog) {
+        await supabase.from('habit_logs').update({ data: log }).eq('id', simpleLog.id);
       } else {
         await supabase.from('habit_logs').insert({
           id: logId,

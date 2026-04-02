@@ -11,6 +11,16 @@ import {
   Brain, Apple, Smile, Activity,
 } from 'lucide-react';
 
+function formatDurationPrecise(totalSecs: number): string {
+  if (totalSecs <= 0) return '0s';
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = Math.floor(totalSecs % 60);
+  if (h > 0) return s > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  return `${s}s`;
+}
+
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } }),
@@ -132,7 +142,7 @@ export default function CalendarPage() {
             {/* Summary */}
             <div className="grid grid-cols-2 gap-2 mb-4">
               {[
-                { labelEn: 'Habits', labelAr: 'عادات', value: selectedData.habits.filter(l => l.completed).length, icon: CheckCircle2, color: 'text-emerald-500' },
+                { labelEn: 'Habits', labelAr: 'عادات', value: new Set(selectedData.habits.filter(l => l.completed).map(l => l.habitId)).size, icon: CheckCircle2, color: 'text-emerald-500' },
                 { labelEn: 'Focus', labelAr: 'تركيز', value: formatDuration(selectedFocusMin), icon: Clock, color: 'text-blue-500' },
                 { labelEn: 'Wellness', labelAr: 'عافية', value: selectedData.hormones.length, icon: Brain, color: 'text-purple-500' },
                 { labelEn: 'Meals', labelAr: 'وجبات', value: selectedData.nutrition.length, icon: Apple, color: 'text-orange-500' },
@@ -145,18 +155,37 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Activity list */}
+            {/* Activity list — group multiple sessions per habit */}
             <div className="space-y-2">
-              {selectedData.habits.filter(l => l.completed).map(log => {
-                const habit = store.habits.find(h => h.id === log.habitId);
-                return (
-                  <div key={log.id} className="flex items-center gap-2 text-xs">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-                    <span className="text-[var(--foreground)]/80">{isAr ? habit?.nameAr : habit?.nameEn}</span>
-                    <span className="text-[var(--foreground)]/50 ms-auto">{log.time}</span>
-                  </div>
-                );
-              })}
+              {(() => {
+                const completedLogs = selectedData.habits.filter(l => l.completed);
+                // Group logs by habitId
+                const grouped = new Map<string, typeof completedLogs>();
+                for (const log of completedLogs) {
+                  const arr = grouped.get(log.habitId) ?? [];
+                  arr.push(log);
+                  grouped.set(log.habitId, arr);
+                }
+                return Array.from(grouped.entries()).map(([habitId, logs]) => {
+                  const habit = store.habits.find(h => h.id === habitId);
+                  const totalDurationSecs = logs.reduce((sum, l) => {
+                    const d = l.duration ?? 0;
+                    return sum + (d <= 300 ? d * 60 : d); // normalize old minutes to seconds
+                  }, 0);
+                  return (
+                    <div key={habitId} className="flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                      <span className="text-[var(--foreground)]/80">
+                        {isAr ? habit?.nameAr : habit?.nameEn}
+                        {logs.length > 1 && <span className="text-emerald-600 font-bold"> ×{logs.length}</span>}
+                      </span>
+                      <span className="text-[var(--foreground)]/50 ms-auto">
+                        {totalDurationSecs > 0 ? formatDurationPrecise(totalDurationSecs) : logs[logs.length - 1].time}
+                      </span>
+                    </div>
+                  );
+                });
+              })()}
               {selectedData.skills.map(session => {
                 const skill = store.skills.find(s => s.id === session.skillId);
                 return (

@@ -70,6 +70,14 @@ const CUSTOM_SCHEDULE_LABELS: Record<string, { en: string; ar: string }> = {
   yeardays: { en: 'Specific Days of Year', ar: 'أيام محددة من السنة' },
 };
 
+// Normalize duration: old logs stored minutes (small values like 30, 45),
+// new logs store seconds (values like 1800, 2700). Threshold: 300 (5 min).
+// If value <= 300 it's likely old minutes format, convert to seconds.
+function normalizeDurationToSecs(dur: number | undefined): number {
+  if (!dur) return 0;
+  return dur <= 300 ? dur * 60 : dur;
+}
+
 function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?: number) {
   const habitLogs = logs.filter(l => l.habitId === habitId);
   const completed = habitLogs.filter(l => l.completed);
@@ -84,19 +92,18 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   // Year start
   const yearStart = `${now.getFullYear()}-01-01`;
 
-  // Count unique completed dates (not individual log entries)
-  const uniqueDates = (arr: HabitLog[]) => new Set(arr.map(l => l.date)).size;
+  // Count every completed session (not unique dates) — each timer session is a rep
   const thisWeekCompleted = completed.filter(l => l.date >= weekStart && l.date <= todayStr);
   const thisMonthCompleted = completed.filter(l => l.date >= monthStart && l.date <= todayStr);
   const thisYearCompleted = completed.filter(l => l.date >= yearStart && l.date <= todayStr);
 
-  // Sum ALL logged time (completed or not) — every timer session counts toward time stats
-  const sumAllMins = (arr: HabitLog[]) => {
+  // Sum ALL logged time in SECONDS (completed or not) — every timer second counts
+  const sumAllSecs = (arr: HabitLog[]) => {
     let total = 0;
     for (const l of arr) {
-      const dur = l.duration ?? 0;
-      if (dur > 0) total += dur;
-      else if (l.completed) total += (expectedDuration ?? 0);
+      const secs = normalizeDurationToSecs(l.duration);
+      if (secs > 0) total += secs;
+      else if (l.completed) total += (expectedDuration ?? 0) * 60; // expectedDuration is in minutes
     }
     return total;
   };
@@ -106,16 +113,20 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   const thisYearAll = habitLogs.filter(l => l.date >= yearStart && l.date <= todayStr);
 
   return {
-    reps: { week: uniqueDates(thisWeekCompleted), month: uniqueDates(thisMonthCompleted), year: uniqueDates(thisYearCompleted), total: uniqueDates(completed) },
-    mins: { today: sumAllMins(habitLogs.filter(l => l.date === todayStr)), week: sumAllMins(thisWeekAll), month: sumAllMins(thisMonthAll), year: sumAllMins(thisYearAll), total: sumAllMins(habitLogs) },
+    reps: { week: thisWeekCompleted.length, month: thisMonthCompleted.length, year: thisYearCompleted.length, total: completed.length },
+    secs: { today: sumAllSecs(habitLogs.filter(l => l.date === todayStr)), week: sumAllSecs(thisWeekAll), month: sumAllSecs(thisMonthAll), year: sumAllSecs(thisYearAll), total: sumAllSecs(habitLogs) },
   };
 }
 
-function formatMins(m: number): string {
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  return r > 0 ? `${h}h ${r}m` : `${h}h`;
+// Format seconds into a human-readable string (e.g. "1h 23m 45s", "45m 30s", "30s")
+function formatSecs(totalSecs: number): string {
+  if (totalSecs <= 0) return '0s';
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = Math.floor(totalSecs % 60);
+  if (h > 0) return s > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  return `${s}s`;
 }
 
 // Convert 24h time "HH:mm" to 12h "h:mm AM/PM"
@@ -696,19 +707,16 @@ export default function HabitsPage() {
       if (new Date(active.endsAt).getTime() > Date.now()) return;
       const habit = store.habits.find(h => h.id === ht.activeHabitId);
       if (!habit?.expectedDuration) return;
-      if (autoCompleteRef.current === ht.activeHabitId) return;
-      autoCompleteRef.current = ht.activeHabitId;
-      const durationMin = habit.expectedDuration;
-      const alreadyDone = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
-      if (!alreadyDone) {
-        store.logHabit({
-          habitId: habit.id, date: today,
-          time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-          duration: durationMin,
-          note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true,
-          source: 'timer',
-        });
-      }
+      if (autoCompleteRef.current === active.sessionId) return;
+      autoCompleteRef.current = active.sessionId;
+      const durationSecs = habit.expectedDuration * 60; // convert minutes target to seconds
+      store.logHabit({
+        habitId: habit.id, date: today,
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        duration: durationSecs,
+        note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true,
+        source: 'timer',
+      });
       if (ht.currentSession) {
         store.completeTimer(ht.currentSession.id);
       }
@@ -3242,7 +3250,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
   const freqLabel = isAr ? FREQ_LABELS[habit.frequency]?.ar : FREQ_LABELS[habit.frequency]?.en;
   const daysSinceCreation = Math.max(1, Math.floor((Date.now() - new Date(habit.createdAt).getTime()) / 86400000));
   const placeLabel = isAr ? habit.placeAr : habit.placeEn;
-  const totalMinutes = timeStats.mins.total;
+  const totalMinutes = Math.floor(timeStats.secs.total / 60);
   const lastCompletedDate = streak.lastCompletedDate;
   // Build streak challenge tiers
   const streakTiers = useMemo(() => {
@@ -3348,7 +3356,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
           className={cn('rounded-2xl overflow-visible flex flex-col group/card habit-card-animated-border transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] h-full')}
           style={{
             '--habit-color': hc,
-            '--habit-border-color': done || allRepsDone ? '#22c55e' : isDisabled ? '#ef4444' : hc,
+            '--habit-border-color': allRepsDone ? '#22c55e' : (done && !hasDuration) ? '#22c55e' : (done && hasDuration && !allRepsDone) ? '#3b82f6' : isDisabled ? '#ef4444' : hc,
             background: minimized ? 'var(--color-background)' : `linear-gradient(180deg, ${hc}06 0%, var(--color-background) 120px)`,
             boxShadow: `0 2px 12px ${hc}10`,
             maxHeight: minimized ? '220px' : undefined,
@@ -3410,7 +3418,11 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             {minimized && (
               <div className="flex flex-col gap-2 py-1">
                 <div className="flex items-center justify-between">
-                  {(done || allRepsDone) ? (
+                  {allRepsDone ? (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> {isAr ? 'مكتملة' : 'Done'}</span>
+                  ) : done && hasDuration && !allRepsDone ? (
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-blue-600"><CheckCircle2 className="h-4 w-4" /> {todayCompletedReps}x {isAr ? 'مكتمل' : 'done'}</span>
+                  ) : done ? (
                     <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> {isAr ? 'مكتملة' : 'Done'}</span>
                   ) : (
                     <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--foreground)]"><Circle className="h-4 w-4" /> {isAr ? 'لم تكتمل' : 'Pending'}</span>
@@ -3528,19 +3540,25 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 ? { background: '#ef444415', color: '#ef4444', border: '1px solid #ef444425' }
                 : strictNotYet
                   ? { background: '#f59e0b12', color: '#f59e0b', border: '1px solid #f59e0b20' }
-                  : (done || allRepsDone)
+                  : allRepsDone
                     ? { background: '#22c55e15', color: '#16a34a' }
-                    : hasMultipleReps && todayCompletedReps > 0
-                      ? { background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }
-                      : streak.current > 0
-                        ? { background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }
-                        : { background: `${hc}08`, color: hc }}>
+                    : done && hasDuration && !allRepsDone
+                      ? { background: '#3b82f612', color: '#3b82f6', border: '1px solid #3b82f620' }
+                      : done
+                        ? { background: '#22c55e15', color: '#16a34a' }
+                        : hasMultipleReps && todayCompletedReps > 0
+                          ? { background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }
+                          : streak.current > 0
+                            ? { background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }
+                            : { background: `${hc}08`, color: hc }}>
               {strictLocked ? (
                 <><X className="h-4 w-4" /> {isAr ? `فات الوقت (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) — فائتة` : `Window passed (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) — Missed`}</>
               ) : strictNotYet ? (
                 <><Clock className="h-4 w-4" /> {isAr ? `متاحة من ${to12h(habit.windowStart!)} إلى ${to12h(habit.windowEnd!)}` : `Available ${to12h(habit.windowStart!)} – ${to12h(habit.windowEnd!)}`}</>
               ) : allRepsDone ? (
                 <><CheckCircle2 className="h-4 w-4" /> {hasMultipleReps ? `${todayCompletedReps}/${maxReps} ${isAr ? 'مكتمل ✓' : 'done ✓'}` : (isAr ? 'مكتملة اليوم ✓' : 'Completed today ✓')}</>
+              ) : done && hasDuration && !allRepsDone ? (
+                <><CheckCircle2 className="h-4 w-4" /> {todayCompletedReps}x {isAr ? 'مكتمل' : 'done'} ({formatSecs(timeStats.secs.today)}) — {isAr ? 'ابدأ جلسة أخرى' : 'start another session'}</>
               ) : hasMultipleReps && todayCompletedReps > 0 ? (
                 <><Target className="h-4 w-4" /> {todayCompletedReps}/{maxReps} — {repsRemaining} {isAr ? 'متبقية' : 'remaining'}</>
               ) : streak.current > 0 ? (
@@ -5337,8 +5355,11 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
     return days;
   }, [habit.id, store.habitLogs, habit.windowStart, habit.windowEnd]);
 
-  // Today's log for time display
-  const todayLog = useMemo(() => store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed), [habit.id, today, store.habitLogs]);
+  // Today's logs for time display (timer habits can have multiple sessions)
+  const todayLogs = useMemo(() => store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed), [habit.id, today, store.habitLogs]);
+  const todayLog = todayLogs.length > 0 ? todayLogs[todayLogs.length - 1] : undefined;
+  const todaySessionCount = todayLogs.length;
+  const todayTotalDurationSecs = todayLogs.reduce((sum, l) => sum + normalizeDurationToSecs(l.duration), 0);
 
   // Streak milestones
   const streakGoals = useMemo(() => {
@@ -5367,10 +5388,10 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
     const totalDays = lastDay.getDate();
     const today = todayString();
 
-    const days: { date: string; day: number; inMonth: boolean; completed: boolean; isFuture: boolean; beforeCreated: boolean; color: CompletionColor }[] = [];
+    const days: { date: string; day: number; inMonth: boolean; completed: boolean; sessionCount: number; isFuture: boolean; beforeCreated: boolean; color: CompletionColor }[] = [];
 
     for (let i = 0; i < startPad; i++) {
-      days.push({ date: '', day: 0, inMonth: false, completed: false, isFuture: false, beforeCreated: false, color: 'none' });
+      days.push({ date: '', day: 0, inMonth: false, completed: false, sessionCount: 0, isFuture: false, beforeCreated: false, color: 'none' });
     }
 
     for (let d = 1; d <= totalDays; d++) {
@@ -5378,9 +5399,10 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
       const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
       const isFuture = dateStr > today;
       const beforeCreated = dt < new Date(createdDate.getFullYear(), createdDate.getMonth(), createdDate.getDate());
-      const log = !isFuture && !beforeCreated ? store.habitLogs.find(l => l.habitId === habit.id && l.date === dateStr && l.completed) : undefined;
+      const dayLogs = !isFuture && !beforeCreated ? store.habitLogs.filter(l => l.habitId === habit.id && l.date === dateStr && l.completed) : [];
+      const log = dayLogs.length > 0 ? dayLogs[0] : undefined;
       days.push({
-        date: dateStr, day: d, inMonth: true, completed: !!log, isFuture, beforeCreated,
+        date: dateStr, day: d, inMonth: true, completed: dayLogs.length > 0, sessionCount: dayLogs.length, isFuture, beforeCreated,
         color: !isFuture && !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
       });
     }
@@ -5691,10 +5713,17 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 </button>
               );
             })()}
-            {todayLog && (
-              <div className="mt-2 flex items-center justify-center gap-4 text-sm text-[var(--foreground)]">
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {to12h(todayLog.time)}</span>
-                {todayLog.duration && <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {todayLog.duration}{isAr ? 'د' : 'm'}</span>}
+            {todayLogs.length > 0 && (
+              <div className="mt-2 flex flex-col items-center gap-1">
+                {todaySessionCount > 1 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600">
+                    {todaySessionCount} {isAr ? 'جلسات اليوم' : 'sessions today'} — {formatSecs(todayTotalDurationSecs)} {isAr ? 'إجمالي' : 'total'}
+                  </span>
+                )}
+                <div className="flex items-center justify-center gap-4 text-sm text-[var(--foreground)]">
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {to12h(todayLog!.time)}</span>
+                  {todayLog!.duration && <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {formatSecs(normalizeDurationToSecs(todayLog!.duration))}{todaySessionCount > 1 ? (isAr ? ' (آخر جلسة)' : ' (last)') : ''}</span>}
+                </div>
               </div>
             )}
           </div>
@@ -5881,8 +5910,8 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                     const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
                     const isTodayCal = day.date === todayString();
                     return (
-                      <div key={i} title={day.date}
-                        className={cn('h-8 rounded-md flex items-center justify-center text-xs font-bold cursor-default',
+                      <div key={i} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
+                        className={cn('h-8 rounded-md flex items-center justify-center text-xs font-bold cursor-default relative',
                           !day.inMonth && 'invisible',
                           day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
                           day.beforeCreated && day.inMonth && 'text-[var(--foreground)]',
@@ -5892,6 +5921,9 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                           isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
                           isTodayCal && 'ring-1.5 ring-offset-1 ring-[var(--color-primary)]')}>
                         {day.inMonth && day.day}
+                        {day.sessionCount > 1 && (
+                          <span className="absolute -top-1 -right-1 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center">{day.sessionCount}</span>
+                        )}
                       </div>
                     );
                   })}
@@ -5964,10 +5996,10 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 ) : (
                 <div className="p-2 grid grid-cols-4 gap-1">
                   {[
-                    { l: isAr ? 'اليوم' : 'Today', v: formatMins(timeStats.mins.today) },
-                    { l: isAr ? 'أسبوع' : 'Week', v: formatMins(timeStats.mins.week) },
-                    { l: isAr ? 'شهر' : 'Month', v: formatMins(timeStats.mins.month) },
-                    { l: isAr ? 'سنة' : 'Year', v: formatMins(timeStats.mins.year) },
+                    { l: isAr ? 'اليوم' : 'Today', v: formatSecs(timeStats.secs.today) },
+                    { l: isAr ? 'أسبوع' : 'Week', v: formatSecs(timeStats.secs.week) },
+                    { l: isAr ? 'شهر' : 'Month', v: formatSecs(timeStats.secs.month) },
+                    { l: isAr ? 'سنة' : 'Year', v: formatSecs(timeStats.secs.year) },
                   ].map((r, i) => (
                     <div key={i} className="text-center rounded-lg py-2 cursor-default" style={{ background: `${hc}08`, border: `1px solid ${hc}20` }}>
                       <p className="text-sm font-black" style={{ color: hc }}>{r.v}</p>
@@ -6004,8 +6036,8 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 const repsPct = repsTarget > 0 ? Math.min(100, Math.round((repsCurrentVal / repsTarget) * 100)) : 0;
                 const repsDone = repsTarget > 0 && repsCurrentVal >= repsTarget;
 
-                const totalMins = timeStats.mins.total;
-                const hoursCurrentVal = Math.round(totalMins / 60 * 10) / 10;
+                const totalSecs = timeStats.secs.total;
+                const hoursCurrentVal = Math.round(totalSecs / 3600 * 10) / 10;
                 const hoursTarget = habit.goalHours ?? 0;
                 const hoursPct = hoursTarget > 0 ? Math.min(100, Math.round((hoursCurrentVal / hoursTarget) * 100)) : 0;
                 const hoursDone = hoursTarget > 0 && hoursCurrentVal >= hoursTarget;

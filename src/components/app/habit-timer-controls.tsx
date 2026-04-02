@@ -8,6 +8,16 @@ import { Habit, formatTimerDuration, resolveHabitColor, computeTimerElapsed, com
 import { useTimerDisplay } from '@/lib/use-timer-display';
 import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 
+function fmtSecs(totalSecs: number): string {
+  if (totalSecs <= 0) return '0s';
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = Math.floor(totalSecs % 60);
+  if (h > 0) return s > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  return `${s}s`;
+}
+
 // Per-habit timer state & actions
 export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore>) {
   const active = store.activeTimer;
@@ -52,11 +62,10 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   const cancel = () => {
     if (currentSession && elapsed > 0 && !habit.archived) {
       const today = todayString();
-      const durationMin = Math.max(1, Math.round(elapsed / 60));
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        duration: durationMin,
+        duration: elapsed, // exact seconds — no rounding, no time lost
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: false,
         source: 'timer',
       });
@@ -67,12 +76,11 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     if (!currentSession) return;
     const secs = elapsed;
     if (secs > 0 && !habit.archived) {
-      const durationMin = Math.max(1, Math.round(secs / 60));
       const isCompleted = hasDuration ? (secs >= targetSecs) : !done;
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        duration: durationMin,
+        duration: secs, // exact seconds — no rounding, no time lost
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
       });
@@ -115,7 +123,14 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   })();
 
   const maxReps = habit.maxDailyReps || Infinity;
-  const todayReps = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
+  const todayCompletedLogs = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed);
+  const todayReps = todayCompletedLogs.length;
+  const todayTotalSecs = store.habitLogs
+    .filter(l => l.habitId === habit.id && l.date === today)
+    .reduce((sum, l) => {
+      const d = l.duration ?? 0;
+      return sum + (d <= 300 ? d * 60 : d); // normalize old minutes to seconds
+    }, 0);
   const allRepsDone = maxReps !== Infinity && todayReps >= maxReps;
   const cantStart = isStrictLocked || allRepsDone;
 
@@ -250,31 +265,38 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const timerSegments = 20;
   const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
 
+  const canDoMore = done && !allRepsDone;
   const statusLabel = t.running
     ? (isAr ? 'قيد التشغيل' : 'Running')
     : t.paused
       ? (isAr ? 'متوقف مؤقتًا' : 'Paused')
-      : done || allRepsDone
+      : allRepsDone
         ? (isAr ? 'مكتمل' : 'Completed')
-        : cantStart
-          ? (isAr ? 'غير متاح' : 'Unavailable')
-          : (isAr ? 'جاهز' : 'Ready');
+        : canDoMore
+          ? (isAr ? `${todayReps} جلسة مكتملة` : `${todayReps} session${todayReps > 1 ? 's' : ''} done`)
+          : cantStart
+            ? (isAr ? 'غير متاح' : 'Unavailable')
+            : (isAr ? 'جاهز' : 'Ready');
 
-  const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : (done || allRepsDone) ? '#22c55e' : cantStart ? '#ef4444' : `${hc}60`;
+  const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : cantStart ? '#ef4444' : `${hc}60`;
 
   const displayTime = isActive
     ? (t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed))
-    : (t.hasDuration ? formatTimerDuration(t.targetSecs) : '00:00');
+    : canDoMore && t.hasDuration
+      ? formatTimerDuration(t.targetSecs)
+      : (t.hasDuration ? formatTimerDuration(t.targetSecs) : '00:00');
 
   const timerBg = t.running
     ? `linear-gradient(135deg, ${hc}15, ${hc}08)`
     : t.paused
       ? `linear-gradient(135deg, #f59e0b10, ${hc}06)`
-      : (done || allRepsDone)
+      : allRepsDone
         ? 'linear-gradient(135deg, #22c55e08, #22c55e04)'
-        : `linear-gradient(135deg, ${hc}06, transparent)`;
+        : canDoMore
+          ? 'linear-gradient(135deg, #3b82f608, #3b82f604)'
+          : `linear-gradient(135deg, ${hc}06, transparent)`;
 
-  const timerBorder = t.running ? `${hc}35` : t.paused ? '#f59e0b30' : (done || allRepsDone) ? '#22c55e25' : `${hc}15`;
+  const timerBorder = t.running ? `${hc}35` : t.paused ? '#f59e0b30' : allRepsDone ? '#22c55e25' : canDoMore ? '#3b82f625' : `${hc}15`;
 
   return (
     <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
@@ -295,16 +317,21 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             'text-lg font-mono font-black tracking-tight text-center transition-all duration-300',
             t.running && 'scale-105',
             isIdle && !done && !allRepsDone && 'opacity-40',
-          )} style={{ color: (done || allRepsDone) ? '#22c55e' : hc }}>
-            {(done || allRepsDone) && !isActive ? (
+          )} style={{ color: allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : hc }}>
+            {allRepsDone && !isActive ? (
               <div className="flex items-center justify-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
               </div>
+            ) : canDoMore && !isActive ? (
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="text-sm font-bold">{todayReps}x ✓</span>
+                <span className="text-[9px] opacity-60">{isAr ? 'ابدأ جلسة أخرى' : 'Start another'}</span>
+              </div>
             ) : displayTime}
           </div>
 
-          {isIdle && t.hasDuration && !done && !allRepsDone && (
+          {isIdle && t.hasDuration && !allRepsDone && !canDoMore && (
             <div className="text-center mt-0.5">
               <span className="text-[9px] font-semibold text-[var(--foreground)]/40">
                 {isAr ? `الهدف: ${habit.expectedDuration} دقيقة` : `Target: ${habit.expectedDuration} min`}
@@ -320,22 +347,29 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
                     {formatTimerDuration(t.elapsed)} / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
-                {!isActive && (
+                {!isActive && canDoMore && (
+                  <span className="text-[9px] font-bold text-blue-500">
+                    {fmtSecs(todayTotalSecs)} {isAr ? 'إجمالي' : 'total'}
+                  </span>
+                )}
+                {!isActive && !canDoMore && (
                   <span className="text-[9px] font-bold text-[var(--foreground)]/30">
                     0:00 / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
-                <span className="text-[10px] font-black" style={{ color: isActive ? hc : `${hc}40` }}>
-                  {isActive ? `${pctText}%` : (done || allRepsDone) ? '100%' : '0%'}
+                <span className="text-[10px] font-black" style={{ color: isActive ? hc : allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : `${hc}40` }}>
+                  {isActive ? `${pctText}%` : allRepsDone ? '100%' : canDoMore ? `${todayReps}x` : '0%'}
                 </span>
               </div>
               <div className="flex gap-[2px]">
                 {Array.from({ length: timerSegments }).map((_, si) => (
                   <div key={si} className="flex-1 h-1.5 rounded-sm transition-all duration-300"
                     style={{
-                      background: (done || allRepsDone) && !isActive
-                        ? (si < timerSegments ? '#22c55e' : '#22c55e12')
-                        : si < filledSegs ? hc : `${hc}10`,
+                      background: allRepsDone && !isActive
+                        ? '#22c55e'
+                        : canDoMore && !isActive
+                          ? '#3b82f6'
+                          : si < filledSegs ? hc : `${hc}10`,
                       transitionDelay: isActive ? `${si * 20}ms` : '0ms',
                     }} />
                 ))}
