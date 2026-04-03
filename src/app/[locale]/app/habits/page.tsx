@@ -3012,19 +3012,21 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
     const lastDay = new Date(year, month + 1, 0);
     const startPad = firstDay.getDay();
     const totalDays = lastDay.getDate();
-    const days: { date: string; day: number; inMonth: boolean; completed: boolean; isFuture: boolean; beforeCreated: boolean; color: CompletionColor }[] = [];
+    const days: { date: string; day: number; inMonth: boolean; completed: boolean; sessionCount: number; isFuture: boolean; beforeCreated: boolean; color: CompletionColor }[] = [];
     for (let i = 0; i < startPad; i++) {
-      days.push({ date: '', day: 0, inMonth: false, completed: false, isFuture: false, beforeCreated: false, color: 'none' });
+      days.push({ date: '', day: 0, inMonth: false, completed: false, sessionCount: 0, isFuture: false, beforeCreated: false, color: 'none' });
     }
     for (let d = 1; d <= totalDays; d++) {
       const dt = new Date(year, month, d);
       const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
       const isFuture = dateStr > today;
       const beforeCreated = dt < new Date(createdDate.getFullYear(), createdDate.getMonth(), createdDate.getDate());
-      const log = !isFuture && !beforeCreated ? store.habitLogs.find(l => l.habitId === habit.id && l.date === dateStr && l.completed) : undefined;
+      const dayLogs = !isFuture && !beforeCreated ? store.habitLogs.filter(l => l.habitId === habit.id && l.date === dateStr && l.completed) : [];
+      const log = dayLogs.length > 0 ? dayLogs[0] : undefined;
       days.push({
         date: dateStr, day: d, inMonth: true, isFuture, beforeCreated,
-        completed: !!log,
+        completed: dayLogs.length > 0,
+        sessionCount: dayLogs.length,
         color: !isFuture && !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
       });
     }
@@ -3138,7 +3140,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
               return (
                 <div key={`${year}-${month}`}
                   className={cn(
-                    'rounded-2xl p-3 transition-all duration-300 cursor-default hover:scale-[1.07] hover:z-10',
+                    'rounded-2xl p-3 transition-all duration-300 cursor-default hover:scale-[1.07] hover:z-10 overflow-visible',
                     isCurrent
                       ? 'shadow-lg'
                       : isFutureMonth
@@ -3196,14 +3198,14 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                     ))}
                   </div>
                   {/* Days */}
-                  <div className="grid grid-cols-7 gap-0.5">
+                  <div className="grid grid-cols-7 gap-0.5 overflow-visible">
                     {days.map((day, di) => {
                       const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
                       const isToday = day.date === today;
                       return (
-                        <div key={di} title={day.date}
+                        <div key={di} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
                           className={cn(
-                            'h-6 rounded-md flex items-center justify-center text-[8px] font-extrabold transition-colors duration-100',
+                            'h-6 rounded-md flex items-center justify-center text-[8px] font-extrabold transition-colors duration-100 relative overflow-visible',
                             !day.inMonth && 'invisible',
                             day.isFuture && day.inMonth && 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]',
                             day.beforeCreated && day.inMonth && 'text-[var(--foreground)]',
@@ -3215,6 +3217,9 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                           )}
                           style={isToday ? { ['--tw-ring-color' as string]: hc } : undefined}>
                           {day.inMonth ? day.day : ''}
+                          {day.sessionCount > 1 && (
+                            <span className="absolute -top-1.5 -end-1.5 z-10 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[7px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
+                          )}
                         </div>
                       );
                     })}
@@ -5940,7 +5945,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
           {/* Calendar + Analytics — side by side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
             {/* Calendar — compact */}
-            <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
+            <div className="rounded-xl overflow-visible" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
               <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${hc}40` }}>
                 <button onClick={() => setCalMonth(m => { const prev = new Date(m.year, m.month - 1); return { year: prev.getFullYear(), month: prev.getMonth() }; })} disabled={!canGoPrev}
                   className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.06] disabled:opacity-20"><ChevronLeft className="h-3 w-3" /></button>
@@ -5954,13 +5959,13 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                     <div key={d} className="text-center text-sm font-black text-[var(--foreground)] uppercase">{d}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-1 overflow-visible">
                   {calendarDays.map((day, i) => {
                     const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
                     const isTodayCal = day.date === todayString();
                     return (
                       <div key={i} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
-                        className={cn('h-8 rounded-md flex items-center justify-center text-xs font-bold cursor-default relative',
+                        className={cn('h-8 rounded-md flex items-center justify-center text-xs font-bold cursor-default relative overflow-visible',
                           !day.inMonth && 'invisible',
                           day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
                           day.beforeCreated && day.inMonth && 'text-[var(--foreground)]',
@@ -5972,7 +5977,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                         style={isTodayCal ? { ['--tw-ring-color' as string]: hc } : undefined}>
                         {day.inMonth && day.day}
                         {day.sessionCount > 1 && (
-                          <span className="absolute -top-1.5 -end-1.5 h-4.5 min-w-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
+                          <span className="absolute -top-1.5 -end-1.5 z-10 h-4.5 min-w-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                         )}
                       </div>
                     );
