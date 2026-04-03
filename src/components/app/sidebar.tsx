@@ -101,7 +101,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
           active
             ? 'bg-[rgba(var(--color-primary-rgb)/0.12)] text-[var(--color-primary)]'
             : 'text-[var(--foreground)]/80',
-          !showLabel && 'justify-center px-2.5',
+          !showLabel && 'justify-center px-2.5 py-3',
         )}
       >
         {active && (
@@ -113,7 +113,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
             }}
           />
         )}
-        <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0', active && 'text-[var(--color-primary)]')} />
+        <Icon className={cn('relative z-10 shrink-0', active && 'text-[var(--color-primary)]')} style={{ width: showLabel ? 18 : 28, height: showLabel ? 18 : 28, transition: 'width 0.3s, height 0.3s' }} />
         {showLabel && (
           <span className="relative z-10 truncate">{isAr ? item.labelAr : item.labelEn}</span>
         )}

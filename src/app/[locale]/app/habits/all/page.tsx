@@ -491,7 +491,7 @@ function HabitCard({ habit, index, isAr, store, today }: { habit: Habit; index: 
 
   return (
     <motion.div variants={fadeUp} custom={index}>
-      <Link href={`/app/habits/${habit.id}`} className="block group">
+      <Link href={`/app/habits?openHabit=${habit.id}`} className="block group">
         <div
           className={cn(
             'rounded-2xl border border-[var(--foreground)]/[0.06] p-4 transition-all duration-200',

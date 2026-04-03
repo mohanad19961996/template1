@@ -1293,6 +1293,10 @@ select.app-input option {
 .app-nav-link {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.app-nav-link svg {
+  max-width: none;
+  height: unset;
+}
 .app-nav-link:hover {
   background: rgba(var(--color-primary-rgb) / 0.06);
   color: var(--color-primary);

@@ -5,6 +5,7 @@ import { AppSidebar } from '@/components/app/sidebar';
 import { AppNavbar } from '@/components/app/app-navbar';
 import { useAppStore } from '@/stores/app-store';
 import { ToastProvider } from '@/components/app/toast-notifications';
+import { GlobalTimerBanner } from '@/components/app/global-timer-banner';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
@@ -132,6 +133,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onToggleSidebar={() => setCollapsed(c => !c)}
           onOpenMobile={() => setMobileOpen(true)}
         />
+        <GlobalTimerBanner />
         <main className="flex-1">
           {children}
         </main>

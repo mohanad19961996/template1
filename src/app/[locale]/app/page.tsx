@@ -279,10 +279,11 @@ export default function DashboardPage() {
                   const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
                   const isStrict = habit.strictWindow || habit.trackingType === 'timer';
                   return (
-                    <div
+                    <Link
                       key={habit.id}
+                      href={`/app/habits?openHabit=${habit.id}`}
                       className={cn(
-                        'flex items-center gap-3 px-5 py-3.5 transition-all duration-200',
+                        'flex items-center gap-3 px-5 py-3.5 transition-all duration-200 cursor-pointer',
                         done ? 'opacity-60' : 'hover:bg-[var(--foreground)]/[0.06]'
                       )}
                     >
@@ -312,7 +313,7 @@ export default function DashboardPage() {
                             : habit.priority}
                         </span>
                       )}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
