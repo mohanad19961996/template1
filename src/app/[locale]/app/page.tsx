@@ -51,7 +51,7 @@ function ActiveTimerCard({ store, isAr }: { store: ReturnType<typeof useAppStore
 
   return (
     <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4.5}
-      className="sticky top-16 z-[190] mb-6 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
+      className="sticky top-[85px] z-[190] mb-6 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
       style={{ background: `linear-gradient(135deg, ${hc}12, rgba(var(--color-background-rgb, 255 255 255) / 0.85))`, border: `1.5px solid ${hc}25` }}
     >
       <div className="px-5 py-4 flex items-center gap-4">
@@ -89,7 +89,7 @@ function ActiveTimerCard({ store, isAr }: { store: ReturnType<typeof useAppStore
       </div>
 
       <Link href={habitId ? `/app/habits?openHabit=${habitId}` : '/app/habits'}
-        className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold transition-colors hover:bg-[var(--foreground)]/[0.04]"
+        className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold transition-colors hover:bg-[var(--foreground)]/[0.05]"
         style={{ color: hc, borderTop: `1px solid ${hc}15` }}>
         {isAr ? 'عرض التفاصيل' : 'View Details'} <ArrowRight className="h-3 w-3" />
       </Link>
@@ -169,23 +169,23 @@ export default function DashboardPage() {
       {/* Active Timer */}
       <ActiveTimerCard store={store} isAr={isAr} />
 
-      {/* Header */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-8">
+      {/* ── Header ── */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-7">
         <div className="flex items-center gap-3 mb-1">
-          <GreetingIcon className="h-5 w-5 text-[var(--color-primary)]" />
+          <GreetingIcon className="h-6 w-6 text-[var(--color-primary)]" />
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {isAr ? greetingAr : greetingEn}{store.settings.displayName ? `, ${store.settings.displayName}` : ''} 👋
           </h1>
         </div>
-        <p className="text-[var(--foreground)]/70 text-sm mt-1">
+        <p className="text-[var(--foreground)]/60 text-sm mt-1">
           {isAr
             ? `${new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
             : `${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
         </p>
       </motion.div>
 
-      {/* Quick Stats */}
-      <motion.div initial="hidden" animate="visible" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      {/* ── Quick Stats ── */}
+      <motion.div initial="hidden" animate="visible" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-7">
         {[
           {
             labelEn: 'Completion', labelAr: 'الإنجاز',
@@ -217,50 +217,52 @@ export default function DashboardPage() {
             key={i}
             variants={fadeUp}
             custom={i + 1}
-            className="rounded-2xl app-stat-card p-4 sm:p-5"
+            className="rounded-2xl dash-stat p-4 sm:p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-[var(--foreground)]/60 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[var(--foreground)]/60 uppercase tracking-wider">
                 {isAr ? stat.labelAr : stat.labelEn}
               </span>
-              <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg', stat.bg)}>
+              <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl', stat.bg)}>
                 <stat.icon className={cn('h-4 w-4', stat.color)} />
               </div>
             </div>
             <p className="text-2xl sm:text-3xl font-bold tracking-tight">{stat.value}</p>
-            <p className="text-xs text-[var(--foreground)]/60 mt-1">{isAr ? stat.subAr : stat.subEn}</p>
+            <p className="text-xs text-[var(--foreground)]/55 mt-1">{isAr ? stat.subAr : stat.subEn}</p>
           </motion.div>
         ))}
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left Column - Today's Habits */}
+      {/* ── Main Grid ── */}
+      <div className="grid lg:grid-cols-3 gap-5 lg:gap-6">
+
+        {/* ── Left Column ── */}
         <motion.div
           initial="hidden" animate="visible" variants={fadeUp} custom={5}
-          className="lg:col-span-2 space-y-6"
+          className="lg:col-span-2 space-y-5"
         >
           {/* Today's Habits */}
-          <div className="rounded-2xl app-card overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
+          <div className="rounded-2xl dash-section overflow-hidden">
+            <div className="dash-section-header flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)]/10">
                   <ListChecks className="h-5 w-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">{isAr ? 'عادات اليوم' : "Today's Habits"}</h2>
-                  <p className="text-xs text-[var(--foreground)]/60">
+                  <p className="text-xs text-[var(--foreground)]/55">
                     {completedToday.length}/{todayHabits.length} {isAr ? 'مكتملة' : 'completed'}
                   </p>
                 </div>
               </div>
-              <Link href="/app/habits" className="text-xs font-medium text-[var(--color-primary)] hover:underline flex items-center gap-1">
-                {isAr ? 'عرض الكل' : 'View all'} <Arrow className="h-3 w-3" />
+              <Link href="/app/habits" className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1 transition-colors">
+                {isAr ? 'عرض الكل' : 'View all'} <Arrow className="h-3.5 w-3.5" />
               </Link>
             </div>
 
             {todayHabits.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.05]">
                   <Sparkles className="h-6 w-6 text-[var(--foreground)]/40" />
                 </div>
                 <p className="text-sm text-[var(--foreground)]/60 mb-3">
@@ -274,7 +276,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.08]">
+              <div className="dash-row-dividers">
                 {todayHabits.slice(0, 6).map((habit) => {
                   const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
                   const isStrict = habit.strictWindow || habit.trackingType === 'timer';
@@ -283,8 +285,8 @@ export default function DashboardPage() {
                       key={habit.id}
                       href={`/app/habits?openHabit=${habit.id}`}
                       className={cn(
-                        'flex items-center gap-3 px-5 py-3.5 transition-all duration-200 cursor-pointer',
-                        done ? 'opacity-60' : 'hover:bg-[var(--foreground)]/[0.06]'
+                        'dash-row flex items-center gap-3 px-5 py-3.5 cursor-pointer',
+                        done ? 'opacity-60' : ''
                       )}
                     >
                       <span className="shrink-0">
@@ -303,7 +305,7 @@ export default function DashboardPage() {
                       </span>
                       {!done && (
                         <span className={cn(
-                          'text-[10px] px-2 py-0.5 rounded-full font-medium',
+                          'text-[10px] px-2 py-0.5 rounded-full font-semibold',
                           habit.priority === 'high' ? 'bg-red-500/10 text-red-500' :
                           habit.priority === 'medium' ? 'bg-amber-500/10 text-amber-500' :
                           'bg-blue-500/10 text-blue-500'
@@ -321,14 +323,14 @@ export default function DashboardPage() {
 
             {/* Completion bar */}
             {todayHabits.length > 0 && (
-              <div className="px-5 py-3 border-t border-[var(--foreground)]/[0.1]">
+              <div className="dash-section-footer px-5 py-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-medium text-[var(--foreground)]/60 uppercase tracking-wider">
+                  <span className="text-[10px] font-semibold text-[var(--foreground)]/55 uppercase tracking-wider">
                     {isAr ? 'التقدم' : 'Progress'}
                   </span>
                   <span className="text-xs font-bold text-[var(--color-primary)]">{completionRate}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                <div className="h-2 rounded-full dash-progress-track">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${completionRate}%` }}
@@ -341,27 +343,27 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Sessions */}
-          <div className="rounded-2xl app-card overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
+          <div className="rounded-2xl dash-section overflow-hidden">
+            <div className="dash-section-header flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10">
                   <Clock className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">{isAr ? 'الجلسات الأخيرة' : 'Recent Sessions'}</h2>
-                  <p className="text-xs text-[var(--foreground)]/60">
+                  <p className="text-xs text-[var(--foreground)]/55">
                     {isAr ? 'آخر جلسات المهارات' : 'Latest skill sessions'}
                   </p>
                 </div>
               </div>
-              <Link href="/app/skills" className="text-xs font-medium text-[var(--color-primary)] hover:underline flex items-center gap-1">
-                {isAr ? 'عرض الكل' : 'View all'} <Arrow className="h-3 w-3" />
+              <Link href="/app/skills" className="text-xs font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1 transition-colors">
+                {isAr ? 'عرض الكل' : 'View all'} <Arrow className="h-3.5 w-3.5" />
               </Link>
             </div>
 
             {recentSessions.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.05]">
                   <GraduationCap className="h-6 w-6 text-[var(--foreground)]/40" />
                 </div>
                 <p className="text-sm text-[var(--foreground)]/60 mb-3">
@@ -375,23 +377,23 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.08]">
+              <div className="dash-row-dividers">
                 {recentSessions.map((session) => {
                   const skill = store.skills.find(s => s.id === session.skillId);
                   return (
-                    <div key={session.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-[var(--foreground)]/[0.06] transition-all">
+                    <div key={session.id} className="dash-row flex items-center gap-3 px-5 py-3.5">
                       <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${skill?.color ?? '#3B82F6'}20` }}>
                         <GraduationCap className="h-4 w-4" style={{ color: skill?.color ?? '#3B82F6' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{isAr ? skill?.nameAr : skill?.nameEn}</p>
-                        <p className="text-xs text-[var(--foreground)]/60">{session.date} · {session.startTime}</p>
+                        <p className="text-xs text-[var(--foreground)]/55">{session.date} · {session.startTime}</p>
                       </div>
                       <div className="text-end">
                         <p className="text-sm font-semibold">{formatDuration(session.duration)}</p>
                         <div className="flex items-center gap-0.5 justify-end">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={cn('h-2.5 w-2.5', i < session.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
+                            <Star key={i} className={cn('h-2.5 w-2.5', i < session.qualityRating ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/25')} />
                           ))}
                         </div>
                       </div>
@@ -403,12 +405,12 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Right Column */}
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} className="space-y-6">
+        {/* ── Right Column ── */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} className="space-y-5">
           {/* Quick Actions */}
-          <div className="rounded-2xl app-card p-5">
+          <div className="rounded-2xl dash-sidebar-card p-5">
             <h3 className="font-semibold text-sm mb-4">{isAr ? 'إجراءات سريعة' : 'Quick Actions'}</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {[
                 { href: '/app/habits', labelEn: 'New Habit', labelAr: 'عادة جديدة', icon: ListChecks, color: 'text-emerald-500 bg-emerald-500/10' },
                 { href: '/app/skills', labelEn: 'New Skill', labelAr: 'مهارة جديدة', icon: GraduationCap, color: 'text-blue-500 bg-blue-500/10' },
@@ -418,7 +420,7 @@ export default function DashboardPage() {
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="flex flex-col items-center gap-2 rounded-xl app-card p-3"
+                  className="dash-action-tile flex flex-col items-center gap-2 rounded-xl p-3.5"
                 >
                   <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', action.color.split(' ')[1])}>
                     <action.icon className={cn('h-5 w-5', action.color.split(' ')[0])} />
@@ -430,19 +432,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Active Streaks */}
-          <div className="rounded-2xl app-card p-5">
+          <div className="rounded-2xl dash-sidebar-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'السلاسل النشطة' : 'Active Streaks'}</h3>
               <Flame className="h-4 w-4 text-orange-500" />
             </div>
             {currentStreaks.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/55 text-center py-4">
                 {isAr ? 'ابدأ بإكمال عاداتك لبناء سلاسل!' : 'Complete habits to build streaks!'}
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {currentStreaks.map(({ habit, streak }) => (
-                  <div key={habit.id} className="flex items-center gap-3">
+                  <div key={habit.id} className="dash-streak-row flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: habit.color }} />
                     <span className="text-xs flex-1 truncate">{isAr ? habit.nameAr : habit.nameEn}</span>
                     <div className="flex items-center gap-1">
@@ -456,24 +458,24 @@ export default function DashboardPage() {
           </div>
 
           {/* Top Skills */}
-          <div className="rounded-2xl app-card p-5">
+          <div className="rounded-2xl dash-sidebar-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'أفضل المهارات' : 'Top Skills'}</h3>
               <TrendingUp className="h-4 w-4 text-[var(--color-primary)]" />
             </div>
             {topSkills.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/55 text-center py-4">
                 {isAr ? 'أضف مهاراتك وابدأ التتبع!' : 'Add skills and start tracking!'}
               </p>
             ) : (
               <div className="space-y-3">
                 {topSkills.map((skill) => (
-                  <div key={skill.id}>
+                  <div key={skill.id} className="dash-skill-row">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium truncate">{isAr ? skill.nameAr : skill.nameEn}</span>
-                      <span className="text-[10px] text-[var(--foreground)]/60">{formatDuration(skill.totalMinutes)}</span>
+                      <span className="text-[10px] text-[var(--foreground)]/55">{formatDuration(skill.totalMinutes)}</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                    <div className="h-1.5 rounded-full dash-progress-track">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -489,13 +491,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Goals */}
-          <div className="rounded-2xl app-card p-5">
+          <div className="rounded-2xl dash-sidebar-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{isAr ? 'الأهداف النشطة' : 'Active Goals'}</h3>
               <Target className="h-4 w-4 text-emerald-500" />
             </div>
             {activeGoals.length === 0 ? (
-              <p className="text-xs text-[var(--foreground)]/60 text-center py-4">
+              <p className="text-xs text-[var(--foreground)]/55 text-center py-4">
                 {isAr ? 'حدد أهدافك وحققها!' : 'Set your goals and achieve them!'}
               </p>
             ) : (
@@ -504,7 +506,7 @@ export default function DashboardPage() {
                   <div key={goal.id} className="flex items-center gap-3">
                     <div className="relative h-8 w-8 shrink-0">
                       <svg className="h-8 w-8 -rotate-90" viewBox="0 0 32 32">
-                        <circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" strokeWidth="3" className="text-[var(--foreground)]/[0.06]" />
+                        <circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" strokeWidth="3" className="text-[var(--foreground)]/[0.15]" />
                         <circle cx="16" cy="16" r="12" fill="none" stroke={goal.color} strokeWidth="3"
                           strokeDasharray={`${goal.progress * 0.754} 75.4`} strokeLinecap="round"
                         />
@@ -513,7 +515,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{isAr ? goal.titleAr : goal.titleEn}</p>
-                      <p className="text-[10px] text-[var(--foreground)]/60">
+                      <p className="text-[10px] text-[var(--foreground)]/55">
                         {goal.milestones.filter(m => m.completed).length}/{goal.milestones.length} {isAr ? 'مراحل' : 'milestones'}
                       </p>
                     </div>
@@ -524,7 +526,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Motivational Card */}
-          <div className="rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)]/70 p-5 text-white">
+          <div className="rounded-2xl dash-motivational bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)]/70 p-5 text-white">
             <Sparkles className="h-6 w-6 mb-3 opacity-80" />
             <p className="text-sm font-semibold mb-1">
               {isAr ? 'استمر في التقدم!' : 'Keep Growing!'}

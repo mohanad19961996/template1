@@ -9,6 +9,7 @@ import {
   HabitHistoryEntry, HabitChangeType,
   computeTimerElapsed, computeTimerRemaining,
 } from '@/types/app';
+import { playHabitDoneSound, playHabitUndoneSound } from '@/lib/sounds';
 
 // ── Storage ────────────────────────────────────────────────
 
@@ -452,13 +453,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
     // Only upsert simple boolean logs; timer/count/duration logs always insert new rows
     apiPost(`/api/habits/${data.habitId}/logs`, { ...log, upsert: isSimpleLog });
+    if (data.completed) playHabitDoneSound();
     return log;
   }, [update]);
 
   const deleteHabitLog = useCallback((id: string) => {
     const log = stateRef.current.habitLogs.find(l => l.id === id);
     update(s => ({ ...s, habitLogs: s.habitLogs.filter(l => l.id !== id) }));
-    if (log) apiDelete(`/api/habits/${log.habitId}/logs?logId=${id}`);
+    if (log) {
+      apiDelete(`/api/habits/${log.habitId}/logs?logId=${id}`);
+      if (log.completed) playHabitUndoneSound();
+    }
   }, [update]);
 
   const getHabitLogs = useCallback((habitId: string, startDate?: string, endDate?: string): HabitLog[] => {

@@ -266,7 +266,7 @@ export default function HormonesPage() {
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل نشاط العافية' : 'Log Wellness Activity'}</h2>
@@ -282,7 +282,7 @@ export default function HormonesPage() {
                       return (
                         <button key={t} onClick={() => { setTrackerType(t); setSelectedActivities([]); }}
                           className={cn('flex flex-col items-center gap-1 rounded-xl py-2.5 text-[10px] font-medium transition-all border',
-                            trackerType === t ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.06]' : 'border-transparent')}>
+                            trackerType === t ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.05]' : 'border-transparent')}>
                           <info.icon className="h-4 w-4" style={{ color: info.color }} />
                           {isAr ? info.nameAr : info.nameEn}
                         </button>
@@ -301,7 +301,7 @@ export default function HormonesPage() {
                         <button key={act}
                           onClick={() => setSelectedActivities(prev => selected ? prev.filter(a => a !== act) : [...prev, act])}
                           className={cn('flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all border',
-                            selected ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
+                            selected ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.18] text-[var(--foreground)]/70')}>
                           {label && <label.icon className="h-3 w-3" />}
                           {label ? (isAr ? label.ar : label.en) : act}
                         </button>

@@ -194,7 +194,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
 
   const getCellColor = (rate: number, inYear: boolean, isFuture: boolean) => {
     if (!inYear || isFuture) return 'bg-[var(--foreground)]/[0.03]';
-    if (rate < 0) return 'bg-[var(--foreground)]/[0.06]'; // no habits scheduled
+    if (rate < 0) return 'bg-[var(--foreground)]/[0.05]'; // no habits scheduled
     if (rate === 0) return 'bg-red-500/20';
     if (rate < 0.5) return 'bg-orange-500/40';
     if (rate < 1) return 'bg-emerald-500/50';
@@ -232,7 +232,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
           { label: isAr ? 'أيام مثالية' : 'Perfect Days', value: `${stats.perfectDays}`, color: 'text-amber-500' },
           { label: isAr ? 'أيام فارغة' : 'Zero Days', value: `${stats.zeroDays}`, color: 'text-red-400' },
         ].map((s, i) => (
-          <div key={i} className="rounded-xl p-3 bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
+          <div key={i} className="rounded-xl p-3 bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15]">
             <div className={cn('text-lg font-bold', s.color)}>{s.value}</div>
             <div className="text-[11px] text-[var(--foreground)]/60 font-medium mt-0.5">{s.label}</div>
           </div>
@@ -240,7 +240,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
       </div>
 
       {/* Heatmap */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--foreground)]/[0.06] p-4 bg-[var(--foreground)]/[0.02]">
+      <div className="overflow-x-auto rounded-xl border border-[var(--foreground)]/[0.15] p-4 bg-[var(--foreground)]/[0.02]">
         {/* Month labels */}
         <div className="flex gap-[2px] mb-1 ms-6">
           {monthPositions.map((mp, i) => {
@@ -296,7 +296,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
             <div className="h-[11px] w-[11px] rounded-[2px] bg-emerald-500/80" />
             <span>{isAr ? 'أكثر' : 'More'}</span>
             <span className="ms-2 text-[var(--foreground)]/30">|</span>
-            <div className="h-[11px] w-[11px] rounded-[2px] bg-[var(--foreground)]/[0.06]" />
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[var(--foreground)]/[0.05]" />
             <span>{isAr ? 'لا عادات' : 'No habits'}</span>
           </div>
           {hoveredCell && (
@@ -366,7 +366,7 @@ export default function AllHabitsPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={isAr ? 'بحث...' : 'Search...'}
-              className="h-9 w-44 rounded-xl bg-[var(--foreground)]/[0.05] ps-9 pe-3 text-sm border border-[var(--foreground)]/[0.08] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+              className="h-9 w-44 rounded-xl bg-[var(--foreground)]/[0.05] ps-9 pe-3 text-sm border border-[var(--foreground)]/[0.18] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute end-2 top-1/2 -translate-y-1/2">
@@ -382,7 +382,7 @@ export default function AllHabitsPage() {
               'h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
               showArchived
                 ? 'text-white border-transparent shadow-md'
-                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.05]',
+                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]',
             )}
             style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
           >
@@ -397,7 +397,7 @@ export default function AllHabitsPage() {
               'h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
               yearView
                 ? 'text-white border-transparent shadow-md'
-                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.05]',
+                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]',
             )}
             style={yearView ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
           >
@@ -462,7 +462,7 @@ export default function AllHabitsPage() {
 
       {allHabits.length === 0 && (
         <div className="text-center py-16">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--foreground)]/[0.04]">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--foreground)]/[0.05]">
             <ListChecks className="h-6 w-6 text-[var(--foreground)]/40" />
           </div>
           <p className="text-sm text-[var(--foreground)]/60 font-medium">
@@ -494,8 +494,8 @@ function HabitCard({ habit, index, isAr, store, today }: { habit: Habit; index: 
       <Link href={`/app/habits?openHabit=${habit.id}`} className="block group">
         <div
           className={cn(
-            'rounded-2xl border border-[var(--foreground)]/[0.06] p-4 transition-all duration-200',
-            'hover:shadow-lg hover:border-[var(--foreground)]/[0.12] hover:-translate-y-0.5',
+            'rounded-2xl border border-[var(--foreground)]/[0.15] p-4 transition-all duration-200',
+            'hover:shadow-lg hover:border-[var(--foreground)]/[0.18] hover:-translate-y-0.5',
             'bg-[var(--color-background)]',
             habit.archived && 'opacity-60',
           )}

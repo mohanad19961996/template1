@@ -31,10 +31,10 @@ const PRIORITY_CONFIG: Record<TaskPriority, { en: string; ar: string; color: str
 };
 
 const STATUS_CONFIG: Record<TaskStatus, { en: string; ar: string; color: string; bg: string }> = {
-  'todo': { en: 'To Do', ar: 'للتنفيذ', color: 'text-[var(--foreground)]/60', bg: 'bg-[var(--foreground)]/[0.06]' },
+  'todo': { en: 'To Do', ar: 'للتنفيذ', color: 'text-[var(--foreground)]/60', bg: 'bg-[var(--foreground)]/[0.05]' },
   'in-progress': { en: 'In Progress', ar: 'قيد التنفيذ', color: 'text-blue-500', bg: 'bg-blue-500/10' },
   'completed': { en: 'Completed', ar: 'مكتمل', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-  'cancelled': { en: 'Cancelled', ar: 'ملغي', color: 'text-[var(--foreground)]/40', bg: 'bg-[var(--foreground)]/[0.04]' },
+  'cancelled': { en: 'Cancelled', ar: 'ملغي', color: 'text-[var(--foreground)]/40', bg: 'bg-[var(--foreground)]/[0.05]' },
 };
 
 const CATEGORY_PRESETS = [
@@ -275,7 +275,7 @@ export default function TasksPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.05 }}
-              className="rounded-xl border border-[var(--foreground)]/[0.06] bg-[var(--color-background)] p-4 flex items-center gap-3"
+              className="rounded-xl border border-[var(--foreground)]/[0.15] bg-[var(--color-background)] p-4 flex items-center gap-3"
               style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
             >
               <div className="flex items-center justify-center w-9 h-9 rounded-lg" style={{ background: `${stat.accent}15` }}>
@@ -302,7 +302,7 @@ export default function TasksPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={isAr ? 'بحث في المهام...' : 'Search tasks...'}
-              className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-[var(--foreground)]/[0.04] border border-[var(--foreground)]/[0.08] text-sm focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]/30 transition-all"
+              className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-[var(--foreground)]/[0.05] border border-[var(--foreground)]/[0.18] text-sm focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]/30 transition-all"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute end-3 top-1/2 -translate-y-1/2">
@@ -319,7 +319,7 @@ export default function TasksPage() {
                 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
                 showFilters
                   ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                  : 'border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/60'
+                  : 'border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60'
               )}
             >
               <Filter className="h-4 w-4" />
@@ -329,7 +329,7 @@ export default function TasksPage() {
               )}
             </button>
 
-            <div className="flex rounded-xl border border-[var(--foreground)]/[0.08] overflow-hidden">
+            <div className="flex rounded-xl border border-[var(--foreground)]/[0.18] overflow-hidden">
               <button
                 onClick={() => setViewMode('board')}
                 className={cn('px-3 py-2.5 text-xs font-medium transition-all',
@@ -357,7 +357,7 @@ export default function TasksPage() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-[var(--foreground)]/[0.06]">
+              <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-[var(--foreground)]/[0.15]">
                 {/* Priority filter */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-semibold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'الأولوية' : 'Priority'}</span>
@@ -367,7 +367,7 @@ export default function TasksPage() {
                         className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all',
                           filterPriority === p
                             ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20'
-                            : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
+                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
                         {p === 'all' ? (isAr ? 'الكل' : 'All') : (isAr ? PRIORITY_CONFIG[p].ar : PRIORITY_CONFIG[p].en)}
                       </button>
                     ))}
@@ -383,7 +383,7 @@ export default function TasksPage() {
                         className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all',
                           filterStatus === s
                             ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20'
-                            : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
+                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
                         {s === 'all' ? (isAr ? 'الكل' : 'All') : (isAr ? STATUS_CONFIG[s].ar : STATUS_CONFIG[s].en)}
                       </button>
                     ))}
@@ -396,7 +396,7 @@ export default function TasksPage() {
                   <select
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[var(--foreground)]/[0.04] border-0 text-[var(--foreground)]/60"
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[var(--foreground)]/[0.05] border-0 text-[var(--foreground)]/60"
                   >
                     <option value="dueDate">{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</option>
                     <option value="priority">{isAr ? 'الأولوية' : 'Priority'}</option>
@@ -404,7 +404,7 @@ export default function TasksPage() {
                     <option value="name">{isAr ? 'الاسم' : 'Name'}</option>
                   </select>
                   <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                    className="p-1 rounded-lg hover:bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/40">
+                    className="p-1 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40">
                     {sortDir === 'asc' ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
                   </button>
                 </div>
@@ -518,7 +518,7 @@ export default function TasksPage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {allTasks.length > 0 && (
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3} className="mt-8">
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.06] bg-[var(--color-background)] p-5"
+          <div className="rounded-2xl border border-[var(--foreground)]/[0.15] bg-[var(--color-background)] p-5"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
@@ -613,16 +613,16 @@ export default function TasksPage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] z-[var(--z-modal)] sm:w-[560px] max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] z-[var(--z-modal)] sm:w-[560px] max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               {/* Modal header */}
-              <div className="sticky top-0 z-10 bg-[var(--color-background)] p-5 pb-4 border-b border-[var(--foreground)]/[0.08] flex items-center justify-between">
+              <div className="sticky top-0 z-10 bg-[var(--color-background)] p-5 pb-4 border-b border-[var(--foreground)]/[0.18] flex items-center justify-between">
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <ClipboardList className="w-5 h-5 text-[var(--color-primary)]" />
                   {editingTask ? (isAr ? 'تعديل المهمة' : 'Edit Task') : (isAr ? 'مهمة جديدة' : 'New Task')}
                 </h2>
                 <button onClick={() => { setShowForm(false); resetForm(); }}
-                  className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/40">
+                  className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -681,7 +681,7 @@ export default function TasksPage() {
                             'flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all',
                             form.priority === p
                               ? cn(PRIORITY_CONFIG[p].bg, PRIORITY_CONFIG[p].color, 'ring-1', p === 'urgent' ? 'ring-red-500/30' : p === 'high' ? 'ring-orange-500/30' : p === 'medium' ? 'ring-amber-500/30' : 'ring-blue-400/30')
-                              : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50'
+                              : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50'
                           )}>
                           {isAr ? PRIORITY_CONFIG[p].ar : PRIORITY_CONFIG[p].en}
                         </button>
@@ -701,7 +701,7 @@ export default function TasksPage() {
                             'flex-1 py-2 rounded-lg text-[11px] font-semibold transition-all',
                             form.status === s
                               ? cn(STATUS_CONFIG[s].bg, STATUS_CONFIG[s].color, 'ring-1 ring-current/20')
-                              : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50'
+                              : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50'
                           )}>
                           {isAr ? STATUS_CONFIG[s].ar : STATUS_CONFIG[s].en}
                         </button>
@@ -755,7 +755,7 @@ export default function TasksPage() {
                           'px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all',
                           form.category === c.en
                             ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20'
-                            : 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]'
+                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]'
                         )}>
                         {isAr ? c.ar : c.en}
                       </button>
@@ -790,7 +790,7 @@ export default function TasksPage() {
                       className="flex-1 rounded-xl app-input px-3 py-2 text-sm"
                     />
                     <button onClick={addSubtask}
-                      className="px-3 py-2 rounded-xl bg-[var(--foreground)]/[0.06] hover:bg-[var(--foreground)]/[0.1] text-[var(--foreground)]/50">
+                      className="px-3 py-2 rounded-xl bg-[var(--foreground)]/[0.05] hover:bg-[var(--foreground)]/[0.1] text-[var(--foreground)]/50">
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
@@ -813,7 +813,7 @@ export default function TasksPage() {
               </div>
 
               {/* Footer */}
-              <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-between gap-3 p-5 pt-4 border-t border-[var(--foreground)]/[0.08]">
+              <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-between gap-3 p-5 pt-4 border-t border-[var(--foreground)]/[0.18]">
                 {editingTask && (
                   <button
                     onClick={() => { store.deleteTask(editingTask.id); setShowForm(false); resetForm(); }}
@@ -824,7 +824,7 @@ export default function TasksPage() {
                 )}
                 <div className="flex gap-3 ms-auto">
                   <button onClick={() => { setShowForm(false); resetForm(); }}
-                    className="px-4 py-2.5 rounded-xl text-sm text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.06]">
+                    className="px-4 py-2.5 rounded-xl text-sm text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
                     {isAr ? 'إلغاء' : 'Cancel'}
                   </button>
                   <button onClick={handleSave}
@@ -873,7 +873,7 @@ function BoardColumn({
       {/* Column Content */}
       <div className="flex-1 space-y-2.5 min-h-[200px]">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 rounded-2xl border-2 border-dashed border-[var(--foreground)]/[0.06]">
+          <div className="flex flex-col items-center justify-center py-12 rounded-2xl border-2 border-dashed border-[var(--foreground)]/[0.15]">
             {emptyIcon}
             <p className="text-xs text-[var(--foreground)]/30 mt-3">{emptyMessage}</p>
           </div>
@@ -930,10 +930,10 @@ function TaskCard({
       className={cn(
         'group rounded-xl border transition-all duration-200',
         isDone
-          ? 'border-[var(--foreground)]/[0.04] bg-[var(--foreground)]/[0.015]'
+          ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.015]'
           : isOver
             ? 'border-red-500/20 bg-red-500/[0.02]'
-            : 'border-[var(--foreground)]/[0.08] bg-[var(--color-background)] hover:border-[var(--color-primary)]/20 hover:shadow-sm',
+            : 'border-[var(--foreground)]/[0.18] bg-[var(--color-background)] hover:border-[var(--color-primary)]/20 hover:shadow-sm',
       )}
       style={!isDone && !isOver ? { boxShadow: '0 1px 2px rgba(0,0,0,0.03)' } : undefined}
     >
@@ -971,10 +971,10 @@ function TaskCard({
 
               {/* Actions */}
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/30">
+                <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30">
                   <Edit3 className="w-3 h-3" />
                 </button>
-                <button onClick={onExpand} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/30">
+                <button onClick={onExpand} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30">
                   {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
               </div>
@@ -1029,7 +1029,7 @@ function TaskCard({
 
             {/* Subtask progress bar */}
             {subtasksTotal > 0 && !compact && (
-              <div className="mt-2 h-1 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+              <div className="mt-2 h-1 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
                 <div className="h-full rounded-full bg-[var(--color-primary)] transition-all duration-500"
                   style={{ width: `${subtaskProgress}%` }} />
               </div>
@@ -1047,7 +1047,7 @@ function TaskCard({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-3.5 pb-3.5 pt-0 border-t border-[var(--foreground)]/[0.06] mt-0">
+            <div className="px-3.5 pb-3.5 pt-0 border-t border-[var(--foreground)]/[0.15] mt-0">
               <div className="pt-3 space-y-2.5">
                 {/* Description */}
                 {desc && (
@@ -1064,7 +1064,7 @@ function TaskCard({
                       <button
                         key={st.id}
                         onClick={() => onToggleSubtask(st.id)}
-                        className="flex items-center gap-2 w-full text-start px-2 py-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.04] transition-colors"
+                        className="flex items-center gap-2 w-full text-start px-2 py-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] transition-colors"
                       >
                         <div className={cn(
                           'w-4 h-4 rounded border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all',

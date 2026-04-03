@@ -1,7 +1,7 @@
 // Sound utility for habit notifications
 // Uses Web Audio API with graceful fallback
 
-type SoundType = 'success' | 'error' | 'warning' | 'info' | 'timer-complete' | 'timer-start' | 'timer-pause' | 'timer-resume' | 'alarm' | 'reminder' | 'notification';
+type SoundType = 'success' | 'error' | 'warning' | 'info' | 'timer-complete' | 'timer-start' | 'timer-pause' | 'timer-resume' | 'alarm' | 'reminder' | 'notification' | 'habit-done' | 'habit-undone';
 
 // Frequencies and patterns for different notification types
 const SOUND_CONFIGS: Record<SoundType, { freqs: number[]; durations: number[]; type: OscillatorType; gain: number }> = {
@@ -16,6 +16,8 @@ const SOUND_CONFIGS: Record<SoundType, { freqs: number[]; durations: number[]; t
   alarm:          { freqs: [880, 0, 880, 0, 880],  durations: [200, 100, 200, 100, 300], type: 'square', gain: 0.3 },
   reminder:       { freqs: [659, 784, 659],        durations: [150, 150, 200], type: 'sine',     gain: 0.25 },
   notification:   { freqs: [523, 659],             durations: [100, 200],      type: 'sine',     gain: 0.2 },
+  'habit-done':   { freqs: [392, 523, 659, 784, 1047], durations: [120, 120, 150, 200, 500], type: 'sine', gain: 0.3 },
+  'habit-undone': { freqs: [659, 523, 440, 349],       durations: [150, 200, 250, 400],      type: 'triangle', gain: 0.2 },
 };
 
 let audioCtx: AudioContext | null = null;
@@ -79,3 +81,5 @@ export const playTimerPauseSound = () => playSound('timer-pause');
 export const playTimerResumeSound = () => playSound('timer-resume');
 export const playAlarmSound = () => playSound('alarm');
 export const playReminderSound = () => playSound('reminder');
+export const playHabitDoneSound = () => playSound('habit-done');
+export const playHabitUndoneSound = () => playSound('habit-undone');

@@ -94,7 +94,7 @@ function LiveClock({ isAr }: { isAr: boolean }) {
   const period = h >= 12 ? (isAr ? 'م' : 'PM') : (isAr ? 'ص' : 'AM');
   const h12 = h % 12 || 12;
 
-  const dateStr = now.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
+  const dateStr = now.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
@@ -877,7 +877,7 @@ export default function AlarmsPage() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-4 pb-4 border-t border-[var(--foreground)]/[0.06] pt-3">
+                      <div className="px-4 pb-4 border-t border-[var(--foreground)]/[0.15] pt-3">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                           <div>
                             <span className="text-[var(--foreground)]/50 block mb-0.5">{isAr ? 'الصوت' : 'Sound'}</span>
@@ -902,7 +902,7 @@ export default function AlarmsPage() {
                             <span className="font-medium">{alarm.gradualVolume ? (isAr ? 'نعم' : 'Yes') : (isAr ? 'لا' : 'No')}</span>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[var(--foreground)]/[0.06]">
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-[var(--foreground)]/[0.15]">
                           <button
                             onClick={() => openEdit(alarm)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--foreground)]/5 hover:bg-[var(--foreground)]/10 cursor-pointer"

@@ -40,7 +40,7 @@ export default function CalendarPage() {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
-  const monthName = currentDate.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'long', year: 'numeric' });
+  const monthName = currentDate.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'long', year: 'numeric' });
 
   const dayNames = isAr
     ? ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت']
@@ -135,7 +135,7 @@ export default function CalendarPage() {
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="space-y-4">
           <div className="rounded-2xl app-card p-5">
             <h3 className="text-sm font-semibold mb-1">
-              {new Date(selectedDate).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {new Date(selectedDate).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
             <p className="text-xs text-[var(--foreground)]/60 mb-4">{selectedDate === today ? (isAr ? 'اليوم' : 'Today') : ''}</p>
 

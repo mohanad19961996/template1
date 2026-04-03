@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -10,18 +10,32 @@ import {
   todayString, MoodLevel, Difficulty, computeTimerElapsed, formatLocalDate,
 } from '@/types/app';
 import { useTimerDisplay } from '@/lib/use-timer-display';
+import { stopAlarmSound } from '@/lib/alarm-sounds';
 import { useSearchParams } from 'next/navigation';
 import {
   Play, Pause, Square, RotateCcw, Timer, Clock, Zap, Brain,
   Coffee, AlertCircle, Plus, X, Star, Volume2, VolumeX,
   Maximize2, Minimize2, Settings, ChevronDown, GraduationCap,
-  ListChecks,
+  ListChecks, Target, TrendingUp, Flame, Keyboard,
+  ChevronUp, Hash, Sparkles,
 } from 'lucide-react';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } }),
+/* ─── animation variants ─── */
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06 } },
 };
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
+};
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.92 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
+};
+
+/* ─── helpers ─── */
+function formatTimeUnit(n: number) { return String(n).padStart(2, '0'); }
 
 export default function TimersPage() {
   const locale = useLocale();
@@ -33,6 +47,9 @@ export default function TimersPage() {
   const [linkedSkillId, setLinkedSkillId] = useState<string>('');
   const [linkedHabitId, setLinkedHabitId] = useState<string>(searchParams.get('habitId') ?? '');
   const [countdownMinutes, setCountdownMinutes] = useState(25);
+  const [customH, setCustomH] = useState(0);
+  const [customM, setCustomM] = useState(25);
+  const [customS, setCustomS] = useState(0);
   const [pomodoroConfig, setPomodoroConfig] = useState(DEFAULT_POMODORO);
   const [labelEn, setLabelEn] = useState('Focus Session');
   const [labelAr, setLabelAr] = useState('جلسة تركيز');
@@ -43,12 +60,15 @@ export default function TimersPage() {
   const [completionRating, setCompletionRating] = useState<MoodLevel>(3);
   const [showHistory, setShowHistory] = useState(false);
   const [clockNow, setClockNow] = useState<Date | null>(null);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const active = store.activeTimer;
   const isRunning = active?.state === 'running';
   const isPaused = active?.state === 'paused';
+  const isIdle = !active;
+  const isCompleted = active?.state === 'completed';
 
-  // Computed display values from absolute timestamps (refreshes every second)
   const timer = useTimerDisplay(active);
 
   // Live clock
@@ -58,19 +78,28 @@ export default function TimersPage() {
     return () => clearInterval(cid);
   }, []);
 
-  // Watch for completion — derived from timestamps, not ticks
+  // Watch for completion — the global layout also checks, but this handles
+  // pomodoro phase transitions and showing the completion modal on the timers page.
+  const prevStateRef = useRef<string | null>(null);
   useEffect(() => {
     if (!active || active.state !== 'running') return;
-    // Check if countdown/pomodoro has ended
     if (active.endsAt && new Date(active.endsAt).getTime() <= Date.now()) {
       if (active.mode === 'pomodoro') {
         handlePomodoroPhaseComplete();
       } else {
-        setShowComplete(true);
-        store.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: active.targetDuration ? active.targetDuration * 1000 : 0, endsAt: undefined });
+        // Don't set completed here — let the global layout handler do it
+        // so the alarm overlay fires. Just show the local completion modal.
       }
     }
   }, [timer.now, active?.state, active?.mode]);
+
+  // Show completion modal when timer state becomes 'completed'
+  useEffect(() => {
+    if (active?.state === 'completed' && prevStateRef.current === 'running') {
+      setShowComplete(true);
+    }
+    prevStateRef.current = active?.state ?? null;
+  }, [active?.state]);
 
   const handlePomodoroPhaseComplete = useCallback(() => {
     if (!store.activeTimer) return;
@@ -102,18 +131,16 @@ export default function TimersPage() {
         remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
       });
     } else {
-      // Long break done — session complete
       setShowComplete(true);
       store.updateActiveTimer({ state: 'completed', remainingMs: 0, endsAt: undefined });
     }
   }, [store, pomodoroConfig]);
 
-  // Auto-fill label when habit is selected
   const selectedHabit = linkedHabitId ? store.habits.find(h => h.id === linkedHabitId) : null;
 
   const handleStart = () => {
     let targetDuration: number | undefined;
-    if (mode === 'countdown') targetDuration = countdownMinutes * 60;
+    if (mode === 'countdown') targetDuration = (customH * 3600) + (customM * 60) + customS;
     if (mode === 'pomodoro') targetDuration = pomodoroConfig.workMinutes * 60;
 
     const timerType = linkedHabitId ? 'habit-linked' : linkedSkillId ? 'skill-linked' : 'independent';
@@ -135,11 +162,8 @@ export default function TimersPage() {
   };
 
   const handlePauseResume = () => {
-    if (isRunning) {
-      store.pauseTimer();
-    } else if (isPaused) {
-      store.resumeTimer();
-    }
+    if (isRunning) store.pauseTimer();
+    else if (isPaused) store.resumeTimer();
   };
 
   const handleStop = () => {
@@ -157,7 +181,6 @@ export default function TimersPage() {
 
     store.completeTimer(active.sessionId, completionNote, completionRating);
 
-    // Auto-log to skill if linked
     const finalElapsed = computeTimerElapsed(active);
     if (sId && finalElapsed > 60) {
       const durationMin = Math.round(finalElapsed / 60);
@@ -179,8 +202,6 @@ export default function TimersPage() {
       });
     }
 
-    // Habit completion is only allowed from the habit card — no auto-log here
-
     setShowComplete(false);
     setCompletionNote('');
     setCompletionRating(3);
@@ -189,18 +210,22 @@ export default function TimersPage() {
   };
 
   const handleCancel = () => {
+    stopAlarmSound('__timer_alarm__');
     store.cancelTimer();
     setShowComplete(false);
   };
 
-  // Display values — derived from absolute timestamps via useTimerDisplay
+  // Display values
   const elapsed = timer.elapsed;
   const target = active?.targetDuration;
   const remaining = timer.remaining;
   const displayTime = timer.displayTime;
   const progress = timer.progress;
-  const circumference = 2 * Math.PI * 120;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  // SVG ring
+  const ringRadius = 140;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference - (progress / 100) * ringCircumference;
 
   const pomodoroPhaseLabel = useMemo(() => {
     if (!active?.pomodoroPhase) return '';
@@ -212,7 +237,7 @@ export default function TimersPage() {
     return isAr ? labels[active.pomodoroPhase]?.ar : labels[active.pomodoroPhase]?.en;
   }, [active?.pomodoroPhase, isAr]);
 
-  // History
+  // Stats
   const recentTimers = useMemo(() =>
     [...store.timerSessions].filter(t => t.completed).sort((a, b) => (b.endedAt ?? '').localeCompare(a.endedAt ?? '')).slice(0, 10),
     [store.timerSessions]
@@ -235,201 +260,710 @@ export default function TimersPage() {
     return store.timerSessions.filter(t => t.completed && t.startedAt >= weekStart).reduce((a, t) => a + t.duration, 0);
   }, [store.timerSessions]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (showComplete) {
+        if (e.key === 'Escape') { e.preventDefault(); handleCancel(); }
+        if (e.key === 'Enter') { e.preventDefault(); handleComplete(); }
+        return;
+      }
+      if (showKeyboardHelp && e.key === 'Escape') { e.preventDefault(); setShowKeyboardHelp(false); return; }
+      if (showHistory && e.key === 'Escape') { e.preventDefault(); setShowHistory(false); return; }
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          if (isIdle) handleStart();
+          else handlePauseResume();
+          break;
+        case 'r':
+        case 'R':
+          if (active) { e.preventDefault(); handleCancel(); }
+          break;
+        case 's':
+        case 'S':
+          if (active) { e.preventDefault(); handleStop(); }
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          setFullscreen(f => !f);
+          break;
+        case '?':
+          e.preventDefault();
+          setShowKeyboardHelp(k => !k);
+          break;
+        case 'Escape':
+          if (fullscreen) setFullscreen(false);
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [active, isIdle, isRunning, isPaused, showComplete, showKeyboardHelp, showHistory, fullscreen]);
+
+  // Timer state for visual styling
+  const timerState = isRunning ? 'running' : isPaused ? 'paused' : isCompleted ? 'completed' : 'idle';
+
+  const stateColors = {
+    idle: 'var(--color-primary)',
+    running: 'var(--color-primary)',
+    paused: 'var(--color-warning)',
+    completed: 'var(--color-success)',
+  };
+
+  const modeIcons = {
+    pomodoro: Brain,
+    countdown: Timer,
+    stopwatch: Clock,
+  };
+
   const containerClass = fullscreen
     ? 'fixed inset-0 z-[var(--z-modal)] bg-[var(--color-background)] flex flex-col items-center justify-center'
     : 'px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto';
 
+  /* ────────────────────────────────────────────────────────────── */
   return (
     <div className={containerClass}>
-      {/* Header */}
+      {/* ═══ HEADER ═══ */}
       {!fullscreen && (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'المؤقتات' : 'Timers'}</h1>
-            <p className="text-sm text-[var(--foreground)]/70 mt-1">
-              {isAr ? `${formatTimerDuration(todayTotal)} اليوم` : `${formatTimerDuration(todayTotal)} today`}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 rounded-xl border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.08]">
-              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-[var(--foreground)]/30" />}
-            </button>
-            <button onClick={() => setShowHistory(!showHistory)} className={cn('p-2.5 rounded-xl border transition-all', showHistory ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10' : 'border-[var(--foreground)]/[0.12]')}>
-              <Clock className="h-4 w-4" />
-            </button>
-          </div>
+        <motion.div
+          initial="hidden" animate="visible" variants={stagger}
+          className="mb-8"
+        >
+          <motion.div variants={fadeUp} className="flex items-center justify-between">
+            <div>
+              <h1 className="text-[var(--text-h1)] font-bold tracking-tight">
+                {isAr ? 'المؤقتات' : 'Timers'}
+              </h1>
+              <p className="text-sm text-[var(--foreground)]/50 mt-0.5">
+                {isAr ? 'ركّز. أنجز. تقدّم.' : 'Focus. Achieve. Progress.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowKeyboardHelp(k => !k)}
+                className="p-2.5 rounded-xl transition-all duration-[var(--dur-base)] hover:bg-[rgba(var(--color-primary-rgb)/0.06)] text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70"
+                title={isAr ? 'اختصارات لوحة المفاتيح' : 'Keyboard shortcuts'}
+              >
+                <Keyboard className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={cn(
+                  'p-2.5 rounded-xl transition-all duration-[var(--dur-base)]',
+                  soundEnabled
+                    ? 'hover:bg-[rgba(var(--color-primary-rgb)/0.06)] text-[var(--foreground)]/60'
+                    : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30'
+                )}
+              >
+                {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={() => setFullscreen(true)}
+                className="p-2.5 rounded-xl transition-all duration-[var(--dur-base)] hover:bg-[rgba(var(--color-primary-rgb)/0.06)] text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.div>
+
+          {/* ═══ STAT CARDS ═══ */}
+          <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+            {[
+              { icon: Clock, labelEn: 'Today', labelAr: 'اليوم', value: formatTimerDuration(todayTotal), color: 'var(--color-primary)' },
+              { icon: Hash, labelEn: 'Sessions', labelAr: 'الجلسات', value: String(todaySessions), color: 'var(--color-primary)' },
+              { icon: TrendingUp, labelEn: 'This Week', labelAr: 'هذا الأسبوع', value: formatTimerDuration(weekTotal), color: 'var(--color-primary)' },
+              {
+                icon: clockNow ? Clock : Clock,
+                labelEn: clockNow
+                  ? clockNow.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                  : '',
+                labelAr: clockNow
+                  ? clockNow.toLocaleDateString('ar-SA-u-nu-latn', { weekday: 'short', month: 'short', day: 'numeric' })
+                  : '',
+                value: clockNow
+                  ? `${formatTimeUnit(clockNow.getHours() % 12 || 12)}:${formatTimeUnit(clockNow.getMinutes())}`
+                  : '--:--',
+                color: 'var(--color-primary)',
+                suffix: clockNow ? (clockNow.getHours() >= 12 ? ' PM' : ' AM') : '',
+              },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className="group relative rounded-2xl p-4 overflow-hidden transition-all duration-[var(--dur-base)]
+                  border border-[rgba(var(--color-primary-rgb)/0.06)]
+                  bg-[linear-gradient(135deg,rgba(var(--color-primary-rgb)/0.02)_0%,rgba(var(--color-primary-rgb)/0.005)_100%)]
+                  hover:border-[rgba(var(--color-primary-rgb)/0.12)]
+                  hover:shadow-[var(--shadow-sm)]
+                  hover:-translate-y-0.5"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <stat.icon className="h-3.5 w-3.5 text-[var(--foreground)]/30" />
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--foreground)]/40">
+                    {isAr ? stat.labelAr : stat.labelEn}
+                  </span>
+                </div>
+                <p className="text-xl font-bold tabular-nums tracking-tight" style={{ color: stat.color }}>
+                  {stat.value}
+                  {stat.suffix && <span className="text-xs font-semibold text-[var(--foreground)]/40 ms-0.5">{stat.suffix}</span>}
+                </p>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
       )}
 
-      <div className={cn(!fullscreen && 'grid lg:grid-cols-3 gap-6')}>
-        {/* Timer Area */}
+      {/* ═══ MAIN LAYOUT ═══ */}
+      <div className={cn(!fullscreen && 'grid lg:grid-cols-[1fr_340px] gap-8')}>
+
+        {/* ═══ HERO TIMER AREA ═══ */}
         <motion.div
-          initial="hidden" animate="visible" variants={fadeUp} custom={1}
-          className={cn(!fullscreen && 'lg:col-span-2', 'flex flex-col items-center')}
+          initial="hidden" animate="visible" variants={stagger}
+          className="flex flex-col items-center"
         >
-          {/* Mode selector - only when idle */}
-          {!active && !fullscreen && (
-            <div className="flex gap-2 mb-8 p-1 rounded-xl bg-[var(--foreground)]/[0.06]">
-              {([
-                { mode: 'pomodoro' as TimerMode, labelEn: 'Pomodoro', labelAr: 'بومودورو', icon: Brain },
-                { mode: 'countdown' as TimerMode, labelEn: 'Countdown', labelAr: 'عد تنازلي', icon: Timer },
-                { mode: 'stopwatch' as TimerMode, labelEn: 'Stopwatch', labelAr: 'ساعة إيقاف', icon: Clock },
-              ]).map(m => (
-                <button
-                  key={m.mode}
-                  onClick={() => setMode(m.mode)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium app-toggle',
-                    mode === m.mode && 'app-toggle-active'
-                  )}
-                >
-                  <m.icon className="h-4 w-4" />
-                  {isAr ? m.labelAr : m.labelEn}
-                </button>
-              ))}
-            </div>
+          {/* Mode Switcher */}
+          {isIdle && !fullscreen && (
+            <motion.div variants={fadeUp} className="mb-10">
+              <div className="relative flex p-1 rounded-2xl bg-[var(--foreground)]/[0.05] border border-[rgba(var(--color-primary-rgb)/0.06)]">
+                {([
+                  { m: 'pomodoro' as TimerMode, en: 'Pomodoro', ar: 'بومودورو', icon: Brain },
+                  { m: 'countdown' as TimerMode, en: 'Countdown', ar: 'عد تنازلي', icon: Timer },
+                  { m: 'stopwatch' as TimerMode, en: 'Stopwatch', ar: 'ساعة إيقاف', icon: Clock },
+                ]).map((item) => (
+                  <button
+                    key={item.m}
+                    onClick={() => setMode(item.m)}
+                    className={cn(
+                      'relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-[var(--dur-base)]',
+                      mode === item.m
+                        ? 'text-white'
+                        : 'text-[var(--foreground)]/50 hover:text-[var(--foreground)]/80'
+                    )}
+                  >
+                    {mode === item.m && (
+                      <motion.div
+                        layoutId="activeMode"
+                        className="absolute inset-0 rounded-xl"
+                        style={{
+                          background: `linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black))`,
+                          boxShadow: `0 4px 16px rgba(var(--color-primary-rgb) / 0.3)`,
+                        }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      {isAr ? item.ar : item.en}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
           )}
 
-          {/* Timer Circle */}
-          <div className="relative mb-8">
-            <svg className="w-64 h-64 sm:w-72 sm:h-72 -rotate-90" viewBox="0 0 260 260">
-              {/* Background circle */}
-              <circle cx="130" cy="130" r="120" fill="none" stroke="currentColor" strokeWidth="4"
-                className="text-[var(--foreground)]/[0.06]" />
-              {/* Progress circle */}
-              {(mode !== 'stopwatch' || active) && (
-                <circle cx="130" cy="130" r="120" fill="none"
-                  stroke="var(--color-primary)" strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={mode === 'stopwatch' ? 0 : strokeDashoffset}
-                  className="transition-all duration-1000"
-                />
-              )}
-            </svg>
-
-            {/* Center content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {active?.pomodoroPhase && (
-                <span className={cn(
-                  'text-xs font-medium px-2.5 py-0.5 rounded-full mb-2',
-                  active.pomodoroPhase === 'work' ? 'bg-red-500/10 text-red-500' :
-                  active.pomodoroPhase === 'short-break' ? 'bg-blue-500/10 text-blue-500' :
-                  'bg-emerald-500/10 text-emerald-500'
-                )}>
-                  {pomodoroPhaseLabel} {active.pomodoroRound && `(${active.pomodoroRound}/${pomodoroConfig.roundsBeforeLongBreak})`}
-                </span>
-              )}
-              <span className="text-5xl sm:text-6xl font-bold tracking-tight tabular-nums">
-                {formatTimerDuration(displayTime)}
+          {/* Active mode badge when timer running */}
+          {active && !fullscreen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 flex items-center gap-3"
+            >
+              <span className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold',
+                'bg-[rgba(var(--color-primary-rgb)/0.08)] text-[var(--color-primary)]'
+              )}>
+                {React.createElement(modeIcons[active.mode], { className: 'h-3.5 w-3.5' })}
+                {active.mode === 'pomodoro' ? (isAr ? 'بومودورو' : 'Pomodoro') : active.mode === 'countdown' ? (isAr ? 'عد تنازلي' : 'Countdown') : (isAr ? 'ساعة إيقاف' : 'Stopwatch')}
               </span>
-              {active && (
-                <span className="text-xs text-[var(--foreground)]/60 mt-2">
-                  {isRunning ? (isAr ? 'قيد التشغيل' : 'Running') : isPaused ? (isAr ? 'متوقف مؤقتاً' : 'Paused') : ''}
+              {active.pomodoroPhase && (
+                <span className={cn(
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold',
+                  active.pomodoroPhase === 'work'
+                    ? 'bg-red-500/8 text-red-500 dark:bg-red-500/15'
+                    : active.pomodoroPhase === 'short-break'
+                      ? 'bg-sky-500/8 text-sky-500 dark:bg-sky-500/15'
+                      : 'bg-emerald-500/8 text-emerald-500 dark:bg-emerald-500/15'
+                )}>
+                  {active.pomodoroPhase === 'work' ? <Target className="h-3 w-3" /> : <Coffee className="h-3 w-3" />}
+                  {pomodoroPhaseLabel}
+                  {active.pomodoroRound && ` ${active.pomodoroRound}/${pomodoroConfig.roundsBeforeLongBreak}`}
                 </span>
               )}
-              {selectedHabit && !active && (
-                <span className="text-xs text-emerald-500 font-medium mt-1 flex items-center gap-1">
-                  <ListChecks className="h-3 w-3" /> {isAr ? selectedHabit.nameAr : selectedHabit.nameEn}
-                </span>
-              )}
-            </div>
-          </div>
+            </motion.div>
+          )}
 
-          {/* Controls */}
-          <div className="flex items-center gap-4 mb-8">
-            {!active ? (
-              <button onClick={handleStart}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl app-btn-primary shadow-lg hover:scale-105">
-                <Play className="h-6 w-6 ms-0.5" />
+          {/* ═══ THE TIMER RING ═══ */}
+          <motion.div
+            variants={scaleIn}
+            className="relative mb-10 group"
+          >
+            {/* Ambient glow behind the ring */}
+            <div
+              className={cn(
+                'absolute inset-0 rounded-full blur-[60px] transition-all duration-1000',
+                isRunning ? 'opacity-30' : isPaused ? 'opacity-15' : 'opacity-8'
+              )}
+              style={{ background: stateColors[timerState] }}
+            />
+
+            <div className="relative">
+              <svg
+                className="w-72 h-72 sm:w-80 sm:h-80 lg:w-[22rem] lg:h-[22rem]"
+                viewBox="0 0 320 320"
+              >
+                <defs>
+                  <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="var(--color-primary)" />
+                    <stop offset="100%" stopColor="color-mix(in srgb, var(--color-primary) 70%, #8b5cf6)" />
+                  </linearGradient>
+                  <filter id="timerGlow">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+
+                {/* Background track */}
+                <circle
+                  cx="160" cy="160" r={ringRadius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  className="text-[var(--foreground)]/[0.15]"
+                  transform="rotate(-90 160 160)"
+                />
+
+                {/* Background track dots */}
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const angle = (i * 6 - 90) * (Math.PI / 180);
+                  const x = 160 + (ringRadius + 12) * Math.cos(angle);
+                  const y = 160 + (ringRadius + 12) * Math.sin(angle);
+                  return i % 5 === 0 ? (
+                    <circle
+                      key={i} cx={x} cy={y} r={1.5}
+                      className="fill-[var(--foreground)]/[0.18]"
+                    />
+                  ) : null;
+                })}
+
+                {/* Progress arc */}
+                {(mode !== 'stopwatch' || active) && (
+                  <circle
+                    cx="160" cy="160" r={ringRadius}
+                    fill="none"
+                    stroke="url(#timerGradient)"
+                    strokeWidth={isRunning ? 5 : 4}
+                    strokeLinecap="round"
+                    strokeDasharray={ringCircumference}
+                    strokeDashoffset={mode === 'stopwatch' ? 0 : ringOffset}
+                    transform="rotate(-90 160 160)"
+                    filter={isRunning ? 'url(#timerGlow)' : undefined}
+                    className="transition-all duration-1000 ease-linear"
+                  />
+                )}
+
+                {/* Start dot on progress */}
+                {(active && mode !== 'stopwatch' && progress > 0) && (
+                  <circle
+                    cx="160" cy={160 - ringRadius}
+                    r="4"
+                    fill="var(--color-primary)"
+                    className="opacity-60"
+                  />
+                )}
+              </svg>
+
+              {/* Center content */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {/* Linked habit badge */}
+                {selectedHabit && isIdle && (
+                  <motion.span
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium mb-3
+                      bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-500/15"
+                  >
+                    <ListChecks className="h-3 w-3" />
+                    {isAr ? selectedHabit.nameAr : selectedHabit.nameEn}
+                  </motion.span>
+                )}
+
+                {/* Timer display */}
+                {(() => {
+                  const totalSec = isIdle
+                    ? mode === 'countdown' ? (customH * 3600) + (customM * 60) + customS
+                    : mode === 'pomodoro' ? pomodoroConfig.workMinutes * 60
+                    : 0
+                    : displayTime;
+                  const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+                  const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+                  const ss = String(totalSec % 60).padStart(2, '0');
+                  const fontSize = fullscreen ? 'text-6xl sm:text-7xl' : 'text-4xl sm:text-5xl lg:text-6xl';
+                  const labelSize = fullscreen ? 'text-xs' : 'text-[10px]';
+                  return (
+                    <div className="relative" dir="ltr">
+                      <div className="flex items-center justify-center gap-1">
+                        {[
+                          { val: hh, label: 'H' },
+                          { val: mm, label: 'M' },
+                          { val: ss, label: 'S' },
+                        ].map((u, i) => (
+                          <React.Fragment key={u.label}>
+                            {i > 0 && (
+                              <span
+                                className={cn('font-mono font-black tabular-nums transition-colors duration-[var(--dur-slow)] -mx-0.5 self-start mt-1', fontSize)}
+                                style={{ color: stateColors[timerState], opacity: 0.4 }}
+                              >:</span>
+                            )}
+                            <div className="flex flex-col items-center">
+                              <span
+                                className={cn('font-mono font-black tracking-tighter tabular-nums transition-colors duration-[var(--dur-slow)]', fontSize)}
+                                style={{ color: stateColors[timerState] }}
+                              >{u.val}</span>
+                              <span className={cn('font-semibold uppercase tracking-wider text-[var(--foreground)]/30 mt-0.5', labelSize)}>{u.label}</span>
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Status indicator */}
+                {active && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2 mt-3"
+                  >
+                    <span className={cn(
+                      'h-2 w-2 rounded-full',
+                      isRunning && 'bg-[var(--color-primary)] animate-pulse',
+                      isPaused && 'bg-[var(--color-warning)]',
+                    )} />
+                    <span className="text-xs font-medium text-[var(--foreground)]/50">
+                      {isRunning ? (isAr ? 'قيد التشغيل' : 'Running')
+                        : isPaused ? (isAr ? 'متوقف مؤقتاً' : 'Paused')
+                        : ''}
+                    </span>
+                    {active.targetDuration && (
+                      <span className="text-[10px] tabular-nums text-[var(--foreground)]/30 font-mono">
+                        {Math.round(progress)}%
+                      </span>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Idle mode label */}
+                {isIdle && (
+                  <p className="text-xs text-[var(--foreground)]/30 mt-2 font-medium">
+                    {isAr
+                      ? (mode === 'pomodoro' ? 'بومودورو' : mode === 'countdown' ? 'عد تنازلي' : 'ساعة إيقاف')
+                      : (mode === 'pomodoro' ? 'Pomodoro' : mode === 'countdown' ? 'Countdown' : 'Stopwatch')
+                    }
+                    {mode !== 'stopwatch' && isIdle && (
+                      <span className="ms-1.5 tabular-nums">
+                        · {mode === 'pomodoro' ? `${pomodoroConfig.workMinutes}m` : `${customH ? `${customH}h ` : ''}${customM ? `${customM}m ` : ''}${customS ? `${customS}s` : !customH && !customM ? '0s' : ''}`.trim()}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ═══ CONTROLS ═══ */}
+          <motion.div variants={fadeUp} className="flex items-center gap-4 mb-6">
+            {isIdle ? (
+              <button
+                onClick={handleStart}
+                className="group relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-[var(--dur-base)] active:scale-95"
+                style={{
+                  background: `linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black))`,
+                  boxShadow: `0 8px 24px rgba(var(--color-primary-rgb) / 0.35)`,
+                }}
+              >
+                <Play className="h-7 w-7 text-white ms-0.5" />
+                <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur-base)]" />
               </button>
             ) : (
               <>
-                <button onClick={handleCancel}
-                  className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--foreground)]/[0.06] hover:bg-[var(--foreground)]/[0.1] transition-all">
-                  <RotateCcw className="h-5 w-5 text-[var(--foreground)]/70" />
+                {/* Reset */}
+                <button
+                  onClick={handleCancel}
+                  className="flex h-12 w-12 items-center justify-center rounded-xl
+                    border border-[rgba(var(--color-primary-rgb)/0.08)]
+                    bg-[rgba(var(--color-primary-rgb)/0.03)]
+                    hover:bg-[rgba(var(--color-primary-rgb)/0.08)]
+                    hover:border-[rgba(var(--color-primary-rgb)/0.15)]
+                    transition-all duration-[var(--dur-base)] active:scale-95"
+                  title={isAr ? 'إلغاء' : 'Reset (R)'}
+                >
+                  <RotateCcw className="h-5 w-5 text-[var(--foreground)]/50" />
                 </button>
-                <button onClick={handlePauseResume}
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl app-btn-primary shadow-lg hover:scale-105">
-                  {isRunning ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ms-0.5" />}
+
+                {/* Play / Pause */}
+                <button
+                  onClick={handlePauseResume}
+                  className="group relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-[var(--dur-base)] active:scale-95"
+                  style={{
+                    background: `linear-gradient(135deg, ${stateColors[timerState]}, color-mix(in srgb, ${stateColors[timerState]} 85%, black))`,
+                    boxShadow: `0 8px 24px rgba(var(--color-primary-rgb) / 0.3)`,
+                  }}
+                >
+                  {isRunning ? <Pause className="h-7 w-7 text-white" /> : <Play className="h-7 w-7 text-white ms-0.5" />}
+                  <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--dur-base)]" />
                 </button>
-                <button onClick={handleStop}
-                  className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-all">
-                  <Square className="h-5 w-5 text-red-500" />
+
+                {/* Stop */}
+                <button
+                  onClick={handleStop}
+                  className="flex h-12 w-12 items-center justify-center rounded-xl
+                    border border-red-500/10
+                    bg-red-500/5
+                    hover:bg-red-500/10
+                    hover:border-red-500/20
+                    transition-all duration-[var(--dur-base)] active:scale-95"
+                  title={isAr ? 'إيقاف' : 'Stop (S)'}
+                >
+                  <Square className="h-5 w-5 text-red-500/70" />
                 </button>
               </>
             )}
-          </div>
+          </motion.div>
 
           {/* Distraction counter */}
           {active && (
-            <button onClick={() => store.addDistraction()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--foreground)]/[0.12] text-xs text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.08] transition-all mb-4">
+            <motion.button
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => store.addDistraction()}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium
+                border border-[var(--foreground)]/[0.15]
+                text-[var(--foreground)]/40
+                hover:text-[var(--foreground)]/60
+                hover:border-[var(--foreground)]/[0.18]
+                hover:bg-[var(--foreground)]/[0.02]
+                transition-all duration-[var(--dur-base)] mb-4"
+            >
               <AlertCircle className="h-3.5 w-3.5" />
-              {isAr ? 'تشتت' : 'Distraction'} ({store.timerSessions.find(t => t.id === active.sessionId)?.distractionCount ?? 0})
-            </button>
+              {isAr ? 'تشتت' : 'Distraction'}
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-[var(--foreground)]/[0.05] tabular-nums text-[10px] font-bold">
+                {store.timerSessions.find(t => t.id === active.sessionId)?.distractionCount ?? 0}
+              </span>
+            </motion.button>
           )}
 
-          {/* Fullscreen toggle */}
-          <button onClick={() => setFullscreen(!fullscreen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-[var(--foreground)]/30 hover:text-[var(--foreground)]/70 transition-colors">
-            {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-            {fullscreen ? (isAr ? 'تصغير' : 'Exit Fullscreen') : (isAr ? 'ملء الشاشة' : 'Fullscreen')}
-          </button>
+          {/* Keyboard hint */}
+          {!fullscreen && (
+            <motion.div variants={fadeUp} className="flex items-center gap-3 text-[10px] text-[var(--foreground)]/25 font-medium mt-2">
+              <span className="flex items-center gap-1">
+                <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded border border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.03] text-[10px] font-mono">
+                  Space
+                </kbd>
+                {isAr ? 'تشغيل/إيقاف' : 'play/pause'}
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded border border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.03] text-[10px] font-mono">
+                  ?
+                </kbd>
+                {isAr ? 'المزيد' : 'more'}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Fullscreen exit */}
+          {fullscreen && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => setFullscreen(false)}
+              className="fixed top-6 end-6 z-10 flex items-center gap-2 px-3 py-2 rounded-xl
+                bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50
+                hover:bg-[var(--foreground)]/[0.1] hover:text-[var(--foreground)]/80
+                transition-all duration-[var(--dur-base)] text-xs font-medium"
+            >
+              <Minimize2 className="h-4 w-4" />
+              {isAr ? 'تصغير' : 'Exit'}
+            </motion.button>
+          )}
         </motion.div>
 
-        {/* Side panel */}
+        {/* ═══ SIDEBAR / CONFIGURATION ═══ */}
         {!fullscreen && (
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="space-y-4">
-            {/* Live Clock & Stats */}
-            {clockNow && (
-              <div className="rounded-2xl app-card p-4 space-y-3">
-                <div className="text-center" dir="ltr">
-                  <div className="flex items-baseline justify-center gap-0.5 font-mono">
-                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
-                      {String(clockNow.getHours() % 12 || 12).padStart(2, '0')}
-                    </span>
-                    <span className="text-3xl font-black animate-pulse" style={{ color: 'var(--color-primary)' }}>:</span>
-                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
-                      {String(clockNow.getMinutes()).padStart(2, '0')}
-                    </span>
-                    <span className="text-3xl font-black animate-pulse" style={{ color: 'var(--color-primary)' }}>:</span>
-                    <span className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>
-                      {String(clockNow.getSeconds()).padStart(2, '0')}
-                    </span>
-                    <span className="text-xs font-bold ms-1.5 text-[var(--foreground)]/50">
-                      {clockNow.getHours() >= 12 ? 'PM' : 'AM'}
-                    </span>
+          <motion.div
+            initial="hidden" animate="visible" variants={stagger}
+            className="space-y-4"
+          >
+            {/* Current Session Info when active */}
+            {active && (() => {
+              const sess = store.timerSessions.find(t => t.id === active.sessionId);
+              const linkedH = sess?.habitId ? store.habits.find(h => h.id === sess.habitId) : null;
+              const linkedS = sess?.skillId ? store.skills.find(s => s.id === sess.skillId) : null;
+              return (
+                <motion.div variants={fadeUp} className="rounded-2xl app-card p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
+                      {isAr ? 'الجلسة الحالية' : 'Active Session'}
+                    </h3>
+                    <span className={cn(
+                      'h-2 w-2 rounded-full',
+                      isRunning && 'bg-[var(--color-primary)] animate-pulse',
+                      isPaused && 'bg-[var(--color-warning)]',
+                    )} />
                   </div>
-                  <p className="text-[11px] text-[var(--foreground)]/50 mt-1">
-                    {clockNow.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                  </p>
-                </div>
-                {/* Quick stats */}
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--foreground)]/[0.08]">
-                  <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{todaySessions}</p>
-                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'جلسات اليوم' : 'Today'}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{formatTimerDuration(todayTotal)}</p>
-                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'وقت اليوم' : 'Time'}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-primary)' }}>{formatTimerDuration(weekTotal)}</p>
-                    <p className="text-[9px] text-[var(--foreground)]/50 font-medium">{isAr ? 'هذا الأسبوع' : 'Week'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Settings */}
-            {!active && (
+                  <p className="text-sm font-semibold">
+                    {isAr ? (sess?.labelAr || 'جلسة') : (sess?.labelEn || 'Session')}
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {linkedH && (
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-500/15 font-semibold flex items-center gap-1">
+                        <ListChecks className="h-3 w-3" /> {isAr ? linkedH.nameAr : linkedH.nameEn}
+                      </span>
+                    )}
+                    {linkedS && (
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-sky-500/8 text-sky-600 dark:text-sky-400 dark:bg-sky-500/15 font-semibold flex items-center gap-1">
+                        <GraduationCap className="h-3 w-3" /> {isAr ? linkedS.nameAr : linkedS.nameEn}
+                      </span>
+                    )}
+                  </div>
+
+                  {active.targetDuration && (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] text-[var(--foreground)]/40 mb-2 tabular-nums font-mono">
+                        <span>{formatTimerDuration(elapsed)}</span>
+                        <span>{formatTimerDuration(active.targetDuration)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{
+                            background: `linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, #8b5cf6))`,
+                            width: `${Math.min(100, (elapsed / active.targetDuration) * 100)}%`,
+                          }}
+                          transition={{ duration: 1, ease: 'linear' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })()}
+
+            {/* ═══ CONFIGURATION (idle only) ═══ */}
+            {isIdle && (
               <>
-                {/* Habit Link */}
-                <div className="rounded-2xl app-card p-4">
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <ListChecks className="h-4 w-4 text-[var(--color-primary)]" />
+                {/* Quick Duration Presets */}
+                {mode === 'countdown' && (
+                  <motion.div variants={fadeUp} className="rounded-2xl app-card p-5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 mb-4">
+                      {isAr ? 'المدة' : 'Duration'}
+                    </h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[5, 10, 15, 25, 30, 45, 60, 90].map(m => {
+                        const isSelected = customH === 0 && customS === 0 && customM === m;
+                        return (
+                          <button
+                            key={m}
+                            onClick={() => { setCountdownMinutes(m); setCustomH(0); setCustomM(m); setCustomS(0); }}
+                            className={cn(
+                              'py-2.5 rounded-xl text-sm font-semibold tabular-nums transition-all duration-[var(--dur-base)]',
+                              isSelected
+                                ? 'text-white shadow-[0_4px_12px_rgba(var(--color-primary-rgb)/0.25)]'
+                                : 'bg-[var(--foreground)]/[0.03] text-[var(--foreground)]/50 border border-[var(--foreground)]/[0.15] hover:bg-[rgba(var(--color-primary-rgb)/0.06)] hover:text-[var(--foreground)]/70 hover:border-[rgba(var(--color-primary-rgb)/0.1)]'
+                            )}
+                            style={isSelected ? {
+                              background: `linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black))`,
+                            } : undefined}
+                          >
+                            {m}<span className="text-[10px] font-medium ms-0.5">m</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom H:M:S inputs */}
+                    <div className="mt-4 pt-4 border-t border-[var(--foreground)]/[0.06]">
+                      <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--foreground)]/30 mb-3">
+                        {isAr ? 'وقت مخصص' : 'Custom Time'}
+                      </h4>
+                      <div className="flex items-center justify-center gap-2">
+                        {[
+                          { label: isAr ? 'س' : 'H', value: customH, set: setCustomH, max: 23 },
+                          { label: isAr ? 'د' : 'M', value: customM, set: setCustomM, max: 59 },
+                          { label: isAr ? 'ث' : 'S', value: customS, set: setCustomS, max: 59 },
+                        ].map((unit, i) => (
+                          <React.Fragment key={unit.label}>
+                            {i > 0 && <span className="text-lg font-bold text-[var(--foreground)]/20 -mx-0.5">:</span>}
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={() => unit.set(v => Math.min(v + 1, unit.max))}
+                                className="p-1 rounded-lg hover:bg-[rgba(var(--color-primary-rgb)/0.08)] text-[var(--foreground)]/30 hover:text-[var(--foreground)]/60 transition-colors"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              </button>
+                              <input
+                                type="number"
+                                min={0}
+                                max={unit.max}
+                                value={unit.value}
+                                onChange={e => {
+                                  const v = Math.max(0, Math.min(unit.max, Number(e.target.value) || 0));
+                                  unit.set(v);
+                                }}
+                                className="w-14 rounded-xl app-input px-1 py-2 text-center text-lg font-bold tabular-nums"
+                              />
+                              <button
+                                onClick={() => unit.set(v => Math.max(v - 1, 0))}
+                                className="p-1 rounded-lg hover:bg-[rgba(var(--color-primary-rgb)/0.08)] text-[var(--foreground)]/30 hover:text-[var(--foreground)]/60 transition-colors"
+                              >
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="text-[10px] font-medium text-[var(--foreground)]/30 uppercase">{unit.label}</span>
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Pomodoro Settings */}
+                {mode === 'pomodoro' && (
+                  <motion.div variants={fadeUp} className="rounded-2xl app-card p-5 space-y-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 flex items-center gap-2">
+                      <Settings className="h-3.5 w-3.5" />
+                      {isAr ? 'إعدادات بومودورو' : 'Pomodoro Config'}
+                    </h3>
+                    {[
+                      { key: 'workMinutes', labelEn: 'Focus', labelAr: 'تركيز', value: pomodoroConfig.workMinutes, icon: Target, color: 'text-red-500/60' },
+                      { key: 'shortBreakMinutes', labelEn: 'Short Break', labelAr: 'استراحة قصيرة', value: pomodoroConfig.shortBreakMinutes, icon: Coffee, color: 'text-sky-500/60' },
+                      { key: 'longBreakMinutes', labelEn: 'Long Break', labelAr: 'استراحة طويلة', value: pomodoroConfig.longBreakMinutes, icon: Coffee, color: 'text-emerald-500/60' },
+                      { key: 'roundsBeforeLongBreak', labelEn: 'Rounds', labelAr: 'جولات', value: pomodoroConfig.roundsBeforeLongBreak, icon: Flame, color: 'text-amber-500/60' },
+                    ].map(s => (
+                      <div key={s.key} className="flex items-center justify-between group">
+                        <span className="flex items-center gap-2 text-sm text-[var(--foreground)]/60">
+                          <s.icon className={cn('h-4 w-4', s.color)} />
+                          {isAr ? s.labelAr : s.labelEn}
+                        </span>
+                        <input
+                          type="number" min={1} max={120} value={s.value}
+                          onChange={e => setPomodoroConfig(c => ({ ...c, [s.key]: Number(e.target.value) }))}
+                          className="w-16 rounded-lg app-input px-2 py-1.5 text-sm text-center tabular-nums font-semibold"
+                        />
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Link to Habit */}
+                <motion.div variants={fadeUp} className="rounded-2xl app-card p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 mb-3 flex items-center gap-2">
+                    <ListChecks className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
                     {isAr ? 'ربط بعادة' : 'Link to Habit'}
                   </h3>
                   <select
@@ -442,12 +976,12 @@ export default function TimersPage() {
                       <option key={h.id} value={h.id}>{isAr ? h.nameAr : h.nameEn}</option>
                     ))}
                   </select>
-                </div>
+                </motion.div>
 
-                {/* Skill Link */}
-                <div className="rounded-2xl app-card p-4">
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-[var(--color-primary)]" />
+                {/* Link to Skill */}
+                <motion.div variants={fadeUp} className="rounded-2xl app-card p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 mb-3 flex items-center gap-2">
+                    <GraduationCap className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
                     {isAr ? 'ربط بمهارة' : 'Link to Skill'}
                   </h3>
                   <select
@@ -460,172 +994,178 @@ export default function TimersPage() {
                       <option key={s.id} value={s.id}>{isAr ? s.nameAr : s.nameEn}</option>
                     ))}
                   </select>
-                </div>
-
-                {/* Timer Config */}
-                {mode === 'countdown' && (
-                  <div className="rounded-2xl app-card p-4">
-                    <h3 className="text-sm font-semibold mb-3">{isAr ? 'مدة العد التنازلي' : 'Countdown Duration'}</h3>
-                    <div className="flex gap-2 flex-wrap">
-                      {[5, 10, 15, 25, 30, 45, 60, 90].map(m => (
-                        <button key={m} onClick={() => setCountdownMinutes(m)}
-                          className={cn('px-3 py-2 rounded-lg text-xs font-medium transition-all',
-                            countdownMinutes === m ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.08]')}>
-                          {m}m
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {mode === 'pomodoro' && (
-                  <div className="rounded-2xl app-card p-4 space-y-3">
-                    <h3 className="text-sm font-semibold">{isAr ? 'إعدادات بومودورو' : 'Pomodoro Settings'}</h3>
-                    {[
-                      { key: 'workMinutes', labelEn: 'Work', labelAr: 'عمل', value: pomodoroConfig.workMinutes },
-                      { key: 'shortBreakMinutes', labelEn: 'Short Break', labelAr: 'استراحة قصيرة', value: pomodoroConfig.shortBreakMinutes },
-                      { key: 'longBreakMinutes', labelEn: 'Long Break', labelAr: 'استراحة طويلة', value: pomodoroConfig.longBreakMinutes },
-                      { key: 'roundsBeforeLongBreak', labelEn: 'Rounds', labelAr: 'جولات', value: pomodoroConfig.roundsBeforeLongBreak },
-                    ].map(s => (
-                      <div key={s.key} className="flex items-center justify-between">
-                        <span className="text-xs text-[var(--foreground)]/70">{isAr ? s.labelAr : s.labelEn}</span>
-                        <input
-                          type="number" min={1} max={120} value={s.value}
-                          onChange={e => setPomodoroConfig(c => ({ ...c, [s.key]: Number(e.target.value) }))}
-                          className="w-16 rounded-lg app-input px-2 py-1 text-xs text-center"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                </motion.div>
 
                 {/* Session Label */}
-                <div className="rounded-2xl app-card p-4">
-                  <h3 className="text-sm font-semibold mb-3">{isAr ? 'تسمية الجلسة' : 'Session Label'}</h3>
-                  <input value={isAr ? labelAr : labelEn}
+                <motion.div variants={fadeUp} className="rounded-2xl app-card p-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 mb-3">
+                    {isAr ? 'تسمية الجلسة' : 'Session Label'}
+                  </h3>
+                  <input
+                    value={isAr ? labelAr : labelEn}
                     onChange={e => isAr ? setLabelAr(e.target.value) : setLabelEn(e.target.value)}
                     className="w-full rounded-xl app-input px-3 py-2.5 text-sm"
                     placeholder={isAr ? 'مثال: دراسة البرمجة' : 'e.g., Coding Study'}
                   />
-                </div>
+                </motion.div>
               </>
             )}
 
-            {/* Active timer info — shows linked habit/skill when a timer is running */}
-            {active && (() => {
-              const sess = store.timerSessions.find(t => t.id === active.sessionId);
-              const linkedH = sess?.habitId ? store.habits.find(h => h.id === sess.habitId) : null;
-              const linkedS = sess?.skillId ? store.skills.find(s => s.id === sess.skillId) : null;
-              return (
-                <div className="rounded-2xl app-card p-4 space-y-2">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-[var(--color-primary)]" />
-                    {isAr ? 'الجلسة الحالية' : 'Current Session'}
-                  </h3>
-                  <p className="text-xs text-[var(--foreground)]/70">
-                    {isAr ? (sess?.labelAr || 'جلسة') : (sess?.labelEn || 'Session')}
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-[var(--foreground)]/[0.06] font-medium">
-                      {active.mode === 'pomodoro' ? (isAr ? 'بومودورو' : 'Pomodoro') : active.mode === 'countdown' ? (isAr ? 'عد تنازلي' : 'Countdown') : (isAr ? 'ساعة إيقاف' : 'Stopwatch')}
-                    </span>
-                    {linkedH && (
-                      <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-medium flex items-center gap-1">
-                        <ListChecks className="h-3 w-3" /> {isAr ? linkedH.nameAr : linkedH.nameEn}
-                      </span>
-                    )}
-                    {linkedS && (
-                      <span className="text-[10px] px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 font-medium flex items-center gap-1">
-                        <GraduationCap className="h-3 w-3" /> {isAr ? linkedS.nameAr : linkedS.nameEn}
-                      </span>
-                    )}
-                  </div>
-                  {active.targetDuration && (
-                    <div className="mt-1">
-                      <div className="flex items-center justify-between text-[10px] text-[var(--foreground)]/50 mb-1">
-                        <span>{formatTimerDuration(elapsed)}</span>
-                        <span>{formatTimerDuration(active.targetDuration)}</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.08] overflow-hidden">
-                        <div className="h-full rounded-full bg-[var(--color-primary)] transition-all duration-1000 ease-linear"
-                          style={{ width: `${Math.min(100, (elapsed / active.targetDuration) * 100)}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Timer History */}
-              <div className="rounded-2xl app-card p-4">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[var(--color-primary)]" />
-                  {isAr ? 'السجل' : 'History'}
+            {/* ═══ HISTORY ═══ */}
+            <motion.div variants={fadeUp} className="rounded-2xl app-card overflow-hidden">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full flex items-center justify-between p-5 text-start hover:bg-[rgba(var(--color-primary-rgb)/0.02)] transition-colors"
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" style={{ color: 'var(--color-primary)' }} />
+                  {isAr ? 'السجل' : 'Recent History'}
                 </h3>
-                {recentTimers.length === 0 ? (
-                  <p className="text-xs text-[var(--foreground)]/30 text-center py-4">{isAr ? 'لا توجد جلسات سابقة' : 'No sessions yet'}</p>
-                ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {recentTimers.map(t => {
-                      const linkedHabit = t.habitId ? store.habits.find(h => h.id === t.habitId) : null;
-                      const linkedSkill = t.skillId ? store.skills.find(s => s.id === t.skillId) : null;
-                      return (
-                      <div key={t.id} className="flex items-center justify-between rounded-lg bg-[var(--foreground)]/[0.03] px-3 py-2">
-                        <div>
-                          <p className="text-xs font-medium">{isAr ? t.labelAr : t.labelEn}</p>
-                          <p className="text-[10px] text-[var(--foreground)]/30">
-                            {t.mode} · {new Date(t.startedAt).toLocaleDateString()}
-                            {linkedHabit && <span className="text-emerald-500"> · {isAr ? linkedHabit.nameAr : linkedHabit.nameEn}</span>}
-                            {linkedSkill && <span className="text-blue-500"> · {isAr ? linkedSkill.nameAr : linkedSkill.nameEn}</span>}
+                <ChevronDown className={cn(
+                  'h-4 w-4 text-[var(--foreground)]/30 transition-transform duration-[var(--dur-base)]',
+                  showHistory && 'rotate-180'
+                )} />
+              </button>
+
+              <AnimatePresence>
+                {showHistory && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-5 space-y-2">
+                      {recentTimers.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Clock className="h-8 w-8 mx-auto text-[var(--foreground)]/[0.18] mb-2" />
+                          <p className="text-xs text-[var(--foreground)]/25">
+                            {isAr ? 'لا توجد جلسات سابقة' : 'No sessions yet'}
                           </p>
                         </div>
-                        <div className="text-end">
-                          <p className="text-xs font-semibold tabular-nums">{formatTimerDuration(t.duration)}</p>
-                          {t.productivityRating && (
-                            <div className="flex gap-0.5 justify-end">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={cn('h-2 w-2', i < t.productivityRating! ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/30')} />
-                              ))}
-                            </div>
-                          )}
+                      ) : (
+                        <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                          {recentTimers.map((t, i) => {
+                            const linkedHabit = t.habitId ? store.habits.find(h => h.id === t.habitId) : null;
+                            const linkedSkill = t.skillId ? store.skills.find(s => s.id === t.skillId) : null;
+                            return (
+                              <motion.div
+                                key={t.id}
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.03 }}
+                                className="flex items-center justify-between rounded-xl px-3.5 py-2.5
+                                  bg-[var(--foreground)]/[0.02]
+                                  hover:bg-[rgba(var(--color-primary-rgb)/0.03)]
+                                  border border-transparent hover:border-[rgba(var(--color-primary-rgb)/0.06)]
+                                  transition-all duration-[var(--dur-base)]"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold truncate">{isAr ? t.labelAr : t.labelEn}</p>
+                                  <p className="text-[10px] text-[var(--foreground)]/30 mt-0.5 flex items-center gap-1 flex-wrap">
+                                    <span className="capitalize">{t.mode}</span>
+                                    <span>·</span>
+                                    <span>{new Date(t.startedAt).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                                    {linkedHabit && (
+                                      <span className="text-emerald-500">· {isAr ? linkedHabit.nameAr : linkedHabit.nameEn}</span>
+                                    )}
+                                    {linkedSkill && (
+                                      <span className="text-sky-500">· {isAr ? linkedSkill.nameAr : linkedSkill.nameEn}</span>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="text-end ms-3 shrink-0">
+                                  <p className="text-xs font-bold tabular-nums font-mono" style={{ color: 'var(--color-primary)' }}>
+                                    {formatTimerDuration(t.duration)}
+                                  </p>
+                                  {t.productivityRating && (
+                                    <div className="flex gap-0.5 justify-end mt-0.5">
+                                      {Array.from({ length: 5 }).map((_, j) => (
+                                        <Star key={j} className={cn('h-2.5 w-2.5', j < t.productivityRating! ? 'text-amber-400 fill-amber-400' : 'text-[var(--foreground)]/10')} />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    );
-                    })}
-                  </div>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
+            </motion.div>
           </motion.div>
         )}
       </div>
 
-      {/* Completion Modal */}
+      {/* ═══ COMPLETION MODAL ═══ */}
       <AnimatePresence>
         {showComplete && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
             <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-sm"
+              onClick={handleCancel}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[15%] z-[var(--z-modal)] sm:w-[420px] rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[12%] z-[var(--z-modal)] sm:w-[440px]
+                rounded-3xl overflow-hidden
+                bg-[var(--color-background)]
+                border border-[rgba(var(--color-primary-rgb)/0.08)]
+                shadow-[var(--shadow-2xl)]"
             >
-              <div className="p-6 text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10">
-                  <Zap className="h-8 w-8 text-emerald-500" />
-                </div>
-                <h2 className="text-lg font-bold mb-1">{isAr ? 'أحسنت!' : 'Well Done!'}</h2>
-                <p className="text-sm text-[var(--foreground)]/70 mb-4">
+              {/* Gradient accent bar */}
+              <div
+                className="h-1"
+                style={{
+                  background: `linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, #8b5cf6), var(--color-primary))`,
+                }}
+              />
+
+              <div className="p-8 text-center">
+                {/* Success icon */}
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 20 }}
+                  className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.12), rgba(var(--color-primary-rgb) / 0.04))`,
+                  }}
+                >
+                  <Sparkles className="h-8 w-8" style={{ color: 'var(--color-primary)' }} />
+                </motion.div>
+
+                <h2 className="text-xl font-bold mb-1">{isAr ? 'أحسنت!' : 'Well Done!'}</h2>
+                <p className="text-sm text-[var(--foreground)]/50 mb-6">
                   {isAr ? `أكملت ${formatTimerDuration(elapsed)} من التركيز` : `You focused for ${formatTimerDuration(elapsed)}`}
                 </p>
 
                 {/* Productivity Rating */}
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-[var(--foreground)]/70 mb-2">{isAr ? 'تقييم الإنتاجية' : 'Productivity Rating'}</p>
+                <div className="mb-6">
+                  <p className="text-xs font-semibold text-[var(--foreground)]/40 uppercase tracking-wider mb-3">
+                    {isAr ? 'تقييم الإنتاجية' : 'How was your session?'}
+                  </p>
                   <div className="flex justify-center gap-2">
                     {[1, 2, 3, 4, 5].map(r => (
-                      <button key={r} onClick={() => setCompletionRating(r as MoodLevel)}>
-                        <Star className={cn('h-7 w-7 transition-all', r <= completionRating ? 'text-amber-400 fill-amber-400 scale-110' : 'text-[var(--foreground)]/30')} />
+                      <button
+                        key={r}
+                        onClick={() => setCompletionRating(r as MoodLevel)}
+                        className="group transition-transform duration-[var(--dur-fast)] hover:scale-110"
+                      >
+                        <Star className={cn(
+                          'h-8 w-8 transition-all duration-[var(--dur-base)]',
+                          r <= completionRating
+                            ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.3)]'
+                            : 'text-[var(--foreground)]/10 group-hover:text-[var(--foreground)]/20'
+                        )} />
                       </button>
                     ))}
                   </div>
@@ -636,18 +1176,89 @@ export default function TimersPage() {
                   onChange={e => setCompletionNote(e.target.value)}
                   placeholder={isAr ? 'ملاحظات اختيارية...' : 'Optional notes...'}
                   rows={2}
-                  className="w-full rounded-xl app-input px-3 py-2.5 text-sm resize-none mb-4"
+                  className="w-full rounded-xl app-input px-4 py-3 text-sm resize-none mb-6"
                 />
 
                 <div className="flex gap-3">
-                  <button onClick={handleCancel}
-                    className="flex-1 py-2.5 rounded-xl border border-[var(--foreground)]/[0.12] text-sm text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.08]">
+                  <button
+                    onClick={handleCancel}
+                    className="flex-1 py-3 rounded-xl text-sm font-medium
+                      border border-[var(--foreground)]/[0.18]
+                      text-[var(--foreground)]/50
+                      hover:bg-[var(--foreground)]/[0.05]
+                      hover:border-[var(--foreground)]/[0.18]
+                      transition-all duration-[var(--dur-base)] active:scale-[0.98]"
+                  >
                     {isAr ? 'إلغاء' : 'Discard'}
                   </button>
-                  <button onClick={handleComplete}
-                    className="flex-1 py-2.5 rounded-xl app-btn-primary text-sm font-medium">
-                    {isAr ? 'حفظ' : 'Save'}
+                  <button
+                    onClick={handleComplete}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-white active:scale-[0.98]
+                      transition-all duration-[var(--dur-base)]"
+                    style={{
+                      background: `linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black))`,
+                      boxShadow: `0 4px 16px rgba(var(--color-primary-rgb) / 0.3)`,
+                    }}
+                  >
+                    {isAr ? 'حفظ الجلسة' : 'Save Session'}
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ KEYBOARD SHORTCUTS MODAL ═══ */}
+      <AnimatePresence>
+        {showKeyboardHelp && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/30 backdrop-blur-sm"
+              onClick={() => setShowKeyboardHelp(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[15%] z-[var(--z-modal)] sm:w-[380px]
+                rounded-2xl overflow-hidden
+                bg-[var(--color-background)]
+                border border-[rgba(var(--color-primary-rgb)/0.08)]
+                shadow-[var(--shadow-xl)]"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                    <Keyboard className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
+                    {isAr ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
+                  </h3>
+                  <button onClick={() => setShowKeyboardHelp(false)}
+                    className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] transition-colors">
+                    <X className="h-4 w-4 text-[var(--foreground)]/40" />
+                  </button>
+                </div>
+                <div className="space-y-2.5">
+                  {[
+                    { key: 'Space', en: 'Start / Pause / Resume', ar: 'تشغيل / إيقاف مؤقت / استئناف' },
+                    { key: 'S', en: 'Stop timer', ar: 'إيقاف المؤقت' },
+                    { key: 'R', en: 'Reset / Cancel', ar: 'إعادة تعيين / إلغاء' },
+                    { key: 'F', en: 'Toggle fullscreen', ar: 'تبديل ملء الشاشة' },
+                    { key: '?', en: 'Show this help', ar: 'عرض هذه المساعدة' },
+                    { key: 'Esc', en: 'Close modal / Exit fullscreen', ar: 'إغلاق / الخروج' },
+                  ].map(s => (
+                    <div key={s.key} className="flex items-center justify-between py-1.5">
+                      <kbd className="inline-flex items-center justify-center h-6 min-w-[28px] px-2 rounded-md
+                        border border-[var(--foreground)]/[0.18]
+                        bg-[var(--foreground)]/[0.03]
+                        text-[11px] font-mono font-semibold text-[var(--foreground)]/50">
+                        {s.key}
+                      </kbd>
+                      <span className="text-xs text-[var(--foreground)]/50">{isAr ? s.ar : s.en}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>

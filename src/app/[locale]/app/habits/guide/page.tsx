@@ -33,7 +33,7 @@ function GuideSection({ section, index, isAr, open, onToggle }: { section: Secti
       custom={index + 2}
       initial="hidden"
       animate="visible"
-      className="rounded-2xl border border-[var(--foreground)]/[0.06] overflow-hidden transition-shadow hover:shadow-lg"
+      className="rounded-2xl border border-[var(--foreground)]/[0.15] overflow-hidden transition-shadow hover:shadow-lg"
       style={{ background: 'linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.02), transparent)' }}
     >
       <button
@@ -268,7 +268,7 @@ export default function HabitsGuidePage() {
           <Tip isAr={false}>
             <strong>Use strict mode for:</strong> Morning routines, prayer times, medication schedules — anything where timing is critical. Use flexible mode for habits where you just want to track the ideal time.
           </Tip>
-          <div className="rounded-xl p-4 border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02]">
+          <div className="rounded-xl p-4 border border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.02]">
             <p className="font-bold text-sm mb-2">Calendar Color Legend</p>
             <div className="flex flex-wrap gap-4 mt-2">
               <span className="flex items-center gap-2"><span className="h-4 w-4 rounded bg-emerald-500" /><span className="text-xs">Done in window</span></span>
@@ -294,7 +294,7 @@ export default function HabitsGuidePage() {
           <Tip isAr={true}>
             <strong>استخدم الوضع الصارم لـ:</strong> الروتين الصباحي، مواعيد الصلاة، الأدوية — أي شيء التوقيت فيه حرج. استخدم الوضع المرن للعادات التي تريد تتبع الوقت المثالي فقط.
           </Tip>
-          <div className="rounded-xl p-4 border border-[var(--foreground)]/[0.06] bg-[var(--foreground)]/[0.02]">
+          <div className="rounded-xl p-4 border border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.02]">
             <p className="font-bold text-sm mb-2">دليل ألوان التقويم</p>
             <div className="flex flex-wrap gap-4 mt-2">
               <span className="flex items-center gap-2"><span className="h-4 w-4 rounded bg-emerald-500" /><span className="text-xs">مكتمل في الوقت</span></span>
@@ -414,7 +414,7 @@ export default function HabitsGuidePage() {
               { icon: <List className="h-4 w-4" />, name: 'List', desc: 'Minimal rows with quick actions. Fast for checking off habits.' },
               { icon: <BarChart3 className="h-4 w-4" />, name: 'Board', desc: 'Kanban-style board grouped by category. Great for visualization.' },
             ].map(v => (
-              <div key={v.name} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.06]">
+              <div key={v.name} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.15]">
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-primary)]/10 text-[var(--color-primary)]">{v.icon}</div>
                 <div><p className="font-bold text-sm">{v.name}</p><p className="text-xs text-[var(--foreground)]/50">{v.desc}</p></div>
               </div>
@@ -433,7 +433,7 @@ export default function HabitsGuidePage() {
               { icon: <List className="h-4 w-4" />, name: 'القائمة', desc: 'صفوف بسيطة مع إجراءات سريعة. سريعة لتسجيل العادات.' },
               { icon: <BarChart3 className="h-4 w-4" />, name: 'اللوحة', desc: 'لوحة كانبان مجمعة حسب الفئة. رائعة للتصور البصري.' },
             ].map(v => (
-              <div key={v.name} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.06]">
+              <div key={v.name} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.15]">
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-primary)]/10 text-[var(--color-primary)]">{v.icon}</div>
                 <div><p className="font-bold text-sm">{v.name}</p><p className="text-xs text-[var(--foreground)]/50">{v.desc}</p></div>
               </div>
@@ -495,7 +495,7 @@ export default function HabitsGuidePage() {
               { icon: '5', title: 'Review Weekly', desc: 'Check the compliance table every Sunday. Identify weak spots and adjust.' },
               { icon: '6', title: 'Never Zero', desc: 'Bad day? Do the minimum. 1 pushup > 0 pushups. The streak matters more than the intensity.' },
             ].map(t => (
-              <div key={t.icon} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.06]">
+              <div key={t.icon} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.15]">
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-black text-sm">{t.icon}</div>
                 <div><p className="font-bold text-sm">{t.title}</p><p className="text-xs text-[var(--foreground)]/50">{t.desc}</p></div>
               </div>
@@ -514,7 +514,7 @@ export default function HabitsGuidePage() {
               { icon: '٥', title: 'راجع أسبوعيًا', desc: 'تحقق من جدول الالتزام كل أحد. حدد نقاط الضعف وعدّل.' },
               { icon: '٦', title: 'أبدًا صفر', desc: 'يوم سيء؟ أنجز الحد الأدنى. تمرين ضغط واحد > صفر. السلسلة أهم من الشدة.' },
             ].map(t => (
-              <div key={t.icon} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.06]">
+              <div key={t.icon} className="flex gap-3 p-3 rounded-xl border border-[var(--foreground)]/[0.15]">
                 <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-black text-sm">{t.icon}</div>
                 <div><p className="font-bold text-sm">{t.title}</p><p className="text-xs text-[var(--foreground)]/50">{t.desc}</p></div>
               </div>

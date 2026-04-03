@@ -77,7 +77,7 @@ export default function GoalsPage() {
       <motion.div initial="hidden" animate="visible" className="space-y-4 mb-8">
         {activeGoals.length === 0 && completedGoals.length === 0 && (
           <div className="text-center py-16">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.05]">
               <Target className="h-8 w-8 text-[var(--foreground)]/40" />
             </div>
             <p className="text-sm text-[var(--foreground)]/60 mb-4">{isAr ? 'لا توجد أهداف بعد' : 'No goals yet'}</p>
@@ -123,7 +123,7 @@ export default function GoalsPage() {
               {/* Progress */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1">
-                  <div className="h-2 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                  <div className="h-2 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${goal.progress}%` }}
                       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
                       className="h-full rounded-full" style={{ backgroundColor: goal.color }} />
@@ -148,10 +148,10 @@ export default function GoalsPage() {
               </div>
 
               {goal.targetDate && (
-                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--foreground)]/[0.04]">
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--foreground)]/[0.15]">
                   <Calendar className="h-3 w-3 text-[var(--foreground)]/30" />
                   <span className="text-[10px] text-[var(--foreground)]/30">
-                    {isAr ? 'الموعد المستهدف:' : 'Target:'} {new Date(goal.targetDate).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                    {isAr ? 'الموعد المستهدف:' : 'Target:'} {new Date(goal.targetDate).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US')}
                   </span>
                 </div>
               )}
@@ -172,7 +172,7 @@ export default function GoalsPage() {
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
                 <span className="text-sm line-through">{isAr ? goal.titleAr : goal.titleEn}</span>
                 <span className="text-[10px] text-[var(--foreground)]/30 ms-auto">
-                  {goal.completedAt && new Date(goal.completedAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                  {goal.completedAt && new Date(goal.completedAt).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US')}
                 </span>
               </div>
             ))}
@@ -190,7 +190,7 @@ export default function GoalsPage() {
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[520px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[520px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{editingGoal ? (isAr ? 'تعديل الهدف' : 'Edit Goal') : (isAr ? 'هدف جديد' : 'New Goal')}</h2>

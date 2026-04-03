@@ -97,11 +97,11 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
         href={item.href}
         onClick={() => onCloseMobile()}
         className={cn(
-          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium app-nav-link',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium app-nav-link',
           active
             ? 'bg-[rgba(var(--color-primary-rgb)/0.12)] text-[var(--color-primary)]'
             : 'text-[var(--foreground)]/80',
-          !showLabel && 'justify-center px-2.5 py-3',
+          !showLabel && 'justify-center px-2.5 py-2.5',
         )}
       >
         {active && (
@@ -113,7 +113,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
             }}
           />
         )}
-        <Icon className={cn('relative z-10 shrink-0', active && 'text-[var(--color-primary)]')} style={{ width: showLabel ? 18 : 28, height: showLabel ? 18 : 28, transition: 'width 0.3s, height 0.3s' }} />
+        <Icon className={cn('relative z-10 shrink-0', active && 'text-[var(--color-primary)]')} style={{ width: showLabel ? 18 : 20, height: showLabel ? 18 : 20, transition: 'width 0.3s, height 0.3s' }} />
         {showLabel && (
           <span className="relative z-10 truncate">{isAr ? item.labelAr : item.labelEn}</span>
         )}
@@ -129,7 +129,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
   const sidebarContent = (showLabel: boolean) => (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className={cn('flex items-center gap-3 border-b border-[var(--foreground)]/[0.12] px-4 py-5', !showLabel && 'justify-center px-2')}
+      <div className={cn('flex items-center gap-3 border-b border-[var(--foreground)]/[0.18] px-4 py-5', !showLabel && 'justify-center px-2')}
         style={{ background: 'linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.04) 0%, transparent 100%)' }}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-lg"
           style={{ background: 'linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 80%, black))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.35)' }}>
@@ -144,7 +144,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
       </div>
 
       {/* Nav Groups */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-thin">
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi}>
             {showLabel && (
@@ -162,7 +162,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-[var(--foreground)]/[0.12] px-3 py-3 space-y-0.5"
+      <div className="border-t border-[var(--foreground)]/[0.18] px-3 py-3 space-y-0.5"
         style={{ background: 'linear-gradient(0deg, rgba(var(--color-primary-rgb) / 0.03) 0%, transparent 100%)' }}>
         {BOTTOM_ITEMS.map((item) => (
           <NavLink key={item.href} item={item} showLabel={showLabel} />
@@ -207,7 +207,7 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
       <aside
         className={cn(
           'hidden lg:flex flex-col fixed inset-y-0 start-0 z-[var(--z-sticky)]',
-          'border-e border-[var(--foreground)]/[0.12]',
+          'border-e border-[var(--foreground)]/[0.18]',
         )}
         style={{
           width: collapsed ? 72 : 260,

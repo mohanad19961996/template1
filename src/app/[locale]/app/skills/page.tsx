@@ -254,7 +254,7 @@ export default function SkillsPage() {
                         {Math.round(progress)}%
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
@@ -277,10 +277,10 @@ export default function SkillsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t border-[var(--foreground)]/[0.04]">
+                  <div className="flex gap-2 pt-3 border-t border-[var(--foreground)]/[0.15]">
                     <button
                       onClick={() => setShowSessionForm(skill.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)]/[0.06] py-2 text-xs font-medium hover:bg-[var(--foreground)]/[0.08] transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--foreground)]/[0.05] py-2 text-xs font-medium hover:bg-[var(--foreground)]/[0.08] transition-colors"
                     >
                       <Plus className="h-3.5 w-3.5" /> {isAr ? 'جلسة' : 'Session'}
                     </button>
@@ -300,7 +300,7 @@ export default function SkillsPage() {
 
       {filteredSkills.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.05]">
             <GraduationCap className="h-8 w-8 text-[var(--foreground)]/40" />
           </div>
           <p className="text-sm text-[var(--foreground)]/60 mb-4">
@@ -325,7 +325,7 @@ export default function SkillsPage() {
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{editingSkill ? (isAr ? 'تعديل المهارة' : 'Edit Skill') : (isAr ? 'مهارة جديدة' : 'New Skill')}</h2>
@@ -410,7 +410,7 @@ export default function SkillsPage() {
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[480px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل جلسة' : 'Log Session'}</h2>
@@ -467,7 +467,7 @@ export default function SkillsPage() {
                     {[1, 2, 3, 4, 5].map(r => (
                       <button key={r} onClick={() => setSessionForm(f => ({ ...f, focusRating: r as MoodLevel }))}
                         className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
-                          r <= sessionForm.focusRating ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                          r <= sessionForm.focusRating ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/70')}>
                         {r}
                       </button>
                     ))}
@@ -506,7 +506,7 @@ export default function SkillsPage() {
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <SkillDetail skill={detailSkill} onClose={() => setDetailSkill(null)} />
             </motion.div>

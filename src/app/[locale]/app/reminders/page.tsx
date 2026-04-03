@@ -98,7 +98,7 @@ export default function RemindersPage() {
 
       {store.reminders.length === 0 ? (
         <div className="text-center py-16">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.06]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--foreground)]/[0.05]">
             <Bell className="h-8 w-8 text-[var(--foreground)]/40" />
           </div>
           <p className="text-sm text-[var(--foreground)]/60 mb-4">{isAr ? 'لا توجد تذكيرات' : 'No reminders yet'}</p>
@@ -187,7 +187,7 @@ export default function RemindersPage() {
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[460px] max-h-[80vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[460px] max-h-[80vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="p-5 border-b border-[var(--foreground)]/[0.1] flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{editingId ? (isAr ? 'تعديل التذكير' : 'Edit Reminder') : (isAr ? 'تذكير جديد' : 'New Reminder')}</h2>
@@ -224,7 +224,7 @@ export default function RemindersPage() {
                         className={cn('flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all',
                           form.scheduleMode === m
                             ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30'
-                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60')}>
                         {isAr ? SCHEDULE_MODE_LABELS[m].ar : SCHEDULE_MODE_LABELS[m].en}
                       </button>
                     ))}
@@ -244,7 +244,7 @@ export default function RemindersPage() {
                           className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
                             form.days.includes(d as WeekDay)
                               ? 'bg-[var(--color-primary)] text-white'
-                              : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                              : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/70')}>
                           {isAr ? DAY_LABELS.ar[d] : DAY_LABELS.en[d]}
                         </button>
                       ))}
@@ -266,7 +266,7 @@ export default function RemindersPage() {
                             className={cn('py-1.5 rounded-lg text-xs font-medium transition-all',
                               form.monthDays.includes(d)
                                 ? 'bg-[var(--color-primary)] text-white'
-                                : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                                : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/70')}>
                             {d}
                           </button>
                         ))}
@@ -299,7 +299,7 @@ export default function RemindersPage() {
                               className={cn('py-1.5 rounded-lg text-[11px] font-medium transition-all',
                                 hasEntries
                                   ? 'bg-[var(--color-primary)] text-white'
-                                  : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60')}>
                               {label}
                             </button>
                           );
@@ -339,7 +339,7 @@ export default function RemindersPage() {
                                     className={cn('py-1.5 rounded-lg text-[11px] font-medium transition-all',
                                       selectedDays.includes(d)
                                         ? 'bg-[var(--color-primary)] text-white'
-                                        : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/60')}>
+                                        : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60')}>
                                     {d}
                                   </button>
                                 ))}
@@ -368,7 +368,7 @@ export default function RemindersPage() {
                         className={cn('flex-1 py-2 rounded-lg text-xs font-medium transition-all',
                           form.urgency === u
                             ? (u === 'high' ? 'bg-red-500 text-white' : u === 'normal' ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white')
-                            : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70')}>
+                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/70')}>
                         {isAr ? (u === 'high' ? 'عالية' : u === 'normal' ? 'عادية' : 'منخفضة') : u}
                       </button>
                     ))}

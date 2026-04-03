@@ -189,7 +189,7 @@ export default function HabitDetailPage() {
   const formatViewingDate = (dateStr: string) => {
     if (dateStr === today) return isAr ? 'اليوم' : 'Today';
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString(isAr ? 'ar' : 'en', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return d.toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const handleSaveNote = () => {
@@ -298,7 +298,7 @@ export default function HabitDetailPage() {
         {/* Date navigation header */}
         <div className="flex items-center justify-between">
           <button onClick={() => navigateDay(-1)}
-            className="h-9 w-9 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.06] transition-colors">
+            className="h-9 w-9 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05] transition-colors">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <div className="text-center">
@@ -311,7 +311,7 @@ export default function HabitDetailPage() {
           <button onClick={() => navigateDay(1)}
             disabled={isViewingToday}
             className={cn('h-9 w-9 rounded-lg flex items-center justify-center transition-colors',
-              isViewingToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.06]')}>
+              isViewingToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.05]')}>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -400,7 +400,7 @@ export default function HabitDetailPage() {
 
         {/* Timer info for timed habits */}
         {isViewingToday && habit.expectedDuration && (
-          <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
+          <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15]">
             <div className="flex items-center gap-2">
               <Timer className="h-4 w-4 text-[var(--foreground)]/40" />
               <span className="text-xs font-medium text-[var(--foreground)]/50">
@@ -442,7 +442,7 @@ export default function HabitDetailPage() {
 
         {/* Changes for this day */}
         {viewingDateHistory.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-[var(--foreground)]/[0.06]">
+          <div className="space-y-2 pt-2 border-t border-[var(--foreground)]/[0.15]">
             <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'التغييرات' : 'Changes'}</p>
             {viewingDateHistory.map(entry => {
               const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
@@ -454,7 +454,7 @@ export default function HabitDetailPage() {
                   <div className="flex-1 min-w-0 text-xs">
                     <p className="font-semibold">{isAr ? info.ar : info.en}</p>
                     <p className="text-[10px] text-[var(--foreground)]/40">
-                      {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                     {Object.keys(entry.changes).length > 0 && (
                       <div className="mt-1 space-y-0.5">
@@ -490,7 +490,7 @@ export default function HabitDetailPage() {
               value={dailyNote}
               onChange={e => setDailyNote(e.target.value)}
               placeholder={isAr ? 'اكتب ملاحظة عن هذا اليوم...' : 'Write a note about this day...'}
-              className="flex-1 rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02] px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 placeholder:text-[var(--foreground)]/30"
+              className="flex-1 rounded-xl border border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.02] px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 placeholder:text-[var(--foreground)]/30"
               rows={2}
             />
             <button
@@ -500,7 +500,7 @@ export default function HabitDetailPage() {
                 'shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all self-end',
                 dailyNote.trim()
                   ? 'bg-[var(--color-primary)] text-white hover:opacity-90'
-                  : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/30'
+                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30'
               )}
             >
               {savingNote ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
@@ -525,7 +525,7 @@ export default function HabitDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--foreground)]/[0.04] border border-[var(--foreground)]/[0.06]">
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--foreground)]/[0.05] border border-[var(--foreground)]/[0.15]">
         {[
           { key: 'calendar' as const, icon: CalendarIcon, labelEn: 'Calendar', labelAr: 'التقويم' },
           { key: 'history' as const, icon: History, labelEn: 'History', labelAr: 'السجل' },
@@ -602,7 +602,7 @@ export default function HabitDetailPage() {
 
                 {/* History entries for this day */}
                 {historyByDate[selectedDate] && historyByDate[selectedDate].length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-[var(--foreground)]/[0.06]">
+                  <div className="space-y-2 pt-2 border-t border-[var(--foreground)]/[0.15]">
                     <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'التغييرات' : 'Changes'}</p>
                     {historyByDate[selectedDate].map(entry => {
                       const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
@@ -614,7 +614,7 @@ export default function HabitDetailPage() {
                           <div className="flex-1 min-w-0 text-xs">
                             <p className="font-semibold">{isAr ? info.ar : info.en}</p>
                             <p className="text-[10px] text-[var(--foreground)]/40">
-                              {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                             {Object.keys(entry.changes).length > 0 && (
                               <div className="mt-1 space-y-0.5">
@@ -652,7 +652,7 @@ export default function HabitDetailPage() {
           ) : (
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute top-0 bottom-0 start-[19px] w-0.5 bg-[var(--foreground)]/[0.08]" />
+              <div className="absolute top-0 bottom-0 start-[19px] w-0.5 bg-[var(--foreground)]/[0.18]" />
 
               {history.map((entry, i) => {
                 const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
@@ -669,9 +669,9 @@ export default function HabitDetailPage() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-bold">{isAr ? info.ar : info.en}</p>
                         <p className="text-[10px] text-[var(--foreground)]/40 shrink-0">
-                          {new Date(entry.timestamp).toLocaleDateString(isAr ? 'ar' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          {new Date(entry.timestamp).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })}
                           {' '}
-                          {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
 
@@ -706,7 +706,7 @@ export default function HabitDetailPage() {
           <div className="app-card rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={() => navigateDay(-1)}
-                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.06] transition-colors">
+                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05] transition-colors">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <div className="text-center">
@@ -719,7 +719,7 @@ export default function HabitDetailPage() {
               <button onClick={() => navigateDay(1)}
                 disabled={isViewingToday}
                 className={cn('h-8 w-8 rounded-lg flex items-center justify-center transition-colors',
-                  isViewingToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.06]')}>
+                  isViewingToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.05]')}>
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -800,7 +800,7 @@ export default function HabitDetailPage() {
               {(habit.placeEn || habit.placeAr) && (
                 <InfoItem label={isAr ? 'المكان' : 'Place'} value={isAr ? habit.placeAr || habit.placeEn || '' : habit.placeEn || habit.placeAr || ''} icon={<MapPin className="h-3.5 w-3.5" />} />
               )}
-              <InfoItem label={isAr ? 'تاريخ الإنشاء' : 'Created'} value={new Date(habit.createdAt).toLocaleDateString(isAr ? 'ar' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })} icon={<CalendarIcon className="h-3.5 w-3.5" />} />
+              <InfoItem label={isAr ? 'تاريخ الإنشاء' : 'Created'} value={new Date(habit.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })} icon={<CalendarIcon className="h-3.5 w-3.5" />} />
             </div>
           </div>
 
@@ -946,13 +946,13 @@ function HabitCalendar({
     <div className="app-card rounded-xl p-4">
       {/* Month nav */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.06] transition-colors">
+        <button onClick={prevMonth} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05] transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <h3 className="text-sm font-bold">
           {isAr ? MONTH_NAMES.ar[calMonth.month] : MONTH_NAMES.en[calMonth.month]} {calMonth.year}
         </h3>
-        <button onClick={nextMonth} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.06] transition-colors">
+        <button onClick={nextMonth} className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05] transition-colors">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -994,7 +994,7 @@ function HabitCalendar({
                 isSelected ? 'ring-2 ring-[var(--color-primary)] bg-[var(--color-primary)]/10' :
                 isToday ? 'ring-2 ring-offset-1 font-black shadow-sm' :
                 isFuture ? 'opacity-30 cursor-not-allowed' :
-                'hover:bg-[var(--foreground)]/[0.04]',
+                'hover:bg-[var(--foreground)]/[0.05]',
               )}
               style={isToday && isScheduled && !isSelected ? { ['--tw-ring-color' as string]: hc } : undefined}
             >
@@ -1034,7 +1034,7 @@ function HabitCalendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[var(--foreground)]/[0.06] flex-wrap">
+      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[var(--foreground)]/[0.15] flex-wrap">
         <div className="flex items-center gap-1.5 text-[9px] text-[var(--foreground)]/50">
           <div className="h-3 w-3 rounded" style={{ background: habitColor, opacity: 0.75 }} />
           {isAr ? 'مكتملة' : 'Completed'}
@@ -1064,7 +1064,7 @@ function HabitCalendar({
 function StatBox({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
     <div className="app-card rounded-xl p-3 flex items-center gap-3">
-      <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-[var(--foreground)]/[0.04] shrink-0">{icon}</div>
+      <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-[var(--foreground)]/[0.05] shrink-0">{icon}</div>
       <div>
         <p className="text-lg font-bold leading-tight">{value} {sub && <span className="text-[10px] font-normal text-[var(--foreground)]/40">{sub}</span>}</p>
         <p className="text-[9px] text-[var(--foreground)]/50">{label}</p>

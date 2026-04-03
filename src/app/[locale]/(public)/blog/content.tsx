@@ -244,7 +244,7 @@ const tags = [
 
 function formatDate(dateStr: string, isAr: boolean) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString(isAr ? "ar-SA" : "en-US", {
+  return d.toLocaleDateString(isAr ? "ar-SA-u-nu-latn" : "en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",

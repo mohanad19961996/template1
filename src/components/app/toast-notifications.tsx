@@ -168,7 +168,7 @@ function ToastContainer({ toasts, onRemove, onClearAll }: { toasts: Toast[]; onR
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           onClick={onClearAll}
-          className="pointer-events-auto self-end text-xs font-bold px-3 py-1.5 rounded-lg bg-[var(--foreground)]/[0.08] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.15] transition-all"
+          className="pointer-events-auto self-end text-xs font-bold px-3 py-1.5 rounded-lg bg-[var(--foreground)]/[0.18] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05] transition-all"
         >
           Clear all ({toasts.length})
         </motion.button>

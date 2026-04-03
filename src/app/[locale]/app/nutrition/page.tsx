@@ -107,7 +107,7 @@ export default function NutritionPage() {
                 <p className="text-xs text-[var(--foreground)]/30">{isAr ? 'لم تسجل وجبات اليوم' : 'No meals logged today'}</p>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--foreground)]/[0.08]">
+              <div className="divide-y divide-[var(--foreground)]/[0.18]">
                 {todayMeals.map(meal => {
                   const info = MEAL_LABELS[meal.mealType];
                   return (
@@ -143,7 +143,7 @@ export default function NutritionPage() {
             <div className="text-center mb-4">
               <div className="relative mx-auto w-32 h-32">
                 <svg className="w-32 h-32 -rotate-90" viewBox="0 0 128 128">
-                  <circle cx="64" cy="64" r="56" fill="none" stroke="currentColor" strokeWidth="6" className="text-[var(--foreground)]/[0.06]" />
+                  <circle cx="64" cy="64" r="56" fill="none" stroke="currentColor" strokeWidth="6" className="text-[var(--foreground)]/[0.15]" />
                   <circle cx="64" cy="64" r="56" fill="none" stroke="#3B82F6" strokeWidth="6" strokeLinecap="round"
                     strokeDasharray={`${Math.min(100, (glasses / target) * 100) * 3.52} 352`} className="transition-all duration-500" />
                 </svg>
@@ -158,7 +158,7 @@ export default function NutritionPage() {
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => store.logHydration(today, Math.max(0, glasses - 1), target)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--foreground)]/[0.12] hover:bg-[var(--foreground)]/[0.08]">
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.08]">
                 <Minus className="h-4 w-4" />
               </button>
               <button
@@ -187,7 +187,7 @@ export default function NutritionPage() {
             <motion.div
               initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[420px] rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.12] shadow-2xl"
+              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[10%] z-[var(--z-modal)] sm:w-[420px] rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
             >
               <div className="p-5 border-b border-[var(--foreground)]/[0.1] flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{isAr ? 'تسجيل وجبة' : 'Log Meal'}</h2>
@@ -203,7 +203,7 @@ export default function NutritionPage() {
                       return (
                         <button key={t} onClick={() => setForm(f => ({ ...f, mealType: t }))}
                           className={cn('flex flex-col items-center gap-1 rounded-xl py-2.5 text-[10px] font-medium transition-all border',
-                            form.mealType === t ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
+                            form.mealType === t ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--foreground)]/[0.18] text-[var(--foreground)]/70')}>
                           <info.icon className="h-4 w-4" />
                           {isAr ? info.ar : info.en}
                         </button>
@@ -227,7 +227,7 @@ export default function NutritionPage() {
                   ].map(opt => (
                     <button key={String(opt.value)} onClick={() => setForm(f => ({ ...f, healthy: opt.value }))}
                       className={cn('flex-1 py-2.5 rounded-xl text-xs font-medium transition-all border',
-                        form.healthy === opt.value ? opt.color : 'border-[var(--foreground)]/[0.12] text-[var(--foreground)]/70')}>
+                        form.healthy === opt.value ? opt.color : 'border-[var(--foreground)]/[0.18] text-[var(--foreground)]/70')}>
                       {isAr ? opt.labelAr : opt.labelEn}
                     </button>
                   ))}

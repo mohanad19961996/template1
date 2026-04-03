@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'التحليلات' : 'Analytics'}</h1>
           <p className="text-sm text-[var(--foreground)]/70 mt-1">{isAr ? 'نظرة شاملة على أدائك' : 'Overview of your performance'}</p>
         </div>
-        <div className="flex p-1 rounded-xl bg-[var(--foreground)]/[0.06]">
+        <div className="flex p-1 rounded-xl bg-[var(--foreground)]/[0.05]">
           {(['week', 'month', 'year'] as const).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
               className={cn('px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
@@ -302,7 +302,7 @@ export default function AnalyticsPage() {
                       <span className="text-xs font-medium">{isAr ? skill!.nameAr : skill!.nameEn}</span>
                       <span className="text-[10px] text-[var(--foreground)]/60">{formatDuration(minutes)}</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
                       <div className="h-full rounded-full" style={{
                         width: `${(minutes / Math.max(...topSkills.map(s => s.minutes), 1)) * 100}%`,
                         backgroundColor: skill!.color,

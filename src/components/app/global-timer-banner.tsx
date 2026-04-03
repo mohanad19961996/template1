@@ -44,7 +44,7 @@ export function GlobalTimerBanner() {
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-        className="sticky top-16 z-[190] mx-4 sm:mx-6 lg:mx-8 mb-4 mt-2 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
+        className="sticky top-[85px] z-[190] mx-4 sm:mx-6 lg:mx-8 mb-4 mt-2 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
         style={{ background: `linear-gradient(135deg, ${hc}15, rgba(var(--color-background-rgb, 255 255 255) / 0.85))`, border: `1.5px solid ${hc}30` }}
       >
         <div className="px-4 py-3 flex items-center gap-3">
