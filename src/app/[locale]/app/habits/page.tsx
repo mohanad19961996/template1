@@ -22,7 +22,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Zap, Award, Hash, Trophy, Activity,
   Sparkles, ArrowRight, Play, Pause, Square, Timer, MapPin, Repeat, Gift,
   Lightbulb, Maximize2, Hourglass, LayoutGrid, List, Columns3, Grid3x3,
-  CreditCard, Palette, ArrowUpDown, SlidersHorizontal, Minus, GripVertical, Tag, Rows3, ChevronsUpDown, Check, CalendarDays, BookOpen, AlertCircle,
+  CreditCard, Palette, ArrowUpDown, SlidersHorizontal, Minus, GripVertical, Tag, Rows3, ChevronsUpDown, Check, CalendarDays, BookOpen, AlertCircle, Folder,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -3384,6 +3384,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 </div>
                 <div className="min-w-0">
                   <h3 className={cn('text-[15px] font-extrabold leading-snug tracking-tight', done && 'line-through opacity-50')}>{name}</h3>
+                  <span className="text-[11px] font-semibold mt-0.5 block" style={{ color: hc }}>{catLabel}</span>
                 </div>
               </div>
               {/* Quick actions */}
@@ -3452,6 +3453,9 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             <div className="relative mb-2 h-[76px] group/badges">
               {/* Normal — clipped */}
               <div className="flex items-center gap-1.5 flex-wrap h-full overflow-hidden content-start transition-opacity duration-300 ease-out group-hover/badges:opacity-0">
+                <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default" style={{ background: `${hc}15`, color: hc, border: `1px solid ${hc}25` }}>
+                  <Folder className="h-3 w-3" /> {catLabel}
+                </span>
                 <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                   habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
                   {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
@@ -3493,6 +3497,9 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               {/* Expanded on hover */}
               <div className="absolute left-[-20px] right-[-20px] top-[-14px] z-30 opacity-0 scale-90 pointer-events-none transition-all duration-300 ease-out group-hover/badges:opacity-100 group-hover/badges:scale-110 group-hover/badges:pointer-events-auto">
                 <div className="flex items-center gap-1.5 flex-wrap content-start rounded-2xl p-4 shadow-2xl border border-[var(--foreground)]/10" style={{ background: 'var(--color-background)' }}>
+                  <span className="hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default" style={{ background: `${hc}15`, color: hc, border: `1px solid ${hc}25` }}>
+                    <Folder className="h-3 w-3" /> {catLabel}
+                  </span>
                   <span className={cn('hc-badge text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 cursor-default',
                     habit.type === 'positive' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500')}>
                     {habit.type === 'positive' ? <Zap className="h-3 w-3" /> : <X className="h-3 w-3" />}
@@ -4209,17 +4216,26 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
             </span>
           )}
           {habit.preferredTime && <span className="text-[8px] text-[var(--foreground)]">{to12h(habit.preferredTime!)}</span>}
-          <div className="flex items-center gap-0.5 ms-auto opacity-0 group-hover/gc:opacity-100 transition-opacity">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
-              <Edit3 className="h-2.5 w-2.5 text-[var(--foreground)]" />
+          <div className="flex items-center gap-1 ms-auto">
+            <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold transition-all duration-200 cursor-pointer"
+              style={{ background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}12`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; }}>
+              <Eye className="h-2.5 w-2.5" /> {isAr ? 'تفاصيل' : 'Details'}
             </button>
-            {onViewPage && (
-              <Link href={onViewPage} onClick={(e) => e.stopPropagation()}>
-                <div className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
-                  <Maximize2 className="h-2.5 w-2.5 text-[var(--foreground)]" />
-                </div>
-              </Link>
-            )}
+            <div className="flex items-center gap-0.5 opacity-0 group-hover/gc:opacity-100 transition-opacity">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
+                <Edit3 className="h-2.5 w-2.5 text-[var(--foreground)]" />
+              </button>
+              {onViewPage && (
+                <Link href={onViewPage} onClick={(e) => e.stopPropagation()}>
+                  <div className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
+                    <Maximize2 className="h-2.5 w-2.5 text-[var(--foreground)]" />
+                  </div>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -4345,20 +4361,29 @@ function HabitListRow({ habit, index, isAr, store, today, onEdit, onArchive, onD
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/lr:opacity-100 transition-opacity">
-        <button onClick={onEdit} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
-          <Edit3 className="h-3 w-3 text-[var(--foreground)]" />
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={onDetail}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer"
+          style={{ background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}12`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; }}>
+          <Eye className="h-3 w-3" /> {isAr ? 'تفاصيل' : 'Details'}
         </button>
-        <button onClick={onArchive} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
-          <Archive className={cn('h-3 w-3', habit.archived ? 'text-emerald-500' : 'text-[var(--foreground)]')} />
-        </button>
-        {onViewPage && (
-          <Link href={onViewPage}>
-            <div className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
-              <Maximize2 className="h-3 w-3 text-[var(--foreground)]" />
-            </div>
-          </Link>
-        )}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover/lr:opacity-100 transition-opacity">
+          <button onClick={onEdit} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
+            <Edit3 className="h-3 w-3 text-[var(--foreground)]" />
+          </button>
+          <button onClick={onArchive} className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
+            <Archive className={cn('h-3 w-3', habit.archived ? 'text-emerald-500' : 'text-[var(--foreground)]')} />
+          </button>
+          {onViewPage && (
+            <Link href={onViewPage}>
+              <div className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.05]">
+                <Maximize2 className="h-3 w-3 text-[var(--foreground)]" />
+              </div>
+            </Link>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -4383,28 +4408,29 @@ function HabitBoardView({ habits, isAr, store, today, onEdit, onDelete, onDetail
   const categories = Object.keys(grouped);
 
   return (
-    <motion.div initial="hidden" animate="visible" className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-thin">
+    <motion.div initial="hidden" animate="visible" className="flex gap-5 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-thin">
       {categories.map((cat) => {
         const catLabel = isAr ? (CATEGORY_LABELS[cat]?.ar ?? cat) : (CATEGORY_LABELS[cat]?.en ?? cat);
         const catHabits = grouped[cat];
         const doneCount = catHabits.filter(h => store.habitLogs.some(l => l.habitId === h.id && l.date === today && l.completed)).length;
         return (
-          <div key={cat} className="shrink-0 w-[260px] flex flex-col">
+          <div key={cat} className="shrink-0 w-[320px] flex flex-col">
             {/* Column header */}
-            <div className="rounded-xl border border-[var(--foreground)]/[0.06] px-3 py-2.5 mb-2 flex items-center justify-between bg-[var(--foreground)]/[0.015]">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold">{catLabel || cat}</span>
-                <span className="text-[9px] font-medium text-[var(--foreground)]">{catHabits.length}</span>
+            <div className="rounded-xl border border-[var(--foreground)]/[0.06] px-4 py-3 mb-3 flex items-center justify-between bg-[var(--foreground)]/[0.015]">
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm font-bold">{catLabel || cat}</span>
+                <span className="text-[10px] font-medium text-[var(--foreground)]">{catHabits.length}</span>
               </div>
-              <span className="text-[10px] font-bold text-emerald-500">{doneCount}/{catHabits.length}</span>
+              <span className="text-xs font-bold text-emerald-500">{doneCount}/{catHabits.length}</span>
             </div>
             {/* Column cards */}
-            <div className="flex flex-col gap-2 flex-1">
+            <div className="flex flex-col gap-3 flex-1">
               {catHabits.map((habit) => {
                 const done = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
                 const streak = store.getHabitStreak(habit.id);
                 const name = isAr ? habit.nameAr : habit.nameEn;
                 const boardHasDuration = !!habit.expectedDuration;
+                const hc = resolveHabitColor(habit.color);
                 const handleToggle = () => {
                   if (boardHasDuration || habit.archived) return;
                   const existingLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
@@ -4413,60 +4439,70 @@ function HabitBoardView({ habits, isAr, store, today, onEdit, onDelete, onDetail
                 };
                 return (
                   <div key={habit.id}
-                    className={cn('rounded-xl p-3 cursor-pointer hover:shadow-sm transition-all border', done ? 'border-emerald-500/15 bg-emerald-500/[0.02] opacity-60' : 'border-[var(--foreground)]/[0.06]')}
-                    style={{ borderInlineStart: `3px solid ${resolveHabitColor(habit.color)}` }}
+                    className={cn('rounded-2xl p-4 cursor-pointer hover:shadow-md transition-all border', done ? 'border-emerald-500/15 bg-emerald-500/[0.02] opacity-60' : 'border-[var(--foreground)]/[0.06]')}
+                    style={{ borderInlineStart: `4px solid ${hc}` }}
                     onClick={() => onDetail(habit)}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-3">
                       <button onClick={(e) => {
                           e.stopPropagation();
                           if (habit.archived) { toast.notifyWarning(isAr ? 'العادة مؤرشفة' : 'Habit is archived', isAr ? 'استعد العادة أولاً للتفاعل معها' : 'Restore the habit first to interact'); return; }
                           if (boardHasDuration && !done) { toast.notifyInfo(isAr ? 'يتطلب مؤقت' : 'Timer required', isAr ? 'هذه العادة تحتاج تشغيل المؤقت أولاً لإكمالها' : 'Start the timer first to complete this habit'); return; }
                           handleToggle();
                         }} className={cn('shrink-0 mt-0.5', (habit.archived || (boardHasDuration && !done)) && 'cursor-not-allowed')}>
-                        {done ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : boardHasDuration ? <Timer className="h-4 w-4 text-[var(--foreground)]" /> : <Circle className="h-4 w-4 text-[var(--foreground)]" />}
+                        {done ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : boardHasDuration ? <Timer className="h-5 w-5 text-[var(--foreground)]" /> : <Circle className="h-5 w-5 text-[var(--foreground)]" />}
                       </button>
-                      <h4 className={cn('text-xs font-semibold leading-snug', done && 'line-through')}>{name}</h4>
+                      <h4 className={cn('text-sm font-bold leading-snug', done && 'line-through')}>{name}</h4>
                     </div>
-                    <div className="flex items-center gap-3 mt-2 ps-6">
+                    <div className="flex items-center gap-3 mt-3 ps-8">
                       <div className="flex items-center gap-1">
-                        <Flame className="h-2.5 w-2.5 text-orange-500" />
-                        <span className="text-[9px] font-bold text-orange-500">{streak.current}</span>
+                        <Flame className="h-3 w-3 text-orange-500" />
+                        <span className="text-[11px] font-bold text-orange-500">{streak.current}</span>
                       </div>
                       {habit.preferredTime && (
                         <div className="flex items-center gap-1">
-                          <Clock className="h-2.5 w-2.5 text-[var(--foreground)]" />
-                          <span className="text-[9px] text-[var(--foreground)]">{to12h(habit.preferredTime!)}</span>
+                          <Clock className="h-3 w-3 text-[var(--foreground)]" />
+                          <span className="text-[11px] text-[var(--foreground)]">{to12h(habit.preferredTime!)}</span>
                         </div>
                       )}
                       {habit.expectedDuration && (
                         <div className="flex items-center gap-1">
-                          <Hourglass className="h-2.5 w-2.5 text-[var(--foreground)]" />
-                          <span className="text-[9px] text-[var(--foreground)]">{habit.expectedDuration}{isAr ? 'د' : 'm'}</span>
+                          <Hourglass className="h-3 w-3 text-[var(--foreground)]" />
+                          <span className="text-[11px] text-[var(--foreground)]">{habit.expectedDuration}{isAr ? 'د' : 'm'}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-0.5 ms-auto">
+                      <div className="flex items-center gap-1 ms-auto">
                         <button onClick={(e) => { e.stopPropagation(); onEdit(habit); }}
-                          className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
-                          <Edit3 className="h-2.5 w-2.5 text-[var(--foreground)]" />
+                          className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--foreground)]/[0.06]">
+                          <Edit3 className="h-3 w-3 text-[var(--foreground)]" />
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); onDelete(habit); }}
-                          className="h-5 w-5 rounded flex items-center justify-center hover:bg-amber-500/10" title={isAr ? 'أرشفة' : 'Archive'}>
-                          <Archive className="h-2.5 w-2.5 text-amber-500/60" />
+                          className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-amber-500/10" title={isAr ? 'أرشفة' : 'Archive'}>
+                          <Archive className="h-3 w-3 text-amber-500/60" />
                         </button>
                         {locale && (
                           <Link href={`/app/habits/${habit.id}`} onClick={(e) => e.stopPropagation()}>
-                            <div className="h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--color-primary)]/10">
-                              <Maximize2 className="h-2.5 w-2.5 text-[var(--color-primary)]/60" />
+                            <div className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-[var(--color-primary)]/10">
+                              <Maximize2 className="h-3 w-3 text-[var(--color-primary)]/60" />
                             </div>
                           </Link>
                         )}
                       </div>
                     </div>
+                    {/* Details button */}
+                    <div className="mt-3 ps-8" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => onDetail(habit)}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-200 cursor-pointer"
+                        style={{ background: `${hc}10`, color: hc, border: `1.5px solid ${hc}20` }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; e.currentTarget.style.boxShadow = `0 4px 14px ${hc}33`; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}10`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; e.currentTarget.style.boxShadow = 'none'; }}>
+                        <Eye className="h-3.5 w-3.5" /> {isAr ? 'التفاصيل' : 'Details'}
+                      </button>
+                    </div>
                     {/* Timer controls */}
                     {!habit.archived && (
-                      <div className="mt-2 ps-6">
-                        <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="xs" />
+                      <div className="mt-3 ps-8">
+                        <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" />
                       </div>
                     )}
                   </div>
@@ -4544,6 +4580,13 @@ function HabitMinimalCard({ habit, index, isAr, store, today, onToggle, onDelete
             <Flame className="h-2.5 w-2.5" /> {streak.current}
           </span>
         )}
+        <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
+          className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-bold transition-all duration-200 cursor-pointer"
+          style={{ background: `${hc}12`, color: hc, border: `1px solid ${hc}20` }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}12`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}20`; }}>
+          <Eye className="h-2.5 w-2.5" /> {isAr ? 'تفاصيل' : 'Details'}
+        </button>
         {onViewPage && (
           <Link href={onViewPage} onClick={(e) => e.stopPropagation()}>
             <div className="shrink-0 h-5 w-5 rounded flex items-center justify-center hover:bg-[var(--foreground)]/[0.05] opacity-0 group-hover:opacity-100 transition-opacity">
