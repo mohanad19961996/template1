@@ -28,6 +28,19 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+
+// Helper: read checklistState entries (backward compat with old boolean format)
+type ChecklistStateValue = boolean | { done: boolean; time: string | null };
+const isItemDone = (state: Record<string, ChecklistStateValue> | undefined, id: string): boolean => {
+  if (!state) return false;
+  const v = (state as Record<string, ChecklistStateValue>)[id];
+  return typeof v === 'boolean' ? v : !!(v && v.done);
+};
+const getItemTime = (state: Record<string, ChecklistStateValue> | undefined, id: string): string | null => {
+  if (!state) return null;
+  const v = (state as Record<string, ChecklistStateValue>)[id];
+  return (v && typeof v === 'object') ? v.time : null;
+};
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } }),
@@ -957,7 +970,7 @@ export default function HabitsPage() {
       customDays: isCustom && formData.customScheduleType === 'weekdays' ? formData.customDays : (formData.frequency === 'weekly' ? formData.customDays : undefined),
       customMonthDays: isCustom && formData.customScheduleType === 'monthdays' ? formData.customMonthDays : undefined,
       customYearDays: isCustom && formData.customScheduleType === 'yeardays' ? formData.customYearDays : undefined,
-      checklistItems: formData.trackingType === 'checklist' && formData.checklistItems.length > 0 ? formData.checklistItems : undefined,
+      checklistItems: formData.checklistItems.length > 0 ? formData.checklistItems : undefined,
       targetValue: formData.trackingType === 'count' ? formData.targetValue : formData.trackingType === 'duration' ? formData.targetValue : undefined,
       targetUnit: formData.trackingType === 'count' ? formData.targetUnit : formData.trackingType === 'duration' ? 'minutes' : undefined,
       expectedDuration: formData.trackingType === 'timer' && formData.expectedDuration ? Number(formData.expectedDuration) : (formData.expectedDuration ? Number(formData.expectedDuration) : undefined),
@@ -2468,8 +2481,8 @@ export default function HabitsPage() {
                     </div>
                   )}
 
-                  {/* Checklist items */}
-                  {formData.trackingType === 'checklist' && (
+                  {/* Checklist items — available for any tracking type */}
+                  {(
                     <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15] space-y-2">
                       <label className="text-[10px] font-semibold text-[var(--foreground)] uppercase tracking-wider block">
                         {isAr ? 'عناصر القائمة' : 'Checklist Items'}
@@ -3658,7 +3671,60 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
               )}
             </div>
 
-            {/* ─ Row 4b: Mark Done / Check-in button ─ */}
+            {/* ─ Row 4b: Mark Done / Check-in button OR Checklist tasks ─ */}
+            {/* Checklist tasks for habits with checklistItems */}
+            {!habit.archived && (habit.checklistItems ?? []).length > 0 && (() => {
+              const clItems = habit.checklistItems!;
+              const clLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today);
+              const clState = clLog?.checklistState ?? {} as Record<string, boolean | { done: boolean; time: string | null }>;
+              const clCount = clItems.filter(item => clState[item.id]).length;
+              const clAllDone = clItems.length > 0 && clItems.every(item => clState[item.id]);
+
+              const handleClToggle = (itemId: string) => {
+                const wasChecked = typeof clState[itemId] === 'object' ? (clState[itemId] as { done: boolean }).done : !!clState[itemId];
+                const newState: Record<string, boolean> = {};
+                clItems.forEach(item => { newState[item.id] = item.id === itemId ? !wasChecked : (typeof clState[item.id] === 'object' ? (clState[item.id] as { done: boolean }).done : !!clState[item.id]); });
+                const allDone = clItems.every(item => newState[item.id]);
+                if (clLog) store.deleteHabitLog(clLog.id);
+                store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: allDone, checklistState: newState, source: 'manual' });
+              };
+
+              return (
+                <div className="mb-2" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex-1 h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${(clCount / clItems.length) * 100}%`, background: clAllDone ? '#10b981' : hc }} />
+                    </div>
+                    <span className="text-[10px] font-black tabular-nums" style={{ color: clAllDone ? '#10b981' : hc }}>
+                      {clCount}/{clItems.length}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {clItems.map(item => (
+                      <button key={item.id} onClick={() => handleClToggle(item.id)}
+                        className="flex items-center gap-2 w-full text-start py-1.5 px-2 rounded-lg hover:bg-[var(--foreground)]/[0.03] transition-colors">
+                        <div className={cn('w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                          clState[item.id] ? 'border-emerald-500 bg-emerald-500' : 'border-[var(--foreground)]/20')}>
+                          {clState[item.id] && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <span className={cn('text-xs font-semibold', clState[item.id] && 'line-through text-[var(--foreground)]/50')}>
+                          {isAr ? (item.titleAr || item.titleEn) : (item.titleEn || item.titleAr)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {clAllDone && (
+                    <div className="mt-1.5 flex items-center justify-center gap-2 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span className="text-xs font-black">{isAr ? 'مكتملة ✓' : 'All tasks done ✓'}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Mark Done button — only for habits WITHOUT checklist items */}
+            {(habit.checklistItems ?? []).length === 0 && (
             <div className="mb-2 h-[40px]" onClick={e => e.stopPropagation()}>
               {!habit.archived && (() => {
                 const isBooleanWindowBlocked = !hasDuration && !isCount && !done && isBooleanOutsideWindow(habit);
@@ -3696,6 +3762,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 );
               })()}
             </div>
+            )}
 
             {/* ─ Row 4c: Count controls (always visible, disabled for non-count habits) ─ */}
             <div className="mb-2 h-[40px]" onClick={e => e.stopPropagation()}>
@@ -4087,13 +4154,14 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
     : 0;
   const countDone = isCount && todayCountValue >= countTarget;
 
-  // Checklist tracking
+  // Checklist tracking — works for any habit with checklistItems
   const isChecklist = tt === 'checklist';
   const checklistItems = habit.checklistItems ?? [];
-  const todayChecklistLog = isChecklist ? store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today) : null;
-  const checklistState: Record<string, boolean> = todayChecklistLog?.checklistState ?? {};
-  const checklistDone = isChecklist && checklistItems.length > 0 && checklistItems.every(item => checklistState[item.id]);
-  const checklistCount = isChecklist ? checklistItems.filter(item => checklistState[item.id]).length : 0;
+  const hasChecklistItems = checklistItems.length > 0;
+  const todayChecklistLog = hasChecklistItems ? store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today) : null;
+  const checklistState = todayChecklistLog?.checklistState ?? {};
+  const checklistDone = hasChecklistItems && checklistItems.every(item => isItemDone(checklistState, item.id));
+  const checklistCount = hasChecklistItems ? checklistItems.filter(item => isItemDone(checklistState, item.id)).length : 0;
 
   // Duration tracking
   const isDuration = tt === 'duration';
@@ -4108,7 +4176,8 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
   const handleToggle = () => {
     if (habit.archived) return;
     if (tt === 'timer' || hasDuration) return;
-    if (tt === 'count' || tt === 'checklist' || tt === 'duration') return; // these have their own UI
+    if (tt === 'count' || tt === 'duration') return; // these have their own UI
+    if (hasChecklistItems) return; // checklist items handle completion
     const existingLog = store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today && l.completed);
     if (existingLog) { store.deleteHabitLog(existingLog.id); }
     else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); }
@@ -4122,8 +4191,13 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
 
   const handleChecklistToggle = (itemId: string) => {
     if (habit.archived) return;
-    const newState = { ...checklistState, [itemId]: !checklistState[itemId] };
-    const allDone = checklistItems.every(item => newState[item.id]);
+    const wasDone = isItemDone(checklistState, itemId);
+    const now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const newState = {
+      ...checklistState,
+      [itemId]: { done: !wasDone, time: !wasDone ? now : null },
+    };
+    const allDone = checklistItems.every(item => isItemDone(newState, item.id));
     if (todayChecklistLog) {
       store.deleteHabitLog(todayChecklistLog.id);
     }
@@ -4160,7 +4234,7 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
             {isComplete ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
               : (tt === 'timer' || hasDuration) ? <Timer className="h-4.5 w-4.5 text-[var(--foreground)]" />
               : isCount ? <div className="h-4.5 w-4.5 rounded-full border-2 border-[var(--color-primary)]/40 flex items-center justify-center text-[8px] font-bold text-[var(--color-primary)]">+</div>
-              : isChecklist ? <ListChecks className="h-4.5 w-4.5 text-[var(--foreground)]" />
+              : hasChecklistItems ? <ListChecks className="h-4.5 w-4.5 text-[var(--foreground)]" />
               : isDuration ? <Clock className="h-4.5 w-4.5 text-[var(--foreground)]" />
               : <Circle className="h-4.5 w-4.5 text-[var(--foreground)] hover:text-emerald-400 transition-colors" />}
           </button>
@@ -4196,8 +4270,8 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
             </div>
           )}
 
-          {/* Checklist */}
-          {isChecklist && checklistItems.length > 0 && !habit.archived && (
+          {/* Checklist / Tasks */}
+          {hasChecklistItems && !habit.archived && (
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 mb-1">
                 <div className="flex-1 h-1 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
@@ -4208,18 +4282,22 @@ function HabitGridCard({ habit, index, isAr, store, today, onEdit, onDelete, onD
                   {checklistCount}/{checklistItems.length}
                 </span>
               </div>
-              {checklistItems.map(item => (
+              {checklistItems.map(item => {
+                const done = isItemDone(checklistState, item.id);
+                const t = getItemTime(checklistState, item.id);
+                return (
                 <button key={item.id} onClick={() => handleChecklistToggle(item.id)}
                   className="flex items-center gap-1.5 w-full text-start py-0.5 hover:bg-[var(--foreground)]/[0.03] rounded px-1 -mx-1 transition-colors">
                   <div className={cn('w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 transition-all',
-                    checklistState[item.id] ? 'border-emerald-500 bg-emerald-500' : 'border-[var(--foreground)]/20')}>
-                    {checklistState[item.id] && <Check className="w-2 h-2 text-white" />}
+                    done ? 'border-emerald-500 bg-emerald-500' : 'border-[var(--foreground)]/20')}>
+                    {done && <Check className="w-2 h-2 text-white" />}
                   </div>
-                  <span className={cn('text-[10px] truncate', checklistState[item.id] && 'line-through text-[var(--foreground)]')}>
+                  <span className={cn('text-[10px] truncate flex-1', done && 'line-through text-[var(--foreground)]')}>
                     {isAr ? (item.titleAr || item.titleEn) : (item.titleEn || item.titleAr)}
                   </span>
-                </button>
-              ))}
+                  {t && <span className="text-[8px] text-[var(--foreground)]/40 flex-shrink-0">{t}</span>}
+                </button>);
+              })}
             </div>
           )}
 
@@ -4311,24 +4389,26 @@ function HabitListRow({ habit, index, isAr, store, today, onEdit, onArchive, onD
     : 0;
   const isChecklist = tt === 'checklist';
   const checklistItems = habit.checklistItems ?? [];
-  const todayChecklistLog = isChecklist ? store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today) : null;
-  const checklistState: Record<string, boolean> = todayChecklistLog?.checklistState ?? {};
+  const hasChecklistItems = checklistItems.length > 0;
+  const todayChecklistLog = hasChecklistItems ? store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today) : null;
+  const checklistState = todayChecklistLog?.checklistState ?? {};
   const isDuration = tt === 'duration';
   const durationTarget = isDuration ? (habit.targetValue ?? 30) : 0;
   const todayDurationValue = isDuration
     ? store.habitLogs.filter((l: HabitLog) => l.habitId === habit.id && l.date === today).reduce((s: number, l: HabitLog) => s + (l.value ?? 0), 0)
     : 0;
 
-  const isComplete = done || (isCount && todayCountValue >= countTarget) || (isChecklist && checklistItems.length > 0 && checklistItems.every(item => checklistState[item.id])) || (isDuration && todayDurationValue >= durationTarget);
+  const isComplete = done || (isCount && todayCountValue >= countTarget) || (hasChecklistItems && checklistItems.every(item => isItemDone(checklistState, item.id))) || (isDuration && todayDurationValue >= durationTarget);
 
   const handleToggle = () => {
     if (hasDuration || habit.archived || tt === 'timer') return;
+    if (hasChecklistItems) return; // checklist items handle completion
     if (tt === 'count') {
       const newVal = todayCountValue + 1;
       store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: newVal >= countTarget, value: 1, source: 'manual' });
       return;
     }
-    if (tt === 'checklist' || tt === 'duration') return;
+    if (tt === 'duration') return;
     const existingLog = store.habitLogs.find((l: HabitLog) => l.habitId === habit.id && l.date === today && l.completed);
     if (existingLog) { store.deleteHabitLog(existingLog.id); }
     else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); }
@@ -4375,7 +4455,7 @@ function HabitListRow({ habit, index, isAr, store, today, onEdit, onArchive, onD
             <span>{freqLabel}</span>
             {isCount && <span className="font-bold" style={{ color: todayCountValue >= countTarget ? '#10b981' : hc }}>{todayCountValue}/{countTarget} {habit.targetUnit ?? 'times'}</span>}
             {isDuration && <span className="font-bold" style={{ color: todayDurationValue >= durationTarget ? '#10b981' : hc }}>{todayDurationValue}/{durationTarget}m</span>}
-            {isChecklist && checklistItems.length > 0 && <span className="font-bold" style={{ color: isComplete ? '#10b981' : hc }}>{checklistItems.filter(i => checklistState[i.id]).length}/{checklistItems.length}</span>}
+            {hasChecklistItems && <span className="font-bold" style={{ color: isComplete ? '#10b981' : hc }}>{checklistItems.filter(i => isItemDone(checklistState, i.id)).length}/{checklistItems.length} {isAr ? 'مهام' : 'tasks'}</span>}
           </div>
         </div>
       </div>
@@ -5778,7 +5858,59 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 </button>
               </div>
             )}
-            {!isCountHabit && !hasDuration && !habit.archived && (() => {
+            {/* Checklist tasks — replaces Mark Done for habits with checklist items */}
+            {!isCountHabit && !hasDuration && !habit.archived && (habit.checklistItems ?? []).length > 0 && (() => {
+              const clItems = habit.checklistItems!;
+              const clLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today);
+              const clState = clLog?.checklistState ?? {} as Record<string, boolean | { done: boolean; time: string | null }>;
+              const clCount = clItems.filter(item => clState[item.id]).length;
+              const clAllDone = clItems.length > 0 && clItems.every(item => clState[item.id]);
+
+              const handleClToggle = (itemId: string) => {
+                const wasChecked = typeof clState[itemId] === 'object' ? (clState[itemId] as { done: boolean }).done : !!clState[itemId];
+                const newState: Record<string, boolean> = {};
+                clItems.forEach(item => { newState[item.id] = item.id === itemId ? !wasChecked : (typeof clState[item.id] === 'object' ? (clState[item.id] as { done: boolean }).done : !!clState[item.id]); });
+                const allDone = clItems.every(item => newState[item.id]);
+                if (clLog) store.deleteHabitLog(clLog.id);
+                store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: allDone, checklistState: newState, source: 'manual' });
+              };
+
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-2 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${(clCount / clItems.length) * 100}%`, background: clAllDone ? '#10b981' : hc }} />
+                    </div>
+                    <span className="text-xs font-black tabular-nums" style={{ color: clAllDone ? '#10b981' : hc }}>
+                      {clCount}/{clItems.length}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {clItems.map(item => (
+                      <button key={item.id} onClick={() => handleClToggle(item.id)}
+                        className="flex items-center gap-2.5 w-full text-start py-2 px-3 rounded-xl hover:bg-[var(--foreground)]/[0.03] transition-colors">
+                        <div className={cn('w-5 h-5 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                          clState[item.id] ? 'border-emerald-500 bg-emerald-500' : 'border-[var(--foreground)]/20')}>
+                          {clState[item.id] && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <span className={cn('text-sm font-semibold', clState[item.id] && 'line-through text-[var(--foreground)]/50')}>
+                          {isAr ? (item.titleAr || item.titleEn) : (item.titleEn || item.titleAr)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {clAllDone && (
+                    <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span className="text-sm font-black">{isAr ? 'مكتملة ✓' : 'All tasks done ✓'}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Mark Done button — only for habits WITHOUT checklist items */}
+            {!isCountHabit && !hasDuration && !habit.archived && (habit.checklistItems ?? []).length === 0 && (() => {
               const now = new Date();
               const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
               const inWindow = !habit.windowStart || !habit.windowEnd || (currentTime >= habit.windowStart && currentTime <= habit.windowEnd);

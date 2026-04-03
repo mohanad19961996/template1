@@ -158,7 +158,7 @@ export interface HabitLog {
   // ── New fields for proper tracking ──
   status?: HabitLogStatus;         // completed | partial | skipped | missed | pending (default: based on completed)
   value?: number;                  // actual value achieved (e.g. 6 cups out of 8)
-  checklistState?: Record<string, boolean>; // for checklist type: { itemId: true/false }
+  checklistState?: Record<string, boolean | { done: boolean; time: string | null }>; // for checklist type: { itemId: { done, time } }
   source?: 'manual' | 'timer' | 'auto'; // how this log was created (default: manual)
 }
 
