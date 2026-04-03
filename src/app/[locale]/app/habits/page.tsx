@@ -140,14 +140,82 @@ function to12h(time: string): string {
   return `${h}:${m} ${period}`;
 }
 
-// Returns 'green' | 'orange' | 'red' | 'none' based on time window
-// green = done in window, orange = done outside window, red = not done, none = no window set
-type CompletionColor = 'green' | 'orange' | 'red' | 'none';
+/** Check if a boolean habit is outside its completion window. Returns false (not blocked) if no window is set. */
+function isBooleanOutsideWindow(habit: Habit): boolean {
+  const start = habit.completionWindowStart;
+  const end = habit.completionWindowEnd;
+  if (!start && !end) return false; // no window configured → always allowed
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  if (start && end) {
+    if (start <= end) return currentTime < start || currentTime > end;
+    // overnight window (e.g. 21:00 → 02:00): blocked only if between end and start
+    return currentTime > end && currentTime < start;
+  }
+  if (start) return currentTime < start;
+  if (end) return currentTime > end;
+  return false;
+}
+
+/** Format a habit's completion window for display */
+function formatCompletionWindow(habit: Habit, isAr: boolean): string {
+  const start = habit.completionWindowStart;
+  const end = habit.completionWindowEnd;
+  if (start && end) return `${to12h(start)} – ${to12h(end)}`;
+  if (start) return isAr ? `بعد ${to12h(start)}` : `After ${to12h(start)}`;
+  if (end) return isAr ? `قبل ${to12h(end)}` : `Before ${to12h(end)}`;
+  return '';
+}
+
+// Check if a habit is scheduled for a specific date
+function isHabitScheduledForDate(habit: Habit, dateStr: string): boolean {
+  if (habit.frequency === 'daily') return true;
+  const d = parseLocalDate(dateStr);
+  if (habit.frequency === 'weekly') {
+    const dayOfWeek = d.getDay() as WeekDay;
+    if (habit.customDays?.length) return habit.customDays.includes(dayOfWeek);
+    // Weekly with no specific days: default to Sunday
+    return dayOfWeek === 0;
+  }
+  if (habit.frequency === 'monthly') {
+    if (habit.customMonthDays?.length) return habit.customMonthDays.includes(d.getDate());
+    // Monthly with no specific days: default to 1st of month
+    return d.getDate() === 1;
+  }
+  if (habit.frequency === 'custom' && habit.customScheduleType) {
+    if (habit.customScheduleType === 'weekdays' && habit.customDays?.length) {
+      return habit.customDays.includes(d.getDay() as WeekDay);
+    }
+    if (habit.customScheduleType === 'monthdays' && habit.customMonthDays?.length) {
+      return habit.customMonthDays.includes(d.getDate());
+    }
+    if (habit.customScheduleType === 'yeardays' && habit.customYearDays?.length) {
+      return habit.customYearDays.some(yd => yd.month === d.getMonth() && yd.day === d.getDate());
+    }
+  }
+  // scheduleType-based fallback
+  const scheduleDays = habit.scheduleDays ?? habit.customDays ?? [];
+  const scheduleType = habit.scheduleType ?? 'daily';
+  if (scheduleType === 'daily') return true;
+  if (scheduleType === 'custom' && scheduleDays.length > 0) {
+    return scheduleDays.includes(d.getDay() as WeekDay);
+  }
+  if (scheduleType === 'weekly' && scheduleDays.length > 0) {
+    return scheduleDays.includes(d.getDay() as WeekDay);
+  }
+  return true;
+}
+
+// Returns 'green' | 'orange' | 'red' | 'none' | 'not-scheduled' based on time window
+// green = done in window, orange = done outside window, red = not done, none = no window set, not-scheduled = habit not active on this day
+type CompletionColor = 'green' | 'orange' | 'red' | 'none' | 'not-scheduled';
 
 function getCompletionColor(habit: Habit, log: HabitLog | undefined, dateStr?: string): CompletionColor {
   if (!log || !log.completed) {
     const today = todayString();
     const checkDate = dateStr || '';
+    // Check if habit is scheduled for this day
+    if (checkDate && !isHabitScheduledForDate(habit, checkDate)) return 'not-scheduled';
     // Future days = gray (upcoming)
     if (checkDate > today) return 'none';
     // Today: only red if strict window has passed, otherwise gray (pending)
@@ -755,6 +823,7 @@ export default function HabitsPage() {
     cueEn: '', cueAr: '', routineEn: '', routineAr: '', rewardEn: '', rewardAr: '',
     placeEn: '', placeAr: '', preferredTime: '', expectedDuration: '' as string | number,
     windowStart: '', windowEnd: '', strictWindow: false, maxDailyReps: '' as string | number,
+    completionWindowStart: '', completionWindowEnd: '',
     orderNumber: '' as string | number, colSpan: 1, rowSpan: 1,
     streakGoal: '' as string | number, streakRewardEn: '', streakRewardAr: '',
     streakGoal2: '' as string | number, streakRewardEn2: '', streakRewardAr2: '',
@@ -778,7 +847,9 @@ export default function HabitsPage() {
       image: '',
       cueEn: '', cueAr: '', routineEn: '', routineAr: '', rewardEn: '', rewardAr: '',
       placeEn: '', placeAr: '', preferredTime: '', expectedDuration: '',
-      windowStart: '', windowEnd: '', strictWindow: false, maxDailyReps: '', orderNumber: '', colSpan: 1, rowSpan: 1,
+      windowStart: '', windowEnd: '', strictWindow: false, maxDailyReps: '',
+      completionWindowStart: '', completionWindowEnd: '',
+      orderNumber: '', colSpan: 1, rowSpan: 1,
       streakGoal: '', streakRewardEn: '', streakRewardAr: '',
       streakGoal2: '', streakRewardEn2: '', streakRewardAr2: '',
       streakGoal3: '', streakRewardEn3: '', streakRewardAr3: '',
@@ -841,6 +912,7 @@ export default function HabitsPage() {
       windowStart: habit.windowStart ?? '',
       windowEnd: habit.windowEnd ?? '',
       strictWindow: habit.strictWindow ?? false, maxDailyReps: habit.maxDailyReps ?? '',
+      completionWindowStart: habit.completionWindowStart ?? '', completionWindowEnd: habit.completionWindowEnd ?? '',
       orderNumber: habit.order ?? '', colSpan: habit.colSpan ?? 1, rowSpan: habit.rowSpan ?? 1,
       streakGoal: habit.streakGoal ?? '', streakRewardEn: habit.streakRewardEn ?? '', streakRewardAr: habit.streakRewardAr ?? '',
       streakGoal2: habit.streakGoal2 ?? '', streakRewardEn2: habit.streakRewardEn2 ?? '', streakRewardAr2: habit.streakRewardAr2 ?? '',
@@ -892,6 +964,8 @@ export default function HabitsPage() {
       windowStart: formData.windowStart || undefined,
       windowEnd: formData.windowEnd || undefined,
       strictWindow: formData.strictWindow || undefined,
+      completionWindowStart: formData.trackingType === 'boolean' && formData.completionWindowStart ? formData.completionWindowStart : undefined,
+      completionWindowEnd: formData.trackingType === 'boolean' && formData.completionWindowEnd ? formData.completionWindowEnd : undefined,
       maxDailyReps: maxDailyReps !== '' ? Number(maxDailyReps) : undefined,
       order: orderNumber !== '' ? Number(orderNumber) : undefined,
       colSpan: formData.colSpan && formData.colSpan > 1 ? formData.colSpan : undefined,
@@ -2370,6 +2444,35 @@ export default function HabitsPage() {
                     ))}
                   </div>
 
+                  {/* Completion Window for boolean habits */}
+                  {formData.trackingType === 'boolean' && (
+                    <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]/60" />
+                        <span className="text-[10px] font-semibold text-[var(--foreground)]">
+                          {isAr ? 'نافذة التسجيل (متى يمكنك تسجيل الإنجاز؟)' : 'Completion Window (when can you mark it done?)'}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-[var(--foreground)] mb-2">
+                        {isAr ? 'حدد الفترة الزمنية التي يمكنك فيها تسجيل هذه العادة كمنجزة. اتركها فارغة للسماح في أي وقت.' : 'Set the time range during which you can mark this habit as done. Leave empty to allow anytime.'}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'من' : 'From'}</label>
+                          <input type="time" value={formData.completionWindowStart}
+                            onChange={e => setFormData(f => ({ ...f, completionWindowStart: e.target.value }))}
+                            className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'إلى' : 'To'}</label>
+                          <input type="time" value={formData.completionWindowEnd}
+                            onChange={e => setFormData(f => ({ ...f, completionWindowEnd: e.target.value }))}
+                            className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Count settings */}
                   {formData.trackingType === 'count' && (
                     <div className="flex gap-3 items-end p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.06]">
@@ -3027,7 +3130,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
         date: dateStr, day: d, inMonth: true, isFuture, beforeCreated,
         completed: dayLogs.length > 0,
         sessionCount: dayLogs.length,
-        color: !isFuture && !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
+        color: !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
       });
     }
     return days;
@@ -3101,14 +3204,18 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
               {[
                 { color: 'bg-emerald-500', label: isAr ? 'في الوقت' : 'On time' },
                 { color: 'bg-amber-500', label: isAr ? 'متأخر' : 'Late' },
-                { color: 'bg-red-500/70', label: isAr ? 'فائت' : 'Missed' },
-                { color: 'bg-[var(--foreground)]/[0.06]', label: isAr ? 'قادم' : 'Upcoming' },
+                { color: 'bg-red-500', label: isAr ? 'فائت' : 'Missed' },
+                { color: 'bg-gray-200 dark:bg-gray-700', label: isAr ? 'قادم' : 'Upcoming' },
               ].map(l => (
                 <div key={l.label} className="flex items-center gap-1">
                   <div className={cn('h-2.5 w-2.5 rounded-sm', l.color)} />
                   <span className="text-[9px] text-[var(--foreground)] font-semibold">{l.label}</span>
                 </div>
               ))}
+              <div className="flex items-center gap-1">
+                <div className="h-2.5 w-2.5 rounded-sm bg-red-500/8 text-red-400/50 text-[7px] font-black flex items-center justify-center">✕</div>
+                <span className="text-[9px] text-[var(--foreground)] font-semibold">{isAr ? 'غير مجدول' : 'N/A'}</span>
+              </div>
             </div>
             <button onClick={handleDismiss}
               className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 hover:bg-red-500/10 hover:text-red-500 text-[var(--foreground)]">
@@ -3201,22 +3308,23 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                   <div className="grid grid-cols-7 gap-0.5 overflow-visible">
                     {days.map((day, di) => {
                       const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
+                      const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                       const isToday = day.date === today;
                       return (
                         <div key={di} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
                           className={cn(
-                            'h-6 rounded-md flex items-center justify-center text-[8px] font-extrabold transition-colors duration-100 relative overflow-visible',
+                            'h-6 rounded-md flex items-center justify-center text-[9px] font-extrabold transition-colors duration-100 relative overflow-visible',
                             !day.inMonth && 'invisible',
-                            day.isFuture && day.inMonth && 'bg-[var(--foreground)]/[0.04] text-[var(--foreground)]',
-                            day.beforeCreated && day.inMonth && 'text-[var(--foreground)]',
+                            isOff && 'bg-red-500/8 text-red-400/50',
+                            !isOff && day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
                             isApplicable && day.color === 'green' && 'bg-emerald-500 text-white',
                             isApplicable && day.color === 'orange' && 'bg-amber-500 text-white',
-                            isApplicable && day.color === 'red' && 'bg-red-500/70 text-white',
-                            isApplicable && day.color === 'none' && !day.completed && 'bg-[var(--foreground)]/[0.07] text-[var(--foreground)]',
+                            isApplicable && day.color === 'red' && 'bg-red-500 text-white',
+                            isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
                             isToday && 'ring-2 ring-offset-1 font-black shadow-sm',
                           )}
                           style={isToday ? { ['--tw-ring-color' as string]: hc } : undefined}>
-                          {day.inMonth ? day.day : ''}
+                          {day.inMonth ? (isOff ? '✕' : day.day) : ''}
                           {day.sessionCount > 1 && (
                             <span className="absolute -top-1.5 -end-1.5 z-10 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[7px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                           )}
@@ -3317,8 +3425,8 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
   const handleCheck = () => {
     if (hasDuration || habit.archived || isDisabled) return;
     if (isCount) return;
-    // Boolean habits can only be checked after 9 PM
-    if (!hasDuration && !isCount && !done && new Date().getHours() < 21) return;
+    // Boolean habits can only be checked within their completion window
+    if (!hasDuration && !isCount && !done && isBooleanOutsideWindow(habit)) return;
     // For single-rep habits: toggle done
     if (!hasMultipleReps) {
       if (done && todayLog) { store.deleteHabitLog(todayLog.id); return; }
@@ -3595,7 +3703,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                       <div className="flex items-center gap-1.5">
                         <div className="h-2 w-2 rounded-full shrink-0" style={{ background: done ? '#22c55e' : `${hc}60`, boxShadow: done ? '0 0 6px #22c55e' : undefined }} />
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground)]">
-                          {done ? (isAr ? 'مكتمل' : 'Completed') : new Date().getHours() >= 21 ? (isAr ? 'تسجيل يومي' : 'Daily Check-in') : (isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM')}
+                          {done ? (isAr ? 'مكتمل' : 'Completed') : !isBooleanOutsideWindow(habit) ? (isAr ? 'تسجيل يومي' : 'Daily Check-in') : (isAr ? `متاح ${formatCompletionWindow(habit, true)}` : `Available ${formatCompletionWindow(habit, false)}`)}
                         </span>
                       </div>
                       <CheckCircle2 className="h-3.5 w-3.5" style={{ color: done ? '#22c55e' : `${hc}50` }} />
@@ -3625,8 +3733,9 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
             {/* ─ Row 4b: Mark Done / Check-in button ─ */}
             <div className="mb-2 h-[40px]" onClick={e => e.stopPropagation()}>
               {!habit.archived && (() => {
-                const isBooleanBefore9pm = !hasDuration && !isCount && !done && new Date().getHours() < 21;
-                const markDoneDisabled = isDisabled || (hasDuration && !done && !allRepsDone) || isBooleanBefore9pm;
+                const isBooleanWindowBlocked = !hasDuration && !isCount && !done && isBooleanOutsideWindow(habit);
+                const windowLabel = formatCompletionWindow(habit, isAr);
+                const markDoneDisabled = isDisabled || (hasDuration && !done && !allRepsDone) || isBooleanWindowBlocked;
                 return allRepsDone ? (
                   <div className="w-full h-full flex items-center justify-center gap-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 cursor-pointer hover:bg-emerald-500/15 transition-all"
                     onClick={() => toast.notifySuccess(
@@ -3641,7 +3750,7 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                 ) : (
                   <motion.button whileHover={!markDoneDisabled ? { scale: 1.02 } : {}} whileTap={!markDoneDisabled ? { scale: 0.97 } : {}}
                     onClick={!markDoneDisabled ? handleCheck : () => {
-                      if (isBooleanBefore9pm) toast.notifyInfo(isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM', isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day');
+                      if (isBooleanWindowBlocked) toast.notifyInfo(isAr ? `متاح ${windowLabel}` : `Available ${windowLabel}`, isAr ? `يمكنك تسجيل هذه العادة خلال الفترة ${windowLabel}` : `You can check in during ${windowLabel}`);
                       else if (strictLocked) toast.notifyWarning(isAr ? 'فات الوقت' : 'Window passed', isAr ? `انتهى وقت النافذة (${habit.windowStart}–${habit.windowEnd})` : `Time window (${habit.windowStart}–${habit.windowEnd}) has passed`);
                       else if (strictNotYet) toast.notifyInfo(isAr ? 'لم يحن الوقت بعد' : 'Not yet', isAr ? `النافذة تبدأ الساعة ${habit.windowStart}` : `Window starts at ${habit.windowStart}`);
                       else if (hasDuration && !done) toast.notifyInfo(isAr ? 'استخدم المؤقت' : 'Use the timer', isAr ? 'هذه العادة تحتاج مؤقت لإكمالها' : 'This habit requires the timer to complete');
@@ -3918,7 +4027,8 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                         <div className={cn('hc-dot h-4 w-4 rounded-full cursor-default',
                           d.done
                             ? d.color === 'green' ? 'bg-emerald-500' : d.color === 'orange' ? 'bg-amber-500' : 'bg-emerald-500'
-                            : d.color === 'red' ? 'bg-red-400/40'
+                            : d.color === 'not-scheduled' ? 'bg-red-500/8'
+                            : d.color === 'red' ? 'bg-red-500'
                             : 'bg-gray-300 dark:bg-gray-600'
                         )}
                           style={isToday ? { boxShadow: `0 0 0 3px ${d.done ? '#22c55e35' : `${hc}30`}, 0 0 8px ${d.done ? '#22c55e20' : `${hc}15`}` } : undefined}
@@ -3933,12 +4043,13 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
                   );
                 })}
               </div>
-              {/* Legend: green=on time, orange=outside window, red=missed, gray=upcoming */}
-              <div className="flex items-center justify-center gap-3 mt-2 pt-1.5" style={{ borderTop: `1px solid ${hc}08` }}>
+              {/* Legend: green=on time, orange=outside window, red=missed, gray=upcoming, dashed=off day */}
+              <div className="flex items-center justify-center gap-3 mt-2 pt-1.5 flex-wrap" style={{ borderTop: `1px solid ${hc}08` }}>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'في الوقت' : 'On time'}</span></span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'خارج الوقت' : 'Late'}</span></span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400/40 inline-block" /><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'فائت' : 'Missed'}</span></span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" /><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'فائت' : 'Missed'}</span></span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" /><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'قادم' : 'Upcoming'}</span></span>
+                {habit.frequency !== 'daily' && <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500/8 text-red-400/50 text-[5px] font-black inline-flex items-center justify-center">✕</span><span className="text-[8px] font-semibold text-[var(--foreground)]">{isAr ? 'غير مجدول' : 'N/A'}</span></span>}
               </div>
             </div>
 
@@ -4345,7 +4456,7 @@ function HabitListRow({ habit, index, isAr, store, today, onEdit, onArchive, onD
       <div className="hidden sm:flex items-center gap-0.5">
         {last7.map((c, i) => (
           <div key={i} className={cn('h-1.5 w-1.5 rounded-full',
-            c === 'green' ? 'bg-emerald-500' : c === 'orange' ? 'bg-amber-500' : c === 'red' ? 'bg-red-400' : 'bg-[var(--foreground)]/8'
+            c === 'green' ? 'bg-emerald-500' : c === 'orange' ? 'bg-amber-500' : c === 'red' ? 'bg-red-500' : c === 'not-scheduled' ? 'bg-red-500/15' : 'bg-gray-300 dark:bg-gray-600'
           )} />
         ))}
       </div>
@@ -5232,8 +5343,12 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                             'px-1 py-3 text-center',
                             isToday && 'bg-[var(--color-primary)]/[0.08]',
                           )}>
-                            {isFuture || beforeCreated ? (
-                              <div className="h-8 w-8 mx-auto rounded-lg bg-[var(--foreground)]/[0.02]" />
+                            {beforeCreated ? (
+                              <div className="h-8 w-8 mx-auto rounded-lg bg-red-500/8 flex items-center justify-center">
+                                <X className="h-3.5 w-3.5 text-red-400/40" />
+                              </div>
+                            ) : isFuture ? (
+                              <div className="h-8 w-8 mx-auto rounded-lg bg-gray-200 dark:bg-gray-700" />
                             ) : done ? (
                               <div className="h-8 w-8 mx-auto rounded-lg bg-emerald-500/15 flex items-center justify-center">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -5451,7 +5566,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
       const log = dayLogs.length > 0 ? dayLogs[0] : undefined;
       days.push({
         date: dateStr, day: d, inMonth: true, completed: dayLogs.length > 0, sessionCount: dayLogs.length, isFuture, beforeCreated,
-        color: !isFuture && !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
+        color: !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
       });
     }
     return days;
@@ -5614,8 +5729,9 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                   toast.notifyInfo(isAr ? 'استخدم العداد' : 'Use counter', isAr ? 'هذه العادة تحتاج العداد لإكمالها' : 'This habit requires the counter to complete');
                   return;
                 }
-                if (new Date().getHours() < 21) {
-                  toast.notifyInfo(isAr ? 'غير متاح بعد' : 'Not available yet', isAr ? 'يمكنك الإكمال بعد الساعة ٩ مساءً' : 'You can mark as done after 9 PM');
+                if (isBooleanOutsideWindow(habit)) {
+                  const wLabel = formatCompletionWindow(habit, isAr);
+                  toast.notifyInfo(isAr ? 'غير متاح بعد' : 'Not available yet', isAr ? `يمكنك الإكمال خلال ${wLabel}` : `You can mark as done during ${wLabel}`);
                   return;
                 }
                 store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: true });
@@ -5648,22 +5764,24 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
               const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
               const isToday = d.date === today;
               const isPast = d.date < today;
+              const isNotScheduled = d.color === 'not-scheduled';
               const daySessionCount = store.habitLogs.filter(l => l.habitId === habit.id && l.date === d.date && l.completed).length;
               return (
                 <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-lg py-1 transition-all relative',
                   isToday && 'bg-[var(--color-primary)]/[0.08]')}
                   style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
-                  <span className={cn('text-sm font-bold', isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
+                  <span className={cn('text-sm font-bold', isNotScheduled ? 'text-[var(--foreground)]/30' : isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
                   <div className={cn('h-7 w-7 rounded-full flex items-center justify-center text-sm font-black',
+                    isNotScheduled ? 'bg-red-500/8 text-red-400/50' :
                     d.done && d.color === 'green' ? 'bg-emerald-500 text-white' :
                     d.done && d.color === 'orange' ? 'bg-amber-500 text-white' :
                     d.done ? 'bg-emerald-500 text-white' :
-                    isPast ? 'bg-red-400/30 text-red-500/70' :
+                    isPast ? 'bg-red-500 text-white' :
                     isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
-                    'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
-                    isToday && 'ring-2 ring-offset-1 shadow-sm')}
-                    style={isToday ? { ['--tw-ring-color' as string]: hc } : undefined}>
-                    {d.done ? <Check className="h-2.5 w-2.5" /> : parseLocalDate(d.date).getDate()}
+                    'bg-gray-300 dark:bg-gray-600 text-[var(--foreground)]/70',
+                    isToday && !isNotScheduled && 'ring-2 ring-offset-1 shadow-sm')}
+                    style={isToday && !isNotScheduled ? { ['--tw-ring-color' as string]: hc } : undefined}>
+                    {d.done ? <Check className="h-2.5 w-2.5" /> : isNotScheduled ? '✕' : parseLocalDate(d.date).getDate()}
                   </div>
                   {daySessionCount > 1 && (
                     <span className="absolute -top-1 end-0 h-4 min-w-[16px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-black flex items-center justify-center shadow-sm">{daySessionCount}x</span>
@@ -5673,7 +5791,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
             })}
           </div>
           {/* Week strip legend */}
-          <div className="flex items-center justify-center gap-3 mt-1.5">
+          <div className="flex items-center justify-center gap-3 mt-1.5 flex-wrap">
             <div className="flex items-center gap-1">
               <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
               <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'مكتمل' : 'Done'}</span>
@@ -5683,13 +5801,19 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
               <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'متأخر' : 'Late'}</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="h-2.5 w-2.5 rounded-full bg-red-400/30" />
+              <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
               <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'فائت' : 'Missed'}</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="h-2.5 w-2.5 rounded-full bg-gray-200 dark:bg-gray-700" />
+              <div className="h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
               <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'قادم' : 'Upcoming'}</span>
             </div>
+            {habit.frequency !== 'daily' && (
+              <div className="flex items-center gap-1">
+                <div className="h-2.5 w-2.5 rounded-full bg-red-500/8 text-red-400/50 text-[7px] font-black flex items-center justify-center">✕</div>
+                <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'غير مجدول' : 'N/A'}</span>
+              </div>
+            )}
           </div>
           </div>
 
@@ -5733,15 +5857,16 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
               const windowExpired = habit.windowStart && habit.windowEnd && currentTime > habit.windowEnd;
               const strictLocked = habit.strictWindow && habit.windowStart && habit.windowEnd && windowExpired && !done;
               const strictNotYet = habit.strictWindow && habit.windowStart && habit.windowEnd && !inWindow && !windowExpired && !done;
-              const isBooleanBefore9pm = !done && now.getHours() < 21;
-              const isDisabled = !!strictLocked || !!strictNotYet || isBooleanBefore9pm;
+              const isBooleanWindowBlocked = !done && isBooleanOutsideWindow(habit);
+              const cwLabel = formatCompletionWindow(habit, isAr);
+              const isDisabled = !!strictLocked || !!strictNotYet || isBooleanWindowBlocked;
 
               const handleClick = () => {
                 if (done) {
                   const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
                   if (log) store.deleteHabitLog(log.id);
-                } else if (isBooleanBefore9pm) {
-                  toast.notifyInfo(isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM', isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day');
+                } else if (isBooleanWindowBlocked) {
+                  toast.notifyInfo(isAr ? `متاح ${cwLabel}` : `Available ${cwLabel}`, isAr ? `يمكنك تسجيل هذه العادة خلال الفترة ${cwLabel}` : `You can check in during ${cwLabel}`);
                 } else if (strictLocked) {
                   toast.notifyWarning(isAr ? 'فات الوقت' : 'Window passed', isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`);
                 } else if (strictNotYet) {
@@ -5760,7 +5885,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                   style={!done && !isDisabled ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 4px 16px ${hc}25` } : undefined}>
                   <CheckCircle2 className="h-4 w-4" />
                   {done ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo')
-                    : isBooleanBefore9pm ? (isAr ? 'متاح بعد ٩ مساءً' : 'After 9 PM')
+                    : isBooleanWindowBlocked ? (isAr ? `متاح ${cwLabel}` : `${cwLabel}`)
                     : strictNotYet ? (isAr ? `متاح من ${to12h(habit.windowStart!)}` : `From ${to12h(habit.windowStart!)}`)
                     : strictLocked ? (isAr ? 'فات الوقت' : 'Window Passed')
                     : (isAr ? 'أنجز الآن' : 'Mark Done')}
@@ -5962,20 +6087,21 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 <div className="grid grid-cols-7 gap-1 overflow-visible">
                   {calendarDays.map((day, i) => {
                     const isApplicable = day.inMonth && !day.isFuture && !day.beforeCreated;
+                    const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                     const isTodayCal = day.date === todayString();
                     return (
                       <div key={i} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
-                        className={cn('h-8 rounded-md flex items-center justify-center text-xs font-bold cursor-default relative overflow-visible',
+                        className={cn('h-8 rounded-md flex items-center justify-center text-sm font-bold cursor-default relative overflow-visible',
                           !day.inMonth && 'invisible',
-                          day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
-                          day.beforeCreated && day.inMonth && 'text-[var(--foreground)]',
+                          isOff && 'bg-red-500/8 text-red-400/50',
+                          !isOff && day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
                           isApplicable && day.color === 'green' && 'bg-emerald-500 text-white',
                           isApplicable && day.color === 'orange' && 'bg-amber-500 text-white',
-                          isApplicable && day.color === 'red' && 'bg-red-500/70 text-white',
-                          isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
+                          isApplicable && day.color === 'red' && 'bg-red-500 text-white',
+                          isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/70',
                           isTodayCal && 'ring-2 ring-offset-1 font-black shadow-sm')}
                         style={isTodayCal ? { ['--tw-ring-color' as string]: hc } : undefined}>
-                        {day.inMonth && day.day}
+                        {day.inMonth ? (isOff ? '✕' : day.day) : ''}
                         {day.sessionCount > 1 && (
                           <span className="absolute -top-1.5 -end-1.5 z-10 h-4.5 min-w-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                         )}
@@ -5984,18 +6110,22 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                   })}
                 </div>
                 {/* Legend */}
-                <div className="flex items-center justify-center gap-2.5 mt-2">
+                <div className="flex items-center justify-center gap-2.5 mt-2 flex-wrap">
                   {[
                     { color: 'bg-emerald-500', label: isAr ? 'في الوقت' : 'On time' },
                     { color: 'bg-amber-500', label: isAr ? 'متأخر' : 'Late' },
-                    { color: 'bg-red-500/70', label: isAr ? 'فائت' : 'Missed' },
-                    { color: 'bg-gray-300 dark:bg-gray-600', label: isAr ? 'قادم' : 'Upcoming' },
+                    { color: 'bg-red-500', label: isAr ? 'فائت' : 'Missed' },
+                    { color: 'bg-gray-200 dark:bg-gray-700', label: isAr ? 'قادم' : 'Upcoming' },
                   ].map(l => (
                     <div key={l.label} className="flex items-center gap-1">
                       <div className={cn('h-2 w-2 rounded-sm', l.color)} />
                       <span className="text-sm text-[var(--foreground)] font-semibold">{l.label}</span>
                     </div>
                   ))}
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-sm bg-red-500/8 text-red-400/50 text-[6px] font-black flex items-center justify-center">✕</div>
+                    <span className="text-sm text-[var(--foreground)] font-semibold">{isAr ? 'غير مجدول' : 'N/A'}</span>
+                  </div>
                 </div>
                 {/* First done + buttons */}
                 <div className="flex gap-1.5 mt-2">

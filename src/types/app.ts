@@ -117,6 +117,8 @@ export interface Habit {
   windowStart?: string; // HH:mm — ideal window start (optional)
   windowEnd?: string;   // HH:mm — ideal window end (optional)
   strictWindow?: boolean; // if true, habit can ONLY be done within windowStart-windowEnd, auto-missed otherwise
+  completionWindowStart?: string; // HH:mm — when boolean habits can be marked done (start)
+  completionWindowEnd?: string;   // HH:mm — when boolean habits can be marked done (end)
   maxDailyReps?: number;  // max times this habit can be completed per day (e.g. study 3 sessions/day)
   // Streak challenges (up to 3 tiers)
   streakGoal?: number;     // tier 1 e.g. 7 days

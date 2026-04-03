@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import { HabitTimerControls } from '@/components/app/habit-timer-controls';
-import { HabitHistoryEntry, HabitLog, todayString, resolveHabitColor } from '@/types/app';
+import { Habit, HabitHistoryEntry, HabitLog, WeekDay, todayString, resolveHabitColor, parseLocalDate } from '@/types/app';
 import {
   ArrowLeft, Calendar as CalendarIcon, Clock, Flame, Target, Edit3, Archive,
   ChevronLeft, ChevronRight, Star, BarChart3, TrendingUp, Activity,
   MapPin, Repeat, Gift, Lightbulb, History, Eye, CheckCircle2, Circle,
-  Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare,
+  Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare, Minus,
 } from 'lucide-react';
 import { useToast } from '@/components/app/toast-notifications';
 
@@ -554,6 +554,7 @@ export default function HabitDetailPage() {
             setSelectedDate={(d) => { setSelectedDate(d); if (d) setViewingDate(d); }}
             isAr={isAr}
             habitColor={habit.color}
+            habit={habit}
           />
 
           {/* Selected day details */}
@@ -875,8 +876,41 @@ export default function HabitDetailPage() {
 }
 
 // ── Calendar Component ──
+// Check if a habit is scheduled for a specific date
+function isHabitScheduledForDate(habit: Habit, dateStr: string): boolean {
+  if (habit.frequency === 'daily') return true;
+  const d = parseLocalDate(dateStr);
+  if (habit.frequency === 'weekly') {
+    const dayOfWeek = d.getDay() as WeekDay;
+    if (habit.customDays?.length) return habit.customDays.includes(dayOfWeek);
+    return dayOfWeek === 0;
+  }
+  if (habit.frequency === 'monthly') {
+    if (habit.customMonthDays?.length) return habit.customMonthDays.includes(d.getDate());
+    return d.getDate() === 1;
+  }
+  if (habit.frequency === 'custom' && habit.customScheduleType) {
+    if (habit.customScheduleType === 'weekdays' && habit.customDays?.length) {
+      return habit.customDays.includes(d.getDay() as WeekDay);
+    }
+    if (habit.customScheduleType === 'monthdays' && habit.customMonthDays?.length) {
+      return habit.customMonthDays.includes(d.getDate());
+    }
+    if (habit.customScheduleType === 'yeardays' && habit.customYearDays?.length) {
+      return habit.customYearDays.some(yd => yd.month === d.getMonth() && yd.day === d.getDate());
+    }
+  }
+  const scheduleDays = habit.scheduleDays ?? habit.customDays ?? [];
+  const scheduleType = habit.scheduleType ?? 'daily';
+  if (scheduleType === 'daily') return true;
+  if ((scheduleType === 'custom' || scheduleType === 'weekly') && scheduleDays.length > 0) {
+    return scheduleDays.includes(d.getDay() as WeekDay);
+  }
+  return true;
+}
+
 function HabitCalendar({
-  calMonth, setCalMonth, logsByDate, historyByDate, selectedDate, setSelectedDate, isAr, habitColor,
+  calMonth, setCalMonth, logsByDate, historyByDate, selectedDate, setSelectedDate, isAr, habitColor, habit,
 }: {
   calMonth: { year: number; month: number };
   setCalMonth: (m: { year: number; month: number }) => void;
@@ -886,6 +920,7 @@ function HabitCalendar({
   setSelectedDate: (d: string | null) => void;
   isAr: boolean;
   habitColor: string;
+  habit?: Habit;
 }) {
   const today = todayString();
   const hc = resolveHabitColor(habitColor);
@@ -946,25 +981,27 @@ function HabitCalendar({
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const isFuture = dateStr > today;
+          const isScheduled = habit ? isHabitScheduledForDate(habit, dateStr) : true;
 
           return (
             <button
               key={day}
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-              disabled={isFuture}
+              disabled={isFuture || !isScheduled}
               className={cn(
-                'relative h-10 rounded-lg flex flex-col items-center justify-center text-xs font-medium transition-all',
+                'relative h-10 rounded-lg flex flex-col items-center justify-center text-sm font-medium transition-all',
+                !isScheduled && !hasCompletion ? 'bg-red-500/8 text-red-400/50 cursor-not-allowed' :
                 isSelected ? 'ring-2 ring-[var(--color-primary)] bg-[var(--color-primary)]/10' :
                 isToday ? 'ring-2 ring-offset-1 font-black shadow-sm' :
+                isFuture ? 'opacity-30 cursor-not-allowed' :
                 'hover:bg-[var(--foreground)]/[0.04]',
-                isFuture && 'opacity-30 cursor-not-allowed',
               )}
-              style={isToday && !isSelected ? { ['--tw-ring-color' as string]: hc } : undefined}
+              style={isToday && isScheduled && !isSelected ? { ['--tw-ring-color' as string]: hc } : undefined}
             >
               <span className={cn(
                 hasCompletion && 'text-white font-bold',
               )}>
-                {day}
+                {!isScheduled && !hasCompletion ? '✕' : day}
               </span>
 
               {/* Completion dot */}
@@ -997,7 +1034,7 @@ function HabitCalendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[var(--foreground)]/[0.06]">
+      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[var(--foreground)]/[0.06] flex-wrap">
         <div className="flex items-center gap-1.5 text-[9px] text-[var(--foreground)]/50">
           <div className="h-3 w-3 rounded" style={{ background: habitColor, opacity: 0.75 }} />
           {isAr ? 'مكتملة' : 'Completed'}
@@ -1012,6 +1049,12 @@ function HabitCalendar({
           </div>
           {isAr ? 'تم التعديل' : 'Edited'}
         </div>
+        {habit && habit.frequency !== 'daily' && (
+          <div className="flex items-center gap-1.5 text-[9px] text-[var(--foreground)]/50">
+            <div className="h-3 w-3 rounded bg-red-500/8 text-red-400/50 text-[7px] font-black flex items-center justify-center">✕</div>
+            {isAr ? 'غير مجدول' : 'N/A'}
+          </div>
+        )}
       </div>
     </div>
   );
