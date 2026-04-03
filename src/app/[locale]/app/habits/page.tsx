@@ -5643,8 +5643,9 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
               const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'narrow' });
               const isToday = d.date === today;
               const isPast = d.date < today;
+              const daySessionCount = store.habitLogs.filter(l => l.habitId === habit.id && l.date === d.date && l.completed).length;
               return (
-                <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-lg py-1 transition-all',
+                <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-lg py-1 transition-all relative',
                   isToday && 'bg-[var(--color-primary)]/[0.08]')}
                   style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
                   <span className={cn('text-sm font-bold', isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
@@ -5654,9 +5655,14 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                     d.done ? 'bg-emerald-500 text-white' :
                     isPast ? 'bg-red-400/30 text-red-500/70' :
                     isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
-                    'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]')}>
+                    'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
+                    isToday && 'ring-2 ring-offset-1 shadow-sm')}
+                    style={isToday ? { ['--tw-ring-color' as string]: hc } : undefined}>
                     {d.done ? <Check className="h-2.5 w-2.5" /> : parseLocalDate(d.date).getDate()}
                   </div>
+                  {daySessionCount > 1 && (
+                    <span className="absolute -top-1 end-0 h-4 min-w-[16px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-black flex items-center justify-center shadow-sm">{daySessionCount}x</span>
+                  )}
                 </div>
               );
             })}
@@ -5962,10 +5968,11 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                           isApplicable && day.color === 'orange' && 'bg-amber-500 text-white',
                           isApplicable && day.color === 'red' && 'bg-red-500/70 text-white',
                           isApplicable && day.color === 'none' && !day.completed && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]',
-                          isTodayCal && 'ring-1.5 ring-offset-1 ring-[var(--color-primary)]')}>
+                          isTodayCal && 'ring-2 ring-offset-1 font-black shadow-sm')}
+                        style={isTodayCal ? { ['--tw-ring-color' as string]: hc } : undefined}>
                         {day.inMonth && day.day}
                         {day.sessionCount > 1 && (
-                          <span className="absolute -top-1 -right-1 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center">{day.sessionCount}</span>
+                          <span className="absolute -top-1.5 -end-1.5 h-4.5 min-w-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                         )}
                       </div>
                     );
