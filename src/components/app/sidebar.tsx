@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ListChecks, GraduationCap, Timer, BarChart3,
   Calendar, Bell, Brain, Apple, Target, Settings,
-  Sparkles, X, AlarmClock, ClipboardList,
+  Sparkles, X, AlarmClock, ClipboardList, Library,
 } from 'lucide-react';
 
 interface NavItem {
@@ -32,7 +32,8 @@ const NAV_GROUPS: NavGroup[] = [
     titleAr: 'الرئيسية',
     items: [
       { href: '/app', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: LayoutDashboard },
-      { href: '/app/habits', labelEn: 'Habits', labelAr: 'العادات', icon: ListChecks },
+      { href: '/app/habits', labelEn: "Today's Habits", labelAr: 'عادات اليوم', icon: ListChecks },
+      { href: '/app/habits/all', labelEn: 'All Habits', labelAr: 'كل العادات', icon: Library },
       { href: '/app/skills', labelEn: 'Skills', labelAr: 'المهارات', icon: GraduationCap },
       { href: '/app/tasks', labelEn: 'Tasks', labelAr: 'المهام', icon: ClipboardList },
       { href: '/app/timers', labelEn: 'Timers', labelAr: 'المؤقتات', icon: Timer },
@@ -77,6 +78,14 @@ export function AppSidebar({ collapsed, mobileOpen, onCloseMobile }: AppSidebarP
   const isActive = (href: string) => {
     const localePath = `/${locale}${href}`;
     if (href === '/app') return pathname === localePath;
+    // For /app/habits, don't match /app/habits/all (which is a separate nav item)
+    if (href === '/app/habits') {
+      if (pathname === localePath) return true;
+      if (pathname.startsWith(localePath + '/')) {
+        return !pathname.startsWith(`/${locale}/app/habits/all`);
+      }
+      return false;
+    }
     return pathname === localePath || pathname.startsWith(localePath + '/');
   };
 
