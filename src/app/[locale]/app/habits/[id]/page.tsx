@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import { HabitTimerControls } from '@/components/app/habit-timer-controls';
-import { HabitHistoryEntry, HabitLog, todayString } from '@/types/app';
+import { HabitHistoryEntry, HabitLog, todayString, resolveHabitColor } from '@/types/app';
 import {
   ArrowLeft, Calendar as CalendarIcon, Clock, Flame, Target, Edit3, Archive,
   ChevronLeft, ChevronRight, Star, BarChart3, TrendingUp, Activity,
@@ -888,6 +888,7 @@ function HabitCalendar({
   habitColor: string;
 }) {
   const today = todayString();
+  const hc = resolveHabitColor(habitColor);
   const daysInMonth = new Date(calMonth.year, calMonth.month + 1, 0).getDate();
   const firstDayOfWeek = new Date(calMonth.year, calMonth.month, 1).getDay();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -954,10 +955,11 @@ function HabitCalendar({
               className={cn(
                 'relative h-10 rounded-lg flex flex-col items-center justify-center text-xs font-medium transition-all',
                 isSelected ? 'ring-2 ring-[var(--color-primary)] bg-[var(--color-primary)]/10' :
-                isToday ? 'ring-1 ring-[var(--foreground)]/20' :
+                isToday ? 'ring-2 ring-offset-1 font-black shadow-sm' :
                 'hover:bg-[var(--foreground)]/[0.04]',
                 isFuture && 'opacity-30 cursor-not-allowed',
               )}
+              style={isToday && !isSelected ? { ['--tw-ring-color' as string]: hc } : undefined}
             >
               <span className={cn(
                 hasCompletion && 'text-white font-bold',
