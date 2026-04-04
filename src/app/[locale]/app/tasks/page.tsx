@@ -368,130 +368,104 @@ export default function TasksPage() {
       {/* ═══ HERO SECTION ═══ */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mt-3">
         <div
-          className="overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-2xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.15), rgba(var(--color-primary-rgb) / 0.06))',
+            background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.7))',
+            boxShadow: '0 6px 24px rgba(var(--color-primary-rgb) / 0.18)',
           }}
         >
-          <div className="px-4 py-3 sm:px-6 sm:py-4">
-            {/* Desktop: title + stats on same row */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ background: 'rgba(var(--color-primary-rgb) / 0.2)' }}
-                >
-                  <ClipboardList className="h-5 w-5 text-[var(--color-primary)]" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
-                    {isAr ? 'المهام' : 'Tasks'}
-                  </h1>
-                  <p className="text-xs text-[var(--foreground)]/50">
-                    {isAr ? 'نظّم مهامك وتابع تقدمك' : 'Organize your tasks and track progress'}
-                  </p>
-                </div>
-              </div>
+          {/* Decorative glow */}
+          <div className="pointer-events-none absolute -end-16 -top-16 h-48 w-48 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)' }} />
 
-              {/* Stat cards - inline on desktop */}
-              <div className="hidden sm:flex sm:items-center sm:gap-1">
-                {([
-                  { key: 'today' as StatFilter, label: isAr ? 'اليوم' : 'Today', value: stats.todayDue, tone: 'var(--color-primary)' },
-                  { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'Active', value: stats.inProgress, tone: '#3b82f6' },
-                  { key: 'overdue' as StatFilter, label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, tone: '#ef4444' },
-                  { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت' : 'Done', value: stats.completedToday, tone: '#10b981' },
-                  { key: 'completion-rate' as StatFilter, label: isAr ? 'إنجاز' : 'Rate', value: `${stats.completionRate}%`, tone: '#8b5cf6' },
-                ]).map(stat => (
-                  <button
-                    key={stat.key}
-                    type="button"
-                    onClick={() => stat.key !== 'completion-rate' ? handleStatClick(stat.key) : undefined}
-                    className={cn(
-                      'flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-center transition-all',
-                      stat.key !== 'completion-rate' && 'cursor-pointer hover:brightness-95',
-                      statFilter === stat.key
-                        ? 'bg-[rgba(var(--color-primary-rgb),0.12)]'
-                        : 'bg-[var(--color-background)]/60',
-                    )}
-                  >
-                    <span className="text-base font-bold tabular-nums leading-none" style={{ color: stat.tone }}>
-                      {stat.value}
-                    </span>
-                    <span className="text-[9px] font-medium text-[var(--foreground)]/45">{stat.label}</span>
-                  </button>
-                ))}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-7 sm:py-5">
+            {/* Left: Icon + Title */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12"
+                style={{ background: 'rgba(255,255,255,0.18)' }}>
+                <ClipboardList className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">
+                  {isAr ? 'المهام' : 'Tasks'}
+                </h1>
+                <p className="text-[11px] font-medium text-white/65 sm:text-xs">
+                  {isAr ? 'نظّم مهامك وتابع تقدمك' : 'Organize your tasks and track progress'}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Stat cards - grid on mobile only */}
-          <div className="grid grid-cols-3 gap-px border-t border-[rgba(var(--color-primary-rgb),0.15)] sm:hidden" style={{ background: 'rgba(var(--color-primary-rgb) / 0.1)' }}>
-            {([
-              { key: 'today' as StatFilter, label: isAr ? 'اليوم' : 'Today', value: stats.todayDue, tone: 'var(--color-primary)' },
-              { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'Active', value: stats.inProgress, tone: '#3b82f6' },
-              { key: 'overdue' as StatFilter, label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, tone: '#ef4444' },
-              { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت' : 'Done', value: stats.completedToday, tone: '#10b981' },
-              { key: 'completion-rate' as StatFilter, label: isAr ? 'إنجاز' : 'Rate', value: `${stats.completionRate}%`, tone: '#8b5cf6' },
-            ]).map(stat => (
-              <button
-                key={stat.key}
-                type="button"
-                onClick={() => stat.key !== 'completion-rate' ? handleStatClick(stat.key) : undefined}
-                className={cn(
-                  'flex flex-col gap-0.5 px-3 py-2 text-start transition-all',
-                  stat.key !== 'completion-rate' && 'cursor-pointer hover:brightness-95',
-                  statFilter === stat.key
-                    ? 'bg-[rgba(var(--color-primary-rgb),0.12)]'
-                    : 'bg-[var(--color-background)]',
-                )}
-              >
-                <span className="text-base font-bold tabular-nums leading-none" style={{ color: stat.tone }}>
-                  {stat.value}
-                </span>
-                <span className="text-[10px] font-medium text-[var(--foreground)]/45">{stat.label}</span>
-              </button>
-            ))}
+            {/* Right: Stat chips */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {([
+                { key: 'today' as StatFilter, label: isAr ? 'اليوم' : 'Today', value: stats.todayDue },
+                { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'Active', value: stats.inProgress },
+                { key: 'overdue' as StatFilter, label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue },
+                { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت' : 'Done', value: stats.completedToday },
+                { key: 'completion-rate' as StatFilter, label: isAr ? 'إنجاز' : 'Rate', value: `${stats.completionRate}%` },
+              ]).map(stat => (
+                <button
+                  key={stat.key}
+                  type="button"
+                  onClick={() => stat.key !== 'completion-rate' ? handleStatClick(stat.key) : undefined}
+                  className={cn(
+                    'flex flex-col items-center rounded-lg px-3 py-1.5 text-center transition-all',
+                    stat.key !== 'completion-rate' && 'cursor-pointer hover:brightness-110',
+                  )}
+                  style={{ background: statFilter === stat.key ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.15)' }}
+                >
+                  <span className="text-base font-black tabular-nums leading-none text-white sm:text-lg">
+                    {stat.value}
+                  </span>
+                  <span className="mt-0.5 text-[8px] font-bold text-white/60 sm:text-[9px]">{stat.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </motion.div>
 
       {/* ═══ TOOLBAR ═══ */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="mt-3 flex flex-wrap items-center gap-2">
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="mt-3 flex items-center gap-1.5 sm:gap-2">
         {/* Search */}
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--foreground)]/35" />
+        <div className="group/search relative min-w-0 flex-1">
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder={isAr ? 'بحث في المهام...' : 'Search tasks...'}
-            className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] py-2 ps-8 pe-8 text-xs text-[var(--foreground)] placeholder:text-[var(--foreground)]/40 focus:border-[var(--color-primary)]/40 focus:outline-none sm:text-sm"
+            placeholder={isAr ? 'بحث...' : 'Search...'}
+            className="w-full rounded-xl border bg-transparent py-2 ps-9 pe-9 text-[13px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-200"
+            style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
           {searchQuery && (
             <button type="button" onClick={() => setSearchQuery('')}
-              className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-[var(--foreground)]/40 hover:text-[var(--color-primary)]">
-              <X className="h-3.5 w-3.5" />
+              className="absolute end-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--foreground)]/[0.08] transition-colors hover:bg-[var(--foreground)]/[0.15]">
+              <X className="h-3 w-3 text-[var(--foreground)]/50" />
             </button>
           )}
         </div>
 
         {/* New Task */}
         <button type="button" onClick={openCreate}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-md transition-all hover:brightness-105 hover:shadow-lg active:scale-[0.98] sm:text-sm"
-          style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' }}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 sm:px-5 py-2 text-[13px] font-bold text-white transition-all active:scale-[0.95]"
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.2)' }}
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-          {isAr ? 'مهمة جديدة' : 'New Task'}
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">{isAr ? 'مهمة جديدة' : 'New Task'}</span>
         </button>
 
         {/* View toggle */}
-        <div className="flex rounded-xl border border-[var(--foreground)]/10 p-0.5">
+        <div className="flex shrink-0 rounded-xl border p-0.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
           <button type="button" onClick={() => setViewMode('board')}
-            className={cn('rounded-lg px-2 py-1.5 transition-all', viewMode === 'board' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
+            className={cn('rounded-lg px-2 py-1.5 text-[13px] font-bold transition-all', viewMode === 'board' ? 'text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
+            style={viewMode === 'board' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
             aria-label={isAr ? 'لوحة' : 'Board'}>
             <Columns3 className="h-3.5 w-3.5" />
           </button>
           <button type="button" onClick={() => setViewMode('list')}
-            className={cn('rounded-lg px-2 py-1.5 transition-all', viewMode === 'list' ? 'bg-[var(--color-primary)] text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
+            className={cn('rounded-lg px-2 py-1.5 text-[13px] font-bold transition-all', viewMode === 'list' ? 'text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
+            style={viewMode === 'list' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
             aria-label={isAr ? 'قائمة' : 'List'}>
             <ListChecks className="h-3.5 w-3.5" />
           </button>
@@ -500,15 +474,19 @@ export default function TasksPage() {
         {/* Filter button */}
         <button type="button" onClick={() => setShowFilters(!showFilters)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all sm:text-sm',
-            showFilters
-              ? 'border-[var(--color-primary)]/40 bg-[rgba(var(--color-primary-rgb),0.15)] text-[var(--color-primary)]'
-              : 'border-[var(--foreground)]/10 text-[var(--foreground)]/60 hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]',
-          )}>
+            'shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold transition-all cursor-pointer',
+            showFilters || activeFilterCount > 0
+              ? 'text-white'
+              : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25',
+          )}
+          style={(showFilters || activeFilterCount > 0)
+            ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' }
+            : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }
+          }>
           <Filter className="h-3.5 w-3.5" />
-          {isAr ? 'فلتر' : 'Filter'}
+          <span className="hidden sm:inline">{isAr ? 'فلتر' : 'Filter'}</span>
           {activeFilterCount > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-primary)] text-[9px] font-bold text-white">
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-white/25 text-[10px] font-black text-white">
               {activeFilterCount}
             </span>
           )}
@@ -628,7 +606,7 @@ export default function TasksPage() {
             <EmptyGlobal isAr={isAr} onAdd={openCreate} />
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4" style={{ gap: '0.75rem' }}>
                 {([
                   { id: 'today-overdue' as BoardColumnId, title: isAr ? 'اليوم والمتأخر' : 'Today & Overdue', icon: <AlertCircle className="h-4 w-4" />, accent: '#ef4444' },
                   { id: 'in-progress' as BoardColumnId, title: isAr ? 'جارية' : 'In Progress', icon: <Play className="h-4 w-4" />, accent: '#3b82f6' },
@@ -1300,37 +1278,34 @@ function BoardColumn({
   );
 
   return (
-    <div className={cn(
-      'flex flex-col overflow-hidden rounded-xl border border-[var(--foreground)]/10',
-      columnId === 'in-progress' && 'bg-blue-500/[0.02]',
-    )}>
-      <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: accent }} />
-      <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
+    <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] shadow-sm">
+      <div className="h-[3px] w-full shrink-0" style={{ backgroundColor: accent }} />
+      <div className="flex items-center gap-2 px-3 py-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ color: accent, background: `${accent}15` }}>
           {icon}
         </span>
-        <h2 className="flex-1 text-xs font-semibold text-[var(--foreground)]/90 sm:text-sm">{title}</h2>
-        <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums" style={{ color: accent, background: `${accent}15` }}>
+        <h2 className="flex-1 text-[13px] font-bold text-[var(--foreground)]/90">{title}</h2>
+        <span className="rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums" style={{ color: accent, background: `${accent}15` }}>
           {tasks.length}
         </span>
       </div>
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className="flex min-h-[120px] flex-1 flex-col gap-1.5 p-2">
+        <div className="flex min-h-[120px] flex-1 flex-col gap-2.5 p-2 sm:gap-3">
           {tasks.length === 0 ? (
             <EmptyColumn isAr={isAr} columnId={columnId} />
           ) : columnId === 'today-overdue' ? (
             <>
               {/* Overdue section */}
               {overdueTasks.length > 0 && (
-                <div className="rounded-lg bg-red-500/[0.04] p-1.5">
+                <div className="rounded-lg border border-red-500/10 p-1.5">
                   <div className="mb-1.5 flex items-center gap-1.5 px-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                    <span className="text-[10px] font-semibold text-red-500">
+                    <span className="text-[10px] font-bold text-red-500">
                       {isAr ? 'متأخرة' : 'Overdue'} ({overdueTasks.length})
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-2.5">
                     {overdueTasks.map((task, i) => renderCard(task, i))}
                   </div>
                 </div>
@@ -1344,11 +1319,11 @@ function BoardColumn({
                 <div className="p-1.5">
                   <div className="mb-1.5 flex items-center gap-1.5 px-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    <span className="text-[10px] font-semibold text-amber-500">
+                    <span className="text-[10px] font-bold text-amber-500">
                       {isAr ? 'اليوم' : 'Today'} ({todayTasks.length})
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-2.5">
                     {todayTasks.map((task, i) => renderCard(task, overdueTasks.length + i))}
                   </div>
                 </div>
@@ -1426,16 +1401,14 @@ function TaskCard({
       transition={{ delay: index * 0.02, duration: 0.2 }}
       onClick={onDetail}
       className={cn(
-        'group relative cursor-pointer overflow-hidden rounded-lg border border-[var(--foreground)]/10 bg-[var(--color-background)] transition-all',
-        isDone && 'opacity-75',
-        isOver && '!border-red-400/40 !bg-red-500/[0.04]',
-        isInProgress && '!border-blue-400/30 !bg-blue-500/[0.03]',
+        'group relative cursor-pointer overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] transition-all hover:shadow-md',
+        isDone && 'opacity-70',
       )}
-      style={{ borderInlineStartWidth: 3, borderInlineStartColor: priority.border }}
+      style={{ borderInlineStartWidth: 3, borderInlineStartColor: isOver ? '#ef4444' : isInProgress ? '#3b82f6' : priority.border }}
     >
-      <div className="p-3">
-        <div className="flex items-start gap-2.5">
-          {/* Toggle */}
+      <div className="p-2.5">
+        {/* Row 1: Toggle + Title + Priority badge + Menu */}
+        <div className="flex items-start gap-2">
           <button type="button" onClick={(e) => { e.stopPropagation(); onComplete(); }}
             className={cn('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all',
               isDone ? 'border-emerald-500 bg-emerald-500' : isOver ? 'border-red-400 hover:bg-red-500/15' : 'border-[var(--foreground)]/25 hover:border-[var(--color-primary)]')}>
@@ -1443,7 +1416,6 @@ function TaskCard({
           </button>
 
           <div className="min-w-0 flex-1">
-            {/* Title row with in-progress pulse */}
             <div className="flex items-center gap-1.5">
               {isInProgress && (
                 <span className="relative flex h-2 w-2 shrink-0">
@@ -1451,154 +1423,150 @@ function TaskCard({
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
                 </span>
               )}
-              <p className={cn('text-[13px] font-semibold leading-snug', isDone && 'text-[var(--foreground)]/40 line-through')}>
+              <p className={cn('text-[13px] font-bold leading-snug', isDone && 'text-[var(--foreground)]/40 line-through')}>
                 {name}
               </p>
-            </div>
-
-            {/* Badges row */}
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', priority.bg, priority.color)}>
+              <span className={cn('shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold', priority.bg, priority.color)}>
                 {isAr ? priority.ar : priority.en}
               </span>
-              {task.category && (
-                <span className="rounded bg-[var(--foreground)]/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground)]/55">
-                  {task.category}
-                </span>
-              )}
-              {isOver && (
-                <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
-                  {isAr ? 'متأخرة' : 'Overdue'}
-                </span>
-              )}
-              {isInProgress && (
-                <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-500">
-                  {isAr ? 'جارية' : 'In Progress'}
-                </span>
-              )}
             </div>
-
-            {/* Info row: due date + estimated time inline */}
-            <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-              {task.dueDate && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-[var(--foreground)]/30" />
-                  <span className={cn('text-[10px]', getRelativeDate(task.dueDate).cls)}>
-                    {getRelativeDate(task.dueDate).text}
-                  </span>
-                </div>
-              )}
-              {task.estimatedMinutes && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-[var(--foreground)]/30" />
-                  <span className="text-[10px] text-[var(--foreground)]/40">{task.estimatedMinutes} {isAr ? 'د' : 'min'}</span>
-                </div>
-              )}
-              {isInProgress && task.updatedAt && (
-                <div className="flex items-center gap-1">
-                  <Timer className="h-3 w-3 text-blue-400/50" />
-                  <span className="text-[10px] text-blue-400/70">
-                    {isAr ? 'بدأ' : 'Started'}{' '}
-                    {new Date(task.updatedAt).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Subtask progress */}
-            {subtasksTotal > 0 && (
-              <div className="mt-1.5">
-                <div className="flex items-center gap-1.5">
-                  <ListChecks className="h-3 w-3 text-[var(--foreground)]/25" />
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--foreground)]/[0.08]">
-                    <div className="h-full rounded-full bg-[var(--color-primary)] transition-all" style={{ width: `${subtaskPct}%` }} />
-                  </div>
-                  <span className="text-[10px] font-medium text-[var(--foreground)]/40">{subtasksDone}/{subtasksTotal}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Tags (max 2 visible + "+N") */}
-            {task.tags && task.tags.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {task.tags.slice(0, 2).map(t => (
-                  <span key={t} className="rounded-full bg-[var(--color-primary)]/[0.08] px-1.5 py-px text-[9px] font-medium text-[var(--color-primary)]">
-                    {t}
-                  </span>
-                ))}
-                {task.tags.length > 2 && (
-                  <span className="rounded-full bg-[var(--foreground)]/[0.06] px-1.5 py-px text-[9px] font-medium text-[var(--foreground)]/35">
-                    +{task.tags.length - 2}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Linked habit */}
-            {habitName && (
-              <div className="mt-1 flex items-center gap-1">
-                <Link2 className="h-3 w-3 text-[var(--color-primary)]/50" />
-                <span className="text-[10px] text-[var(--color-primary)]/70">{habitName}</span>
-              </div>
-            )}
           </div>
 
-          {/* Quick action buttons + menu */}
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            {/* Primary quick actions - always visible */}
-            <div className="flex items-center gap-0.5">
-              {task.status === 'todo' && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); onStart(); }}
-                  title={isAr ? 'بدء' : 'Start'}
-                  className="rounded-md p-1 text-blue-500/60 transition-colors hover:bg-blue-500/10 hover:text-blue-500">
-                  <Play className="h-3.5 w-3.5" />
-                </button>
-              )}
-              {!isDone && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); onComplete(); }}
-                  title={isAr ? 'إكمال' : 'Complete'}
-                  className="rounded-md p-1 text-emerald-500/60 transition-colors hover:bg-emerald-500/10 hover:text-emerald-500">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-
-              {/* Secondary actions menu */}
-              <div className="relative" ref={menuRef}>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-                  className="rounded-md p-1 text-[var(--foreground)]/30 transition-colors hover:bg-[var(--foreground)]/[0.06] hover:text-[var(--foreground)]/60">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </button>
-                <AnimatePresence>
-                  {menuOpen && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                      className="absolute end-0 top-7 z-30 w-40 overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] shadow-xl">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">
-                        <Edit3 className="h-3 w-3" /> {isAr ? 'تعديل' : 'Edit'}
-                      </button>
-                      {task.dueDate !== today && task.status !== 'completed' && (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMoveToToday(); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-amber-500 hover:bg-amber-500/5">
-                          <ArrowRight className="h-3 w-3" /> {isAr ? 'نقل لليوم' : 'Move to today'}
-                        </button>
-                      )}
-                      {task.status !== 'completed' && (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onPostpone(); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
-                          <CalendarClock className="h-3 w-3" /> {isAr ? 'تأجيل لغداً' : 'Postpone'}
-                        </button>
-                      )}
-                      <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        className="flex w-full items-center gap-2 border-t border-[var(--foreground)]/5 px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/5">
-                        <Trash2 className="h-3 w-3" /> {isAr ? 'حذف' : 'Delete'}
-                      </button>
-                    </motion.div>
+          {/* Menu */}
+          <div className="relative shrink-0" ref={menuRef}>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+              className="rounded-md p-1 text-[var(--foreground)]/30 transition-colors hover:bg-[var(--foreground)]/[0.06] hover:text-[var(--foreground)]/60">
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+            <AnimatePresence>
+              {menuOpen && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute end-0 top-7 z-30 w-40 overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] shadow-xl">
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">
+                    <Edit3 className="h-3 w-3" /> {isAr ? 'تعديل' : 'Edit'}
+                  </button>
+                  {task.dueDate !== today && task.status !== 'completed' && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMoveToToday(); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-amber-500 hover:bg-amber-500/5">
+                      <ArrowRight className="h-3 w-3" /> {isAr ? 'نقل لليوم' : 'Move to today'}
+                    </button>
                   )}
-                </AnimatePresence>
-              </div>
-            </div>
+                  {task.status !== 'completed' && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onPostpone(); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
+                      <CalendarClock className="h-3 w-3" /> {isAr ? 'تأجيل لغداً' : 'Postpone'}
+                    </button>
+                  )}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    className="flex w-full items-center gap-2 border-t border-[var(--foreground)]/5 px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/5">
+                    <Trash2 className="h-3 w-3" /> {isAr ? 'حذف' : 'Delete'}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
+
+        {/* Row 2: Inline badges — category, due date, estimate, subtask count, status badges */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          {task.category && (
+            <span className="rounded-md bg-[var(--foreground)]/[0.06] px-1.5 py-0.5 text-[9px] font-bold text-[var(--foreground)]/55">
+              {task.category}
+            </span>
+          )}
+          {task.dueDate && (
+            <span className={cn('flex items-center gap-0.5 rounded-md bg-[var(--foreground)]/[0.04] px-1.5 py-0.5 text-[9px] font-bold', getRelativeDate(task.dueDate).cls)}>
+              <Calendar className="h-2.5 w-2.5" />
+              {getRelativeDate(task.dueDate).text}
+            </span>
+          )}
+          {task.estimatedMinutes && (
+            <span className="flex items-center gap-0.5 rounded-md bg-[var(--foreground)]/[0.04] px-1.5 py-0.5 text-[9px] font-bold text-[var(--foreground)]/40">
+              <Clock className="h-2.5 w-2.5" />
+              {task.estimatedMinutes}{isAr ? 'د' : 'm'}
+            </span>
+          )}
+          {subtasksTotal > 0 && (
+            <span className="flex items-center gap-0.5 rounded-md bg-[var(--foreground)]/[0.04] px-1.5 py-0.5 text-[9px] font-bold text-[var(--foreground)]/40">
+              <ListChecks className="h-2.5 w-2.5" />
+              {subtasksDone}/{subtasksTotal}
+            </span>
+          )}
+          {isOver && (
+            <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-500">
+              {isAr ? 'متأخرة' : 'Overdue'}
+            </span>
+          )}
+          {isInProgress && (
+            <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold text-blue-500">
+              {isAr ? 'جارية' : 'In Progress'}
+            </span>
+          )}
+        </div>
+
+        {/* Subtask progress bar */}
+        {subtasksTotal > 0 && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--foreground)]/[0.08]">
+              <div className="h-full rounded-full bg-[var(--color-primary)] transition-all" style={{ width: `${subtaskPct}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Tags (max 2 visible + "+N") */}
+        {task.tags && task.tags.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {task.tags.slice(0, 2).map(t => (
+              <span key={t} className="rounded-full bg-[var(--color-primary)]/[0.08] px-1.5 py-px text-[9px] font-bold text-[var(--color-primary)]">
+                {t}
+              </span>
+            ))}
+            {task.tags.length > 2 && (
+              <span className="rounded-full bg-[var(--foreground)]/[0.06] px-1.5 py-px text-[9px] font-bold text-[var(--foreground)]/35">
+                +{task.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Linked habit */}
+        {habitName && (
+          <div className="mt-1 flex items-center gap-1">
+            <Link2 className="h-2.5 w-2.5 text-[var(--color-primary)]/50" />
+            <span className="text-[9px] font-bold text-[var(--color-primary)]/70">{habitName}</span>
+          </div>
+        )}
+
+        {/* Row 3: Quick action buttons */}
+        {!isDone && (
+          <div className="mt-2 flex items-center gap-1">
+            {task.status === 'todo' && (
+              <button type="button" onClick={(e) => { e.stopPropagation(); onStart(); }}
+                title={isAr ? 'بدء' : 'Start'}
+                className="rounded-lg bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-500 transition-colors hover:bg-blue-500 hover:text-white">
+                <span className="flex items-center gap-1"><Play className="h-3 w-3" />{isAr ? 'بدء' : 'Start'}</span>
+              </button>
+            )}
+            <button type="button" onClick={(e) => { e.stopPropagation(); onComplete(); }}
+              title={isAr ? 'إكمال' : 'Complete'}
+              className="rounded-lg bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-500 transition-colors hover:bg-emerald-500 hover:text-white">
+              <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />{isAr ? 'إكمال' : 'Done'}</span>
+            </button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onDetail(); }}
+              className="ms-auto rounded-lg bg-[var(--color-primary)]/10 px-2 py-1 text-[10px] font-bold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)] hover:text-white">
+              {isAr ? 'تفاصيل' : 'Details'}
+            </button>
+          </div>
+        )}
+        {isDone && (
+          <div className="mt-2 flex items-center">
+            <button type="button" onClick={(e) => { e.stopPropagation(); onDetail(); }}
+              className="ms-auto rounded-lg bg-[var(--color-primary)]/10 px-2 py-1 text-[10px] font-bold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)] hover:text-white">
+              {isAr ? 'تفاصيل' : 'Details'}
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
