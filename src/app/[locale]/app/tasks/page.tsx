@@ -680,26 +680,41 @@ export default function TasksPage() {
 
               {/* Add new category */}
               {newCatEditing ? (
-                <div className="flex items-center gap-1 rounded-lg border border-dashed border-[var(--color-primary)]/40 bg-[var(--color-primary)]/[0.04] px-2 py-1">
+                <div className="flex items-center gap-1 rounded-lg border border-dashed border-[var(--color-primary)]/40 bg-[var(--color-primary)]/[0.04] px-2 py-0.5">
                   <input
                     autoFocus
                     value={newCatValue}
                     onChange={e => setNewCatValue(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && newCatValue.trim()) {
-                        const catName = newCatValue.trim();
-                        resetForm();
-                        setForm(f => ({ ...f, category: catName }));
-                        setShowForm(true);
-                        setNewCatEditing(false);
-                        setNewCatValue('');
-                      }
                       if (e.key === 'Escape') { setNewCatEditing(false); setNewCatValue(''); }
                     }}
-                    onBlur={() => { if (!newCatValue.trim()) { setNewCatEditing(false); setNewCatValue(''); } }}
-                    placeholder={isAr ? 'اسم الفئة...' : 'Category name...'}
-                    className="w-24 bg-transparent text-[11px] font-bold outline-none placeholder:text-[var(--foreground)]/30"
+                    placeholder={isAr ? 'اسم الفئة...' : 'Name...'}
+                    className="w-20 bg-transparent text-[11px] font-bold outline-none placeholder:text-[var(--foreground)]/30"
                   />
+                  <button
+                    type="button"
+                    disabled={!newCatValue.trim()}
+                    onClick={() => {
+                      if (!newCatValue.trim()) return;
+                      const catName = newCatValue.trim();
+                      resetForm();
+                      setForm(f => ({ ...f, category: catName }));
+                      setShowForm(true);
+                      setNewCatEditing(false);
+                      setNewCatValue('');
+                    }}
+                    className={cn('shrink-0 rounded-md px-2 py-1 text-[10px] font-bold transition-all',
+                      newCatValue.trim() ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--foreground)]/[0.08] text-[var(--foreground)]/30')}
+                  >
+                    {isAr ? 'إنشاء' : 'Create'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNewCatEditing(false); setNewCatValue(''); }}
+                    className="shrink-0 rounded-md p-1 text-[var(--foreground)]/30 hover:text-[var(--foreground)]/60"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ) : (
                 <button
