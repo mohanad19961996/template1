@@ -1053,13 +1053,13 @@ export default function TasksPage() {
                   <div>
                     <FieldLabel>{isAr ? 'العنوان (عربي)' : 'Title (Arabic)'}</FieldLabel>
                     <input dir="rtl" value={form.titleAr} onChange={e => setForm(f => ({ ...f, titleAr: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
+                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
                       placeholder={isAr ? 'عنوان المهمة...' : 'Task title...'} />
                   </div>
                   <div>
                     <FieldLabel>{isAr ? 'العنوان (إنجليزي)' : 'Title (English)'}</FieldLabel>
                     <input dir="ltr" value={form.titleEn} onChange={e => setForm(f => ({ ...f, titleEn: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
+                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
                       placeholder="Task title..." />
                   </div>
                 </div>
@@ -1069,13 +1069,13 @@ export default function TasksPage() {
                   <div>
                     <FieldLabel>{isAr ? 'الوصف (عربي)' : 'Description (Arabic)'}</FieldLabel>
                     <textarea dir="rtl" value={form.descriptionAr} onChange={e => setForm(f => ({ ...f, descriptionAr: e.target.value }))}
-                      rows={2} className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
+                      rows={2} className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
                       placeholder={isAr ? 'وصف اختياري...' : 'Optional...'} />
                   </div>
                   <div>
                     <FieldLabel>{isAr ? 'الوصف (إنجليزي)' : 'Description (English)'}</FieldLabel>
                     <textarea dir="ltr" value={form.descriptionEn} onChange={e => setForm(f => ({ ...f, descriptionEn: e.target.value }))}
-                      rows={2} className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
+                      rows={2} className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
                       placeholder="Optional description..." />
                   </div>
                 </div>
@@ -1113,7 +1113,7 @@ export default function TasksPage() {
                   <div>
                     <FieldLabel>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</FieldLabel>
                     <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                     {!form.dueDate && (
                       <p className="mt-1 text-[10px] text-amber-500/80">
                         {isAr ? '⚠ بدون تاريخ ستظهر في "لاحقاً" فقط' : '⚠ Without a date, task goes to "Upcoming" only'}
@@ -1123,12 +1123,12 @@ export default function TasksPage() {
                   <div>
                     <FieldLabel>{isAr ? 'الوقت' : 'Time'}</FieldLabel>
                     <input type="time" value={form.dueTime} onChange={e => setForm(f => ({ ...f, dueTime: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                   </div>
                   <div>
                     <FieldLabel>{isAr ? 'الوقت المقدر (دقيقة)' : 'Estimate (min)'}</FieldLabel>
                     <input type="number" min={1} value={form.estimatedMinutes} onChange={e => setForm(f => ({ ...f, estimatedMinutes: e.target.value }))}
-                      placeholder="min" className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                      placeholder="min" className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                   </div>
                 </div>
 
@@ -1146,7 +1146,7 @@ export default function TasksPage() {
                   </div>
                   <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                     placeholder={isAr ? 'أو اكتب تصنيفاً...' : 'Or type custom...'}
-                    className="mt-2 w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2 text-xs focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                    className="mt-2 w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2 text-xs focus:border-[var(--color-primary)]/40 focus:outline-none" />
                 </div>
 
                 {/* Tags */}
@@ -1166,7 +1166,7 @@ export default function TasksPage() {
                     <input value={form.tagInput} onChange={e => setForm(f => ({ ...f, tagInput: e.target.value }))}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
                       placeholder={isAr ? 'اكتب واضغط Enter...' : 'Type & press Enter...'}
-                      className="flex-1 rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2 text-xs focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                      className="flex-1 rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2 text-xs focus:border-[var(--color-primary)]/40 focus:outline-none" />
                     <button type="button" onClick={addTag} className="rounded-xl bg-[var(--foreground)]/[0.05] px-3 py-2 text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.1]">
                       <Plus className="h-4 w-4" />
                     </button>
@@ -1195,7 +1195,7 @@ export default function TasksPage() {
                     <input value={form.newSubtask} onChange={e => setForm(f => ({ ...f, newSubtask: e.target.value }))}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask(); } }}
                       placeholder={isAr ? 'إضافة مهمة فرعية...' : 'Add subtask...'}
-                      className="flex-1 rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                      className="flex-1 rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                     <button type="button" onClick={addSubtask}
                       className="rounded-xl bg-[var(--foreground)]/[0.05] px-3 py-2 text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.1]">
                       <Plus className="h-4 w-4" />
@@ -1208,7 +1208,7 @@ export default function TasksPage() {
                   <FieldLabel>{isAr ? 'ملاحظات' : 'Notes'}</FieldLabel>
                   <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                     dir={isAr ? 'rtl' : 'ltr'} rows={2}
-                    className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
+                    className="w-full resize-none rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none"
                     placeholder={isAr ? 'ملاحظات إضافية...' : 'Additional notes...'} />
                 </div>
 
@@ -1229,7 +1229,7 @@ export default function TasksPage() {
                   <div>
                     <FieldLabel>{isAr ? 'ربط بعادة' : 'Linked Habit'}</FieldLabel>
                     <select value={form.linkedHabitId} onChange={e => setForm(f => ({ ...f, linkedHabitId: e.target.value }))}
-                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none">
+                      className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none">
                       <option value="">{isAr ? 'بدون ربط' : 'None'}</option>
                       {(store.habits ?? []).filter(h => !h.archived).map(h => (
                         <option key={h.id} value={h.id}>{isAr ? (h.nameAr || h.nameEn) : (h.nameEn || h.nameAr)}</option>
