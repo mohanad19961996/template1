@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+});
+
 /** Tolerance for subpixel / scrollbar differences */
 const MAX_HORIZONTAL_OVERFLOW_PX = 24;
 
@@ -8,6 +12,8 @@ const routes: { path: string; mustContain: RegExp }[] = [
   { path: '/ar/app/habits', mustContain: /العادات|عاداتك/i },
   { path: '/en/app', mustContain: /Today's Habits|Today/i },
   { path: '/ar/app', mustContain: /عادات اليوم|اليوم/i },
+  { path: '/en/app/tasks', mustContain: /Sorted by due date|alongside your habits/i },
+  { path: '/ar/app/tasks', mustContain: /مرتبة حسب الموعد|بجانب عاداتك/i },
 ];
 
 /** Hero text can stay `visibility:hidden` briefly with Framer Motion; assert copy is in the DOM. */

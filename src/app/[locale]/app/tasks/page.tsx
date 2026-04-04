@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import {
-  Task, TaskStatus, TaskPriority, todayString, generateId, ITEM_COLORS,
+  Task, TaskStatus, TaskPriority, todayString, generateId,
 } from '@/types/app';
 import {
-  Plus, Search, X, Check, ChevronDown, ChevronRight, Clock, Calendar,
-  Flag, Tag, Filter, SortAsc, SortDesc, AlertCircle, CheckCircle2,
-  Circle, Timer, Trash2, Edit3, MoreHorizontal, Sparkles, Target,
-  ArrowUpRight, TrendingUp, ClipboardList, ListChecks, Zap, Star,
-  ChevronUp, GripVertical, CalendarClock, CircleDot, BarChart3,
+  Plus, Search, X, Check, ChevronDown, Clock, Calendar,
+  Filter, SortAsc, SortDesc, AlertCircle, CheckCircle2,
+  Circle, Trash2, Edit3, Sparkles,
+  TrendingUp, ClipboardList, ListChecks,
+  ChevronUp, CalendarClock, BarChart3,
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────
@@ -31,11 +31,19 @@ const PRIORITY_CONFIG: Record<TaskPriority, { en: string; ar: string; color: str
 };
 
 const STATUS_CONFIG: Record<TaskStatus, { en: string; ar: string; color: string; bg: string }> = {
-  'todo': { en: 'To Do', ar: 'للتنفيذ', color: 'text-[var(--foreground)]/60', bg: 'bg-[var(--foreground)]/[0.05]' },
-  'in-progress': { en: 'In Progress', ar: 'قيد التنفيذ', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  'completed': { en: 'Completed', ar: 'مكتمل', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-  'cancelled': { en: 'Cancelled', ar: 'ملغي', color: 'text-[var(--foreground)]/40', bg: 'bg-[var(--foreground)]/[0.05]' },
+  'todo': { en: 'To do', ar: 'معلّقة', color: 'text-[var(--foreground)]/55', bg: 'bg-[var(--foreground)]/[0.06]' },
+  'in-progress': { en: 'In progress', ar: 'جارية', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
+  'completed': { en: 'Done', ar: 'منجزة', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+  'cancelled': { en: 'Archived', ar: 'مؤرشفة', color: 'text-[var(--foreground)]/40', bg: 'bg-[var(--foreground)]/[0.05]' },
 };
+
+function addDaysToIsoDate(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
 
 const CATEGORY_PRESETS = [
   { en: 'Work', ar: 'عمل' },
@@ -67,6 +75,7 @@ export default function TasksPage() {
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [taskScope, setTaskScope] = useState<'all' | 'today' | 'week' | 'stakes'>('all');
 
   // Form State
   const [form, setForm] = useState({
@@ -164,6 +173,26 @@ export default function TasksPage() {
     if (filterPriority !== 'all') tasks = tasks.filter(t => t.priority === filterPriority);
     if (filterStatus !== 'all') tasks = tasks.filter(t => t.status === filterStatus);
 
+    // Quick scope (all / due / week / urgent+high)
+    if (taskScope === 'today') {
+      tasks = tasks.filter(t => {
+        if (t.status === 'completed' || t.status === 'cancelled') return false;
+        if (!t.dueDate) return false;
+        return t.dueDate <= today;
+      });
+    } else if (taskScope === 'week') {
+      const weekEnd = addDaysToIsoDate(today, 7);
+      tasks = tasks.filter(t => {
+        if (t.status === 'completed' || t.status === 'cancelled') return false;
+        if (!t.dueDate) return false;
+        return t.dueDate >= today && t.dueDate <= weekEnd;
+      });
+    } else if (taskScope === 'stakes') {
+      tasks = tasks.filter(
+        t => t.status !== 'completed' && t.status !== 'cancelled' && (t.priority === 'urgent' || t.priority === 'high'),
+      );
+    }
+
     // Sort
     tasks.sort((a, b) => {
       let cmp = 0;
@@ -187,7 +216,7 @@ export default function TasksPage() {
     });
 
     return tasks;
-  }, [allTasks, searchQuery, filterPriority, filterStatus, sortBy, sortDir, isAr]);
+  }, [allTasks, searchQuery, filterPriority, filterStatus, sortBy, sortDir, isAr, taskScope, today]);
 
   // Board columns
   const todayTasks = useMemo(() =>
@@ -231,143 +260,191 @@ export default function TasksPage() {
   // ── Render ──
 
   return (
-    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1600px] mx-auto">
-
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* HEADER */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl"
-                style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.6))' }}>
-                <ClipboardList className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'المهام' : 'Tasks'}</h1>
-                <p className="text-sm text-[var(--foreground)]/50">
-                  {isAr ? 'نظم وأنجز مهامك بكفاءة' : 'Organize, prioritize, and execute'}
-                </p>
-              </div>
+    <div className="mx-auto max-w-[1600px] px-3 pb-20 sm:px-6 lg:px-8">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        custom={0}
+        className="tasks-glass-shell tasks-glass-stack mt-3"
+      >
+        {/* ── Header row ── */}
+        <div className="tasks-glass-header flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="tasks-glass-icon-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+              <ClipboardList className="h-4 w-4 text-[var(--color-primary)]" strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold leading-tight tracking-tight text-[var(--foreground)] sm:text-xl">
+                {isAr ? 'المهام' : 'Tasks'}
+              </h1>
+              <p className="mt-0.5 text-[11px] leading-snug text-[var(--foreground)]/50 sm:text-xs">
+                {isAr
+                  ? 'مرتبة حسب الموعد والأولوية — بجانب عاداتك.'
+                  : 'Sorted by due date and priority — alongside your habits.'}
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-5 py-2.5 text-sm font-semibold shadow-lg"
-            style={{ boxShadow: '0 4px 20px rgba(var(--color-primary-rgb) / 0.3)' }}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg app-btn-primary px-4 py-2 text-xs font-semibold shadow-md transition-all duration-200 hover:brightness-105 hover:shadow-lg active:scale-[0.98] sm:text-sm"
           >
-            <Plus className="h-4 w-4" />
-            {isAr ? 'مهمة جديدة' : 'New Task'}
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.5} />
+            {isAr ? 'مهمة جديدة' : 'New task'}
           </button>
         </div>
 
-        {/* Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+        {/* ── Stats row (divided cells) ── */}
+        <div className="tasks-glass-stats-row flex flex-wrap sm:flex-nowrap">
           {[
-            { label: isAr ? 'مهام اليوم' : 'Due Today', value: stats.todayDue, icon: CalendarClock, accent: 'var(--color-primary)' },
-            { label: isAr ? 'قيد التنفيذ' : 'In Progress', value: stats.inProgress, icon: Zap, accent: '#3b82f6' },
-            { label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, icon: AlertCircle, accent: '#ef4444' },
-            { label: isAr ? 'أنجزت اليوم' : 'Done Today', value: stats.completedToday, icon: CheckCircle2, accent: '#10b981' },
+            { label: isAr ? 'اليوم' : 'Due today', value: stats.todayDue, tone: 'var(--color-primary)' },
+            { label: isAr ? 'جارية' : 'In progress', value: stats.inProgress, tone: '#3b82f6' },
+            { label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, tone: '#ef4444' },
+            { label: isAr ? 'أُنجزت اليوم' : 'Done today', value: stats.completedToday, tone: '#10b981' },
           ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.05 }}
-              className="rounded-xl border border-[var(--foreground)]/[0.15] bg-[var(--color-background)] p-4 flex items-center gap-3"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            <div
+              key={stat.label}
+              className={cn(
+                'tasks-glass-stat-cell flex w-1/2 flex-col gap-0.5 border-[rgba(var(--color-primary-rgb),0.14)] py-2.5 ps-3 pe-2 sm:w-1/4',
+                'border-e border-b sm:border-b-0',
+                i % 2 === 1 && 'border-e-0 sm:border-e',
+                i === 3 && 'sm:border-e-0',
+              )}
             >
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg" style={{ background: `${stat.accent}15` }}>
-                <stat.icon className="w-4.5 h-4.5" style={{ color: stat.accent }} />
-              </div>
-              <div>
-                <p className="text-xl font-bold tracking-tight" style={{ color: stat.accent }}>{stat.value}</p>
-                <p className="text-[10px] font-medium text-[var(--foreground)]/40 uppercase tracking-wider">{stat.label}</p>
-              </div>
-            </motion.div>
+              <span
+                className="text-lg font-semibold tabular-nums leading-none sm:text-xl"
+                style={{ color: stat.tone }}
+              >
+                {stat.value}
+              </span>
+              <span className="text-[10px] font-medium text-[var(--foreground)]/45 sm:text-[11px]">{stat.label}</span>
+            </div>
           ))}
         </div>
-      </motion.div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* TOOLBAR */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1} className="mb-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground)]/30" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={isAr ? 'بحث في المهام...' : 'Search tasks...'}
-              className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-[var(--foreground)]/[0.05] border border-[var(--foreground)]/[0.18] text-sm focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]/30 transition-all"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute end-3 top-1/2 -translate-y-1/2">
-                <X className="h-3.5 w-3.5 text-[var(--foreground)]/30" />
+        {/* ── Toolbar ── */}
+        <div className="tasks-glass-toolbar space-y-2.5 px-3 py-2.5 sm:px-4">
+          <div
+            className="tasks-glass-segmented flex flex-wrap gap-0.5 rounded-xl p-0.5"
+            role="tablist"
+            aria-label={isAr ? 'نطاق العرض' : 'View scope'}
+          >
+            {([
+              { id: 'all' as const, en: 'All', ar: 'الكل' },
+              { id: 'today' as const, en: 'Due', ar: 'مستحقة' },
+              { id: 'week' as const, en: 'Week', ar: 'أسبوع' },
+              { id: 'stakes' as const, en: 'Urgent', ar: 'عاجلة' },
+            ]).map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                role="tab"
+                aria-selected={taskScope === opt.id}
+                onClick={() => setTaskScope(opt.id)}
+                className={cn(
+                  'rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all duration-150 sm:px-3 sm:text-xs',
+                  taskScope === opt.id
+                    ? 'bg-[var(--color-primary)] text-white shadow-md ring-1 ring-white/25'
+                    : 'text-[var(--foreground)]/55 hover:bg-[rgba(var(--color-primary-rgb),0.18)] hover:text-[var(--color-primary)] hover:shadow-sm',
+                )}
+              >
+                {isAr ? opt.ar : opt.en}
               </button>
-            )}
+            ))}
           </div>
 
-          {/* Filter toggle + View mode */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
-                showFilters
-                  ? 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                  : 'border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60'
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--foreground)]/35" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={isAr ? 'بحث في المهام…' : 'Search tasks…'}
+                className="tasks-glass-input w-full rounded-xl py-1.5 ps-8 pe-8 text-xs text-[var(--foreground)] placeholder:text-[var(--foreground)]/40 sm:text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute end-1.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--foreground)]/40 transition-colors hover:bg-[rgba(var(--color-primary-rgb),0.1)] hover:text-[var(--color-primary)]"
+                  aria-label={isAr ? 'مسح البحث' : 'Clear search'}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
-            >
-              <Filter className="h-4 w-4" />
-              {isAr ? 'تصفية' : 'Filter'}
-              {(filterPriority !== 'all' || filterStatus !== 'all') && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
-              )}
-            </button>
+            </div>
 
-            <div className="flex rounded-xl border border-[var(--foreground)]/[0.18] overflow-hidden">
+            <div className="flex shrink-0 gap-1.5">
               <button
-                onClick={() => setViewMode('board')}
-                className={cn('px-3 py-2.5 text-xs font-medium transition-all',
-                  viewMode === 'board' ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--foreground)]/40')}
+                type="button"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 sm:text-sm',
+                  showFilters
+                    ? 'border-[var(--color-primary)]/40 bg-[rgba(var(--color-primary-rgb),0.2)] text-[var(--color-primary)] shadow-md backdrop-blur-md'
+                    : 'border-[rgba(var(--color-primary-rgb),0.22)] bg-[rgba(var(--color-primary-rgb),0.06)] text-[var(--foreground)]/60 backdrop-blur-md hover:border-[rgba(var(--color-primary-rgb),0.35)] hover:bg-[rgba(var(--color-primary-rgb),0.12)] hover:text-[var(--color-primary)]',
+                )}
               >
-                <BarChart3 className="h-4 w-4 rotate-90" />
+                <Filter className="h-3.5 w-3.5 opacity-80" />
+                {isAr ? 'فلتر' : 'Filter'}
+                {(filterPriority !== 'all' || filterStatus !== 'all') && (
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-primary)]" />
+                )}
               </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn('px-3 py-2.5 text-xs font-medium transition-all',
-                  viewMode === 'list' ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--foreground)]/40')}
-              >
-                <ListChecks className="h-4 w-4" />
-              </button>
+
+              <div className="tasks-glass-segmented flex rounded-xl p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('board')}
+                  className={cn(
+                    'rounded-md px-2 py-1.5 transition-all duration-150',
+                    viewMode === 'board'
+                      ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                      : 'text-[var(--foreground)]/40 hover:bg-[rgba(var(--color-primary-rgb),0.08)] hover:text-[var(--color-primary)]',
+                  )}
+                  aria-pressed={viewMode === 'board'}
+                  aria-label={isAr ? 'عرض اللوحة' : 'Board view'}
+                >
+                  <BarChart3 className="mx-auto h-3.5 w-3.5 rotate-90 sm:h-4 sm:w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'rounded-md px-2 py-1.5 transition-all duration-150',
+                    viewMode === 'list'
+                      ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                      : 'text-[var(--foreground)]/40 hover:bg-[rgba(var(--color-primary-rgb),0.08)] hover:text-[var(--color-primary)]',
+                  )}
+                  aria-pressed={viewMode === 'list'}
+                  aria-label={isAr ? 'عرض القائمة' : 'List view'}
+                >
+                  <ListChecks className="mx-auto h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Expanded Filters */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-[var(--foreground)]/[0.15]">
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 flex flex-wrap gap-2 border-t border-[rgba(var(--color-primary-rgb),0.15)] pt-2.5">
                 {/* Priority filter */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-semibold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'الأولوية' : 'Priority'}</span>
                   <div className="flex gap-1">
                     {(['all', 'urgent', 'high', 'medium', 'low'] as const).map(p => (
                       <button key={p} onClick={() => setFilterPriority(p)}
-                        className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all',
+                        className={cn('rounded-md border border-transparent px-2.5 py-1 text-[11px] font-medium transition-all duration-150',
                           filterPriority === p
-                            ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20'
-                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
+                            ? 'border-[var(--color-primary)]/30 bg-[rgba(var(--color-primary-rgb),0.12)] text-[var(--color-primary)]'
+                            : 'border-[var(--foreground)]/8 bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/55 hover:border-[rgba(var(--color-primary-rgb),0.25)] hover:bg-[rgba(var(--color-primary-rgb),0.06)] hover:text-[var(--color-primary)]')}>
                         {p === 'all' ? (isAr ? 'الكل' : 'All') : (isAr ? PRIORITY_CONFIG[p].ar : PRIORITY_CONFIG[p].en)}
                       </button>
                     ))}
@@ -380,10 +457,10 @@ export default function TasksPage() {
                   <div className="flex gap-1">
                     {(['all', 'todo', 'in-progress', 'completed'] as const).map(s => (
                       <button key={s} onClick={() => setFilterStatus(s)}
-                        className={cn('px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all',
+                        className={cn('rounded-md border border-transparent px-2.5 py-1 text-[11px] font-medium transition-all duration-150',
                           filterStatus === s
-                            ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20'
-                            : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.08]')}>
+                            ? 'border-[var(--color-primary)]/30 bg-[rgba(var(--color-primary-rgb),0.12)] text-[var(--color-primary)]'
+                            : 'border-[var(--foreground)]/8 bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/55 hover:border-[rgba(var(--color-primary-rgb),0.25)] hover:bg-[rgba(var(--color-primary-rgb),0.06)] hover:text-[var(--color-primary)]')}>
                         {s === 'all' ? (isAr ? 'الكل' : 'All') : (isAr ? STATUS_CONFIG[s].ar : STATUS_CONFIG[s].en)}
                       </button>
                     ))}
@@ -396,33 +473,39 @@ export default function TasksPage() {
                   <select
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[var(--foreground)]/[0.05] border-0 text-[var(--foreground)]/60"
+                    className="tasks-glass-input rounded-lg px-2.5 py-1 text-[11px] font-medium text-[var(--foreground)]/70"
                   >
                     <option value="dueDate">{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</option>
                     <option value="priority">{isAr ? 'الأولوية' : 'Priority'}</option>
                     <option value="created">{isAr ? 'تاريخ الإنشاء' : 'Created'}</option>
                     <option value="name">{isAr ? 'الاسم' : 'Name'}</option>
                   </select>
-                  <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                    className="p-1 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40">
+                  <button
+                    type="button"
+                    onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                    className="rounded-md p-1.5 text-[var(--foreground)]/40 transition-colors hover:bg-[rgba(var(--color-primary-rgb),0.1)] hover:text-[var(--color-primary)]"
+                  >
                     {sortDir === 'asc' ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* BOARD VIEW */}
-      {/* ═══════════════════════════════════════════════════════ */}
+        <div className="tasks-glass-board">
       {viewMode === 'board' && (
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
-          <div className="grid lg:grid-cols-3 gap-5">
-            {/* Today / Overdue Column */}
+          {allTasks.length === 0 ? (
+            <div className="p-4 sm:p-6">
+              <EmptyState isAr={isAr} onAdd={openCreate} />
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 divide-y divide-[rgba(var(--color-primary-rgb),0.16)] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            <div className="p-2.5 sm:p-3 lg:pe-3">
             <BoardColumn
-              title={isAr ? 'اليوم والمتأخر' : 'Today & Overdue'}
+              title={isAr ? 'اليوم والمتأخر' : 'Today & overdue'}
               titleAr="اليوم والمتأخر"
               icon={<AlertCircle className="w-4 h-4" />}
               accent="#ef4444"
@@ -436,14 +519,14 @@ export default function TasksPage() {
               onToggleSubtask={(taskId, subtaskId) => store.toggleSubtask(taskId, subtaskId)}
               expandedId={expandedTaskId}
               onExpand={id => setExpandedTaskId(expandedTaskId === id ? null : id)}
-              emptyMessage={isAr ? 'لا توجد مهام لليوم' : 'No tasks due today'}
-              emptyIcon={<CheckCircle2 className="w-8 h-8 text-emerald-400" />}
+              emptyMessage={isAr ? 'لا توجد مهام لهذا اليوم.' : 'Nothing due today.'}
+              emptyIcon={<CheckCircle2 className="h-6 w-6 text-[var(--foreground)]/20" strokeWidth={1.25} />}
             />
-
-            {/* Upcoming Column */}
+            </div>
+            <div className="p-2.5 sm:p-3 lg:px-3">
             <BoardColumn
-              title={isAr ? 'القادمة' : 'Upcoming'}
-              titleAr="القادمة"
+              title={isAr ? 'لاحقاً' : 'Later'}
+              titleAr="لاحقاً"
               icon={<CalendarClock className="w-4 h-4" />}
               accent="var(--color-primary)"
               count={upcomingTasks.length}
@@ -456,14 +539,14 @@ export default function TasksPage() {
               onToggleSubtask={(taskId, subtaskId) => store.toggleSubtask(taskId, subtaskId)}
               expandedId={expandedTaskId}
               onExpand={id => setExpandedTaskId(expandedTaskId === id ? null : id)}
-              emptyMessage={isAr ? 'لا توجد مهام قادمة' : 'No upcoming tasks'}
-              emptyIcon={<Sparkles className="w-8 h-8 text-[var(--color-primary)]/40" />}
+              emptyMessage={isAr ? 'لا مهام بدون تاريخ أو لاحقة.' : 'No undated or upcoming tasks.'}
+              emptyIcon={<Sparkles className="h-6 w-6 text-[var(--foreground)]/20" strokeWidth={1.25} />}
             />
-
-            {/* Completed Column */}
+            </div>
+            <div className="p-2.5 sm:p-3 lg:ps-3">
             <BoardColumn
-              title={isAr ? 'المكتمل' : 'Completed'}
-              titleAr="المكتمل"
+              title={isAr ? 'منجزة' : 'Done'}
+              titleAr="منجزة"
               icon={<CheckCircle2 className="w-4 h-4" />}
               accent="#10b981"
               count={completedTasks.length}
@@ -476,11 +559,13 @@ export default function TasksPage() {
               onToggleSubtask={(taskId, subtaskId) => store.toggleSubtask(taskId, subtaskId)}
               expandedId={expandedTaskId}
               onExpand={id => setExpandedTaskId(expandedTaskId === id ? null : id)}
-              emptyMessage={isAr ? 'لا توجد مهام مكتملة' : 'No completed tasks yet'}
-              emptyIcon={<Target className="w-8 h-8 text-[var(--foreground)]/20" />}
+              emptyMessage={isAr ? 'لا مهام مكتملة بعد.' : 'No completed tasks yet.'}
+              emptyIcon={<CheckCircle2 className="h-6 w-6 text-[var(--foreground)]/20" />}
               isCompleted
             />
+            </div>
           </div>
+          )}
         </motion.div>
       )}
 
@@ -488,11 +573,11 @@ export default function TasksPage() {
       {/* LIST VIEW */}
       {/* ═══════════════════════════════════════════════════════ */}
       {viewMode === 'list' && (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="p-2.5 sm:p-3">
           {filteredTasks.length === 0 ? (
             <EmptyState isAr={isAr} onAdd={openCreate} />
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {filteredTasks.map((task, i) => (
                 <TaskCard
                   key={task.id}
@@ -512,19 +597,15 @@ export default function TasksPage() {
           )}
         </motion.div>
       )}
+        </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* PROGRESS INSIGHTS STRIP */}
-      {/* ═══════════════════════════════════════════════════════ */}
       {allTasks.length > 0 && (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3} className="mt-8">
-          <div className="rounded-2xl border border-[var(--foreground)]/[0.15] bg-[var(--color-background)] p-5"
-            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
-              <h3 className="text-sm font-semibold">{isAr ? 'نظرة عامة' : 'Progress Overview'}</h3>
+        <div className="tasks-glass-overview px-3 py-3 sm:px-4 sm:py-4">
+            <div className="mb-3 flex items-center gap-2 border-b border-[rgba(var(--color-primary-rgb),0.2)] pb-2">
+              <TrendingUp className="h-3.5 w-3.5 text-[var(--color-primary)]" strokeWidth={2} />
+              <h3 className="text-xs font-semibold text-[var(--foreground)]/85 sm:text-sm">{isAr ? 'نظرة عامة' : 'Overview'}</h3>
             </div>
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="grid gap-5 sm:grid-cols-3 sm:gap-4">
               {/* Completion rate */}
               <div className="flex items-center gap-4">
                 <div className="relative w-14 h-14">
@@ -588,14 +669,10 @@ export default function TasksPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Empty state when no tasks at all */}
-      {allTasks.length === 0 && viewMode === 'board' && (
-        <EmptyState isAr={isAr} onAdd={openCreate} />
-      )}
+      </motion.div>
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* CREATE / EDIT MODAL */}
@@ -606,23 +683,28 @@ export default function TasksPage() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="fixed inset-0 z-[var(--z-overlay)] bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/40 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto top-[5%] z-[var(--z-modal)] sm:w-[560px] max-h-[90vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
+              className="tasks-glass-modal fixed inset-x-4 top-[5%] z-[var(--z-modal)] max-h-[90vh] overflow-y-auto rounded-2xl sm:inset-x-0 sm:mx-auto sm:w-[560px]"
             >
+              <div className="h-0.5 w-full shrink-0 bg-[var(--color-primary)]" aria-hidden />
               {/* Modal header */}
-              <div className="sticky top-0 z-10 bg-[var(--color-background)] p-5 pb-4 border-b border-[var(--foreground)]/[0.18] flex items-center justify-between">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-[var(--color-primary)]" />
-                  {editingTask ? (isAr ? 'تعديل المهمة' : 'Edit Task') : (isAr ? 'مهمة جديدة' : 'New Task')}
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[rgba(var(--color-primary-rgb),0.2)] bg-[rgba(var(--color-background-rgb),0.55)] px-5 py-4 backdrop-blur-xl">
+                <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <ClipboardList className="h-5 w-5 text-[var(--color-primary)]" strokeWidth={1.75} />
+                  {editingTask ? (isAr ? 'تعديل المهمة' : 'Edit task') : (isAr ? 'مهمة جديدة' : 'New task')}
                 </h2>
-                <button onClick={() => { setShowForm(false); resetForm(); }}
-                  className="p-2 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/40">
+                <button
+                  type="button"
+                  onClick={() => { setShowForm(false); resetForm(); }}
+                  className="rounded-lg p-2 text-[var(--foreground)]/45 hover:bg-[var(--foreground)]/[0.06] hover:text-[var(--foreground)]/70"
+                  aria-label={isAr ? 'إغلاق' : 'Close'}
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -847,7 +929,7 @@ export default function TasksPage() {
 // ═══════════════════════════════════════════════════════════
 
 function BoardColumn({
-  title, icon, accent, count, tasks, isAr, today, store, onEdit, onToggle, onToggleSubtask,
+  title, titleAr, icon, accent, count, tasks, isAr, today, store, onEdit, onToggle, onToggleSubtask,
   expandedId, onExpand, emptyMessage, emptyIcon, isCompleted,
 }: {
   title: string; titleAr: string; icon: React.ReactNode; accent: string; count: number;
@@ -858,24 +940,33 @@ function BoardColumn({
   emptyMessage: string; emptyIcon: React.ReactNode; isCompleted?: boolean;
 }) {
   return (
-    <div className="flex flex-col">
-      {/* Column Header */}
-      <div className="flex items-center gap-2.5 mb-4 px-1">
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg" style={{ background: `${accent}15`, color: accent }}>
+    <div
+      className="tasks-glass-column flex min-h-[200px] flex-col overflow-hidden"
+      role="region"
+      aria-label={isAr ? titleAr : title}
+    >
+      <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: accent }} aria-hidden />
+      <div className="tasks-glass-column-head flex items-center gap-2 px-2.5 py-2 sm:px-3">
+        <span
+          className="tasks-glass-icon-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+          style={{ color: accent }}
+        >
           {icon}
-        </div>
-        <h2 className="text-sm font-bold flex-1">{title}</h2>
-        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${accent}12`, color: accent }}>
+        </span>
+        <h2 className="min-w-0 flex-1 text-xs font-semibold text-[var(--foreground)]/90 sm:text-sm">{title}</h2>
+        <span
+          className="tabular-nums rounded-lg border border-[rgba(var(--color-primary-rgb),0.22)] bg-[rgba(var(--color-primary-rgb),0.1)] px-2 py-0.5 text-[11px] font-bold backdrop-blur-sm"
+          style={{ color: accent }}
+        >
           {count}
         </span>
       </div>
 
-      {/* Column Content */}
-      <div className="flex-1 space-y-2.5 min-h-[200px]">
+      <div className="flex min-h-[100px] flex-1 flex-col gap-1.5 p-2 sm:p-2.5">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 rounded-2xl border-2 border-dashed border-[var(--foreground)]/[0.15]">
-            {emptyIcon}
-            <p className="text-xs text-[var(--foreground)]/30 mt-3">{emptyMessage}</p>
+          <div className="tasks-glass-empty flex flex-1 flex-col items-center justify-center py-8 transition-all hover:border-[rgba(var(--color-primary-rgb),0.35)] hover:bg-[rgba(var(--color-primary-rgb),0.08)]">
+            <span className="opacity-50">{emptyIcon}</span>
+            <p className="mt-2 max-w-[200px] px-2 text-center text-[11px] leading-relaxed text-[var(--foreground)]/45">{emptyMessage}</p>
           </div>
         ) : (
           tasks.map((task, i) => (
@@ -922,33 +1013,39 @@ function TaskCard({
   const subtasksTotal = task.subtasks?.length ?? 0;
   const subtaskProgress = subtasksTotal > 0 ? (subtasksDone / subtasksTotal) * 100 : 0;
 
+  const stripeColor = isDone
+    ? 'rgba(var(--color-primary-rgb), 0.35)'
+    : isOver
+      ? '#f87171'
+      : 'var(--color-primary)';
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.3 }}
+      transition={{ delay: index * 0.02, duration: 0.2 }}
       className={cn(
-        'group rounded-xl border transition-all duration-200',
-        isDone
-          ? 'border-[var(--foreground)]/[0.15] bg-[var(--foreground)]/[0.015]'
-          : isOver
-            ? 'border-red-500/20 bg-red-500/[0.02]'
-            : 'border-[var(--foreground)]/[0.18] bg-[var(--color-background)] hover:border-[var(--color-primary)]/20 hover:shadow-sm',
+        'tasks-glass-task group relative overflow-hidden transition-all duration-200',
+        isDone && 'opacity-[0.88]',
+        !isDone && isOver && '!border-red-400/45 !bg-red-500/[0.1] hover:!shadow-red-500/10',
+        !isDone &&
+          !isOver &&
+          'hover:-translate-y-px motion-reduce:hover:translate-y-0',
       )}
-      style={!isDone && !isOver ? { boxShadow: '0 1px 2px rgba(0,0,0,0.03)' } : undefined}
+      style={{ borderInlineStartWidth: 3, borderInlineStartColor: stripeColor }}
     >
-      <div className="p-3.5">
+      <div className="p-2.5 sm:p-3">
         <div className="flex items-start gap-3">
           {/* Completion toggle */}
           <button
             onClick={onToggle}
             className={cn(
-              'mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
+              'mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150',
               isDone
-                ? 'border-emerald-500 bg-emerald-500'
+                ? 'border-emerald-500 bg-emerald-500 shadow-sm'
                 : isOver
-                  ? 'border-red-400 hover:border-red-500 hover:bg-red-500/10'
-                  : 'border-[var(--foreground)]/20 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10',
+                  ? 'border-red-400 hover:scale-105 hover:border-red-500 hover:bg-red-500/15 hover:shadow-sm'
+                  : 'border-[var(--foreground)]/25 hover:scale-105 hover:border-[var(--color-primary)] hover:bg-[rgba(var(--color-primary-rgb),0.12)] hover:shadow-[0_0_0_3px_rgba(var(--color-primary-rgb),0.12)]',
             )}
           >
             {isDone && <Check className="w-3 h-3 text-white" />}
@@ -959,7 +1056,7 @@ function TaskCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <p className={cn(
-                  'text-sm font-semibold leading-tight',
+                  'text-[13px] font-semibold leading-snug sm:text-sm',
                   isDone && 'line-through text-[var(--foreground)]/40',
                 )}>
                   {name}
@@ -970,12 +1067,20 @@ function TaskCard({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30">
-                  <Edit3 className="w-3 h-3" />
+              <div className="flex items-center gap-0.5 opacity-0 transition-all duration-150 group-hover:opacity-100 max-sm:opacity-100">
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="rounded-md p-1.5 text-[var(--foreground)]/40 transition-colors hover:bg-[rgba(var(--color-primary-rgb),0.12)] hover:text-[var(--color-primary)]"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={onExpand} className="p-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/30">
-                  {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <button
+                  type="button"
+                  onClick={onExpand}
+                  className="rounded-md p-1.5 text-[var(--foreground)]/40 transition-colors hover:bg-[rgba(var(--color-primary-rgb),0.12)] hover:text-[var(--color-primary)]"
+                >
+                  {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
@@ -983,14 +1088,14 @@ function TaskCard({
             {/* Meta row */}
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {/* Priority badge */}
-              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', priority.bg, priority.color)}>
+              <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', priority.bg, priority.color)}>
                 {isAr ? priority.ar : priority.en}
               </span>
 
               {/* Status badge */}
               {task.status === 'in-progress' && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">
-                  {isAr ? 'قيد التنفيذ' : 'In Progress'}
+                <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', STATUS_CONFIG['in-progress'].bg, STATUS_CONFIG['in-progress'].color)}>
+                  {isAr ? STATUS_CONFIG['in-progress'].ar : STATUS_CONFIG['in-progress'].en}
                 </span>
               )}
 
@@ -1047,7 +1152,7 @@ function TaskCard({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-3.5 pb-3.5 pt-0 border-t border-[var(--foreground)]/[0.15] mt-0">
+            <div className="mt-0 border-t border-[rgba(var(--color-primary-rgb),0.14)] bg-[rgba(var(--color-primary-rgb),0.04)] px-3.5 pb-3.5 pt-0 backdrop-blur-sm">
               <div className="pt-3 space-y-2.5">
                 {/* Description */}
                 {desc && (
@@ -1064,7 +1169,7 @@ function TaskCard({
                       <button
                         key={st.id}
                         onClick={() => onToggleSubtask(st.id)}
-                        className="flex items-center gap-2 w-full text-start px-2 py-1.5 rounded-lg hover:bg-[var(--foreground)]/[0.05] transition-colors"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-[rgba(var(--color-primary-rgb),0.08)]"
                       >
                         <div className={cn(
                           'w-4 h-4 rounded border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all',
@@ -1123,29 +1228,25 @@ function TaskCard({
 function EmptyState({ isAr, onAdd }: { isAr: boolean; onAdd: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-      className="flex flex-col items-center justify-center py-20"
+      transition={{ duration: 0.25 }}
+      className="tasks-glass-empty mx-auto flex max-w-md flex-col items-center justify-center px-8 py-14 sm:py-20"
     >
-      <div className="relative mb-6">
-        <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.1), rgba(var(--color-primary-rgb) / 0.05))' }}>
-          <ClipboardList className="w-10 h-10 text-[var(--color-primary)]/40" />
-        </div>
-        <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-[var(--color-primary)]/15 flex items-center justify-center">
-          <Plus className="w-4 h-4 text-[var(--color-primary)]" />
-        </div>
+      <div className="tasks-glass-icon-btn mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+        <ClipboardList className="h-7 w-7 text-[var(--color-primary)]" strokeWidth={1.5} />
       </div>
-      <h3 className="text-lg font-bold mb-1">{isAr ? 'لا توجد مهام بعد' : 'No tasks yet'}</h3>
-      <p className="text-sm text-[var(--foreground)]/40 mb-6 text-center max-w-xs">
-        {isAr ? 'ابدأ بإضافة مهمتك الأولى لتنظيم يومك بكفاءة' : 'Start by adding your first task to organize and execute with clarity'}
+      <h3 className="mb-1 text-lg font-semibold text-[var(--foreground)]">{isAr ? 'لا مهام بعد' : 'No tasks yet'}</h3>
+      <p className="mb-6 max-w-sm text-center text-sm text-[var(--foreground)]/45">
+        {isAr ? 'أضف مهمة لتتبع ما يجب إنجازه.' : 'Add a task to track what needs doing.'}
       </p>
-      <button onClick={onAdd}
-        className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-6 py-3 text-sm font-semibold shadow-lg"
-        style={{ boxShadow: '0 4px 20px rgba(var(--color-primary-rgb) / 0.3)' }}>
-        <Plus className="h-4 w-4" />
-        {isAr ? 'إنشاء مهمة' : 'Create Task'}
+      <button
+        type="button"
+        onClick={onAdd}
+        className="inline-flex items-center gap-2 rounded-xl app-btn-primary px-5 py-2.5 text-sm font-medium"
+      >
+        <Plus className="h-4 w-4" strokeWidth={2} />
+        {isAr ? 'مهمة جديدة' : 'New task'}
       </button>
     </motion.div>
   );

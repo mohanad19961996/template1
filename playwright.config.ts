@@ -22,7 +22,6 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     browserName: 'chromium',
-    reducedMotion: 'reduce',
   },
   projects: [
     {

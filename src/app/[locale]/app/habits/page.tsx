@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getDoneRepCountForDate, getTotalCompletionUnits, sumLoggedDurationSecsOnDate } from '@/lib/habit-completion';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import { useHabitTimer, useStoreHabitTimer, HabitTimerControls } from '@/components/app/habit-timer-controls';
@@ -133,12 +134,6 @@ function normalizeDurationToSecs(dur: number | undefined): number {
   return dur;
 }
 
-function sumLoggedDurationSecsOnDate(habitId: string, logs: HabitLog[], dateStr: string): number {
-  return logs
-    .filter(l => l.habitId === habitId && l.date === dateStr)
-    .reduce((sum, l) => sum + (l.duration ?? 0), 0);
-}
-
 // Check if a habit is done today — for timer habits, uses cumulative daily time
 function isHabitDoneToday(habit: Habit, logs: HabitLog[], today: string): boolean {
   if (habit.expectedDuration) {
@@ -149,39 +144,12 @@ function isHabitDoneToday(habit: Habit, logs: HabitLog[], today: string): boolea
   return logs.some(l => l.habitId === habit.id && l.date === today && l.completed);
 }
 
-// For multi-rep timer habits: how many full targets earned on a date (from cumulative time)
-function getTimerCompletionCount(habit: Habit, logs: HabitLog[], dateStr: string): number {
-  if (!habit.expectedDuration) return 0;
-  const totalSecs = sumLoggedDurationSecsOnDate(habit.id, logs, dateStr);
-  const earned = Math.floor(totalSecs / habit.expectedDuration);
-  const maxReps = habit.maxDailyReps || Infinity;
-  return maxReps === Infinity ? earned : Math.min(earned, maxReps);
-}
-
-/**
- * How many "done" reps for a date — matches user expectation for Nx badges (not raw completed-log rows).
- * Timer: full targets from summed duration. Count: floor(max cumulative value / target). Else: completed logs.
- */
-function getDoneRepCountForDate(habit: Habit, logs: HabitLog[], dateStr: string): number {
-  if (habit.expectedDuration) {
-    return getTimerCompletionCount(habit, logs, dateStr);
-  }
-  if (habit.trackingType === 'count') {
-    const target = habit.targetValue ?? 1;
-    if (target <= 0) return 0;
-    const dayLogs = logs.filter(l => l.habitId === habit.id && l.date === dateStr);
-    const maxVal = dayLogs.reduce((m, l) => Math.max(m, l.value ?? 0), 0);
-    if (maxVal > 0) return Math.floor(maxVal / target);
-    return dayLogs.filter(l => l.completed).length;
-  }
-  return logs.filter(l => l.habitId === habit.id && l.date === dateStr && l.completed).length;
-}
-
-function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?: number) {
+function getHabitTimeStats(habit: Habit, logs: HabitLog[]) {
+  const habitId = habit.id;
   const habitLogs = logs.filter(l => l.habitId === habitId);
-  const completed = habitLogs.filter(l => l.completed);
   const now = new Date();
   const todayStr = todayString();
+  const expectedDuration = habit.expectedDuration;
 
   // Week start (Monday)
   const ws = new Date(now); const day = ws.getDay(); ws.setDate(ws.getDate() - (day === 0 ? 6 : day - 1));
@@ -191,10 +159,10 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   // Year start
   const yearStart = `${now.getFullYear()}-01-01`;
 
-  // Count every completed session (not unique dates) — each timer session is a rep
-  const thisWeekCompleted = completed.filter(l => l.date >= weekStart && l.date <= todayStr);
-  const thisMonthCompleted = completed.filter(l => l.date >= monthStart && l.date <= todayStr);
-  const thisYearCompleted = completed.filter(l => l.date >= yearStart && l.date <= todayStr);
+  const sumRepsInRange = (startStr: string, endStr: string) => {
+    const dates = [...new Set(habitLogs.filter(l => l.date >= startStr && l.date <= endStr).map(l => l.date))];
+    return dates.reduce((sum, d) => sum + getDoneRepCountForDate(habit, logs, d), 0);
+  };
 
   // Sum ALL logged time in SECONDS (completed or not) — every timer second counts
   const sumAllSecs = (arr: HabitLog[]) => {
@@ -210,9 +178,15 @@ function getHabitTimeStats(habitId: string, logs: HabitLog[], expectedDuration?:
   const thisWeekAll = habitLogs.filter(l => l.date >= weekStart && l.date <= todayStr);
   const thisMonthAll = habitLogs.filter(l => l.date >= monthStart && l.date <= todayStr);
   const thisYearAll = habitLogs.filter(l => l.date >= yearStart && l.date <= todayStr);
+  const allDates = [...new Set(habitLogs.map(l => l.date))];
 
   return {
-    reps: { week: thisWeekCompleted.length, month: thisMonthCompleted.length, year: thisYearCompleted.length, total: completed.length },
+    reps: {
+      week: sumRepsInRange(weekStart, todayStr),
+      month: sumRepsInRange(monthStart, todayStr),
+      year: sumRepsInRange(yearStart, todayStr),
+      total: allDates.reduce((sum, d) => sum + getDoneRepCountForDate(habit, logs, d), 0),
+    },
     secs: { today: sumAllSecs(habitLogs.filter(l => l.date === todayStr)), week: sumAllSecs(thisWeekAll), month: sumAllSecs(thisMonthAll), year: sumAllSecs(thisYearAll), total: sumAllSecs(habitLogs) },
   };
 }
@@ -2649,8 +2623,8 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
     return days;
   };
 
-  // Stats
-  const totalDone = store.habitLogs.filter(l => l.habitId === habit.id && l.completed).length;
+  // Stats (boolean habits: unique completed days — avoids 2× duplicate rows inflating totals / rate)
+  const totalDone = getTotalCompletionUnits(habit, store.habitLogs);
   const daysSince = Math.max(1, Math.floor((Date.now() - createdDate.getTime()) / 86400000));
   const rate = Math.round((totalDone / daysSince) * 100);
   const handleDismiss = onBack || onClose;
@@ -2988,8 +2962,16 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     const now = new Date();
     const todayStr = todayString();
 
-    // Total completions
-    const totalCompletions = allLogs.length;
+    // Total completions (per habit semantics — boolean = one unit per completed day)
+    const totalCompletions = activeHabits.reduce((sum, h) => sum + getTotalCompletionUnits(h, store.habitLogs), 0);
+
+    const sumCompletionUnitsInRange = (startStr: string, endStr: string) =>
+      activeHabits.reduce((habitSum, h) => {
+        const dates = [...new Set(
+          store.habitLogs.filter(l => l.habitId === h.id && l.date >= startStr && l.date <= endStr).map(l => l.date),
+        )];
+        return habitSum + dates.reduce((dSum, d) => dSum + getDoneRepCountForDate(h, store.habitLogs, d), 0);
+      }, 0);
 
     // Total hours — count ALL logged time (completed or not)
     const totalMinutes = allHabitLogs.reduce((sum, l) => sum + (l.duration ?? 0), 0);
@@ -2999,17 +2981,17 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
     const weekStart = new Date(now);
     const wd = weekStart.getDay(); weekStart.setDate(weekStart.getDate() - (wd === 0 ? 6 : wd - 1));
     const weekStartStr = formatLocalDate(weekStart);
-    const thisWeek = allLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).length;
+    const thisWeek = sumCompletionUnitsInRange(weekStartStr, todayStr);
     const thisWeekMinutes = allHabitLogs.filter(l => l.date >= weekStartStr && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // This month
     const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    const thisMonth = allLogs.filter(l => l.date >= monthStart && l.date <= todayStr).length;
+    const thisMonth = sumCompletionUnitsInRange(monthStart, todayStr);
     const thisMonthMinutes = allHabitLogs.filter(l => l.date >= monthStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // This year
     const yearStart = `${now.getFullYear()}-01-01`;
-    const thisYear = allLogs.filter(l => l.date >= yearStart && l.date <= todayStr).length;
+    const thisYear = sumCompletionUnitsInRange(yearStart, todayStr);
     const thisYearMinutes = allHabitLogs.filter(l => l.date >= yearStart && l.date <= todayStr).reduce((s, l) => s + (l.duration ?? 0), 0);
 
     // Active days (unique dates with at least one completion)
@@ -3039,7 +3021,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
       activeDays, bestStreak, bestStreakHabit,
       avgPerDay, daysSinceFirst,
     };
-  }, [allLogs, activeHabits, store, isAr]);
+  }, [allLogs, activeHabits, store, store.habitLogs, isAr]);
 
   // ── Weekly heatmap (last 12 weeks) ──
   const weeklyData = useMemo(() => {
@@ -3055,7 +3037,9 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
         const ds = formatLocalDate(dt);
         days.push({
           date: ds,
-          count: ds <= today ? allLogs.filter(l => l.date === ds).length : -1,
+          count: ds <= today
+            ? activeHabits.reduce((s, h) => s + getDoneRepCountForDate(h, store.habitLogs, ds), 0)
+            : -1,
           isToday: ds === today,
         });
       }
@@ -3063,7 +3047,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
       weeks.push({ weekLabel: wStart, days });
     }
     return weeks;
-  }, [allLogs, today, isAr]);
+  }, [allLogs, today, isAr, activeHabits, store.habitLogs]);
 
   const maxDayCount = Math.max(...weeklyData.flatMap(w => w.days.map(d => d.count)), 1);
 
@@ -3076,7 +3060,7 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
       const st = store.getHabitStats(h.id);
       return {
         habit: h,
-        completions: logs.length,
+        completions: st.totalCompletions,
         totalMinutes: totalMin,
         streak: streak.current,
         bestStreak: streak.best,
@@ -3571,7 +3555,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                     store.habitLogs.some(l => l.habitId === habit.id && l.date === d && l.completed)
                   ).length;
                   const rate = applicableDates.length > 0 ? Math.round((completions / applicableDates.length) * 100) : 0;
-                  const totalAllTime = store.habitLogs.filter(l => l.habitId === habit.id && l.completed).length;
+                  const totalAllTime = getTotalCompletionUnits(habit, store.habitLogs);
 
                   return (
                     <tr key={habit.id} className={cn(
@@ -3677,7 +3661,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                   })}
                   <td className="px-3 py-3.5 text-center border-s border-[var(--foreground)]/[0.15]">
                     <span className="text-sm font-bold text-[var(--color-primary)]">
-                      {habits.reduce((sum, h) => sum + store.habitLogs.filter(l => l.habitId === h.id && l.completed).length, 0)}
+                      {habits.reduce((sum, h) => sum + getTotalCompletionUnits(h, store.habitLogs), 0)}
                     </span>
                   </td>
                   <td className="px-3 py-3.5 text-center border-s border-[var(--foreground)]/[0.15]">
@@ -3726,7 +3710,7 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
   const today = todayString();
   const stats = store.getHabitStats(habit.id);
   const streak = store.getHabitStreak(habit.id);
-  const timeStats = useMemo(() => getHabitTimeStats(habit.id, store.habitLogs, habit.expectedDuration), [habit.id, store.habitLogs, habit.expectedDuration]);
+  const timeStats = useMemo(() => getHabitTimeStats(habit, store.habitLogs), [habit, store.habitLogs]);
   const done = isHabitDoneToday(habit, store.habitLogs, today);
   const hasDuration = !!habit.expectedDuration;
   const isCountHabit = habit.trackingType === 'count';

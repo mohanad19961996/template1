@@ -10,6 +10,7 @@ import {
   computeTimerElapsed, computeTimerRemaining,
 } from '@/types/app';
 import { playHabitDoneSound, playHabitUndoneSound } from '@/lib/sounds';
+import { getDoneRepCountForDate, getTotalCompletionUnits } from '@/lib/habit-completion';
 
 // ── Storage ────────────────────────────────────────────────
 
@@ -608,12 +609,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const logs = stateRef.current.habitLogs.filter(l => l.habitId === habitId);
     const completedLogs = logs.filter(l => l.completed);
     const streak = getHabitStreak(habitId);
+    const habit = stateRef.current.habits.find(h => h.id === habitId);
 
     const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
-    completedLogs.forEach(l => {
-      const day = parseLocalDate(l.date).getDay();
-      weekdayCounts[day]++;
-    });
+    if (habit) {
+      const dates = [...new Set(logs.map(l => l.date))];
+      dates.forEach(dateStr => {
+        const n = getDoneRepCountForDate(habit, logs, dateStr);
+        if (n <= 0) return;
+        const day = parseLocalDate(dateStr).getDay();
+        weekdayCounts[day] += n;
+      });
+    } else {
+      completedLogs.forEach(l => {
+        const day = parseLocalDate(l.date).getDay();
+        weekdayCounts[day]++;
+      });
+    }
 
     const moodsBefore = completedLogs.filter(l => l.moodBefore).map(l => l.moodBefore!);
     const moodsAfter = completedLogs.filter(l => l.moodAfter).map(l => l.moodAfter!);
@@ -622,12 +634,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const worstDayIdx = weekdayCounts.indexOf(Math.min(...weekdayCounts));
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    const habit = stateRef.current.habits.find(h => h.id === habitId);
     const daysSinceCreation = habit ? Math.max(1, Math.floor((Date.now() - new Date(habit.createdAt).getTime()) / 86400000)) : 1;
     const uniqueCompletedDays = new Set(completedLogs.map(l => l.date)).size;
 
     return {
-      totalCompletions: completedLogs.length,
+      totalCompletions: habit ? getTotalCompletionUnits(habit, logs) : completedLogs.length,
       completionRate: Math.min(100, Math.round((uniqueCompletedDays / daysSinceCreation) * 100)),
       streak,
       averageMoodBefore: moodsBefore.length ? moodsBefore.reduce((a, b) => a + b, 0) / moodsBefore.length : 0,
