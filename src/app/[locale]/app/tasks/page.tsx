@@ -599,6 +599,85 @@ export default function TasksPage() {
         )}
       </AnimatePresence>
 
+      {/* ═══ CATEGORY FILTER ═══ */}
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1.5} className="mt-3">
+        <div
+          className="overflow-hidden rounded-xl border-2 shadow-sm"
+          style={{
+            borderColor: 'rgba(var(--color-primary-rgb) / 0.14)',
+            background: 'linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.04) 0%, var(--color-background) 40%)',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 18px -6px rgba(0,0,0,0.07)',
+          }}
+        >
+          <div
+            className="flex items-center gap-2 border-b-2 px-2.5 py-2 sm:px-3 sm:py-2"
+            style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.1)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }}
+          >
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border sm:h-8 sm:w-8"
+              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.2)', background: 'rgba(var(--color-primary-rgb) / 0.08)' }}
+            >
+              <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--color-primary)' }} strokeWidth={2.25} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black tracking-tight text-[var(--foreground)] sm:text-[13px]">
+                {isAr ? 'تصفية حسب الفئة' : 'Filter by category'}
+              </p>
+              <p className="text-[9px] font-semibold leading-tight text-[var(--foreground)]/40 sm:text-[10px]">
+                {isAr ? 'اختر فئة أو اعرض الكل' : 'Pick one or show all'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-2 sm:p-2.5">
+            <div className="flex flex-wrap gap-1.5">
+              {/* All chip */}
+              <button
+                type="button"
+                onClick={() => setFilterCategory('all')}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all duration-150',
+                  filterCategory === 'all'
+                    ? 'border-[var(--color-primary)] text-white shadow-sm'
+                    : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
+                )}
+                style={filterCategory === 'all' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
+              >
+                {isAr ? 'الكل' : 'All'}
+                <span className={cn('rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', filterCategory === 'all' ? 'bg-white/25 text-white' : 'bg-[var(--foreground)]/[0.07] text-[var(--foreground)]/60')}>
+                  {allTasks.length}
+                </span>
+              </button>
+
+              {/* Category chips */}
+              {categories.map(c => {
+                const count = allTasks.filter(t => t.category === c).length;
+                const isSelected = filterCategory === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setFilterCategory(isSelected ? 'all' : c)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all duration-150',
+                      isSelected
+                        ? 'border-[var(--color-primary)] text-white shadow-sm'
+                        : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
+                    )}
+                    style={isSelected ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
+                  >
+                    <span className="truncate max-w-[120px]">{c}</span>
+                    <span className={cn('shrink-0 rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', isSelected ? 'bg-white/25 text-white' : 'bg-[var(--foreground)]/[0.07] text-[var(--foreground)]/60')}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* ═══ BOARD VIEW ═══ */}
       {viewMode === 'board' && (
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="mt-3">
