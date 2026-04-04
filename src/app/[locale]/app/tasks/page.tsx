@@ -372,50 +372,82 @@ export default function TasksPage() {
             background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.15), rgba(var(--color-primary-rgb) / 0.06))',
           }}
         >
-          <div className="px-4 py-5 sm:px-6 sm:py-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{ background: 'rgba(var(--color-primary-rgb) / 0.2)' }}
-              >
-                <ClipboardList className="h-5 w-5 text-[var(--color-primary)]" />
+          <div className="px-4 py-3 sm:px-6 sm:py-4">
+            {/* Desktop: title + stats on same row */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: 'rgba(var(--color-primary-rgb) / 0.2)' }}
+                >
+                  <ClipboardList className="h-5 w-5 text-[var(--color-primary)]" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
+                    {isAr ? 'المهام' : 'Tasks'}
+                  </h1>
+                  <p className="text-xs text-[var(--foreground)]/50">
+                    {isAr ? 'نظّم مهامك وتابع تقدمك' : 'Organize your tasks and track progress'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
-                  {isAr ? 'المهام' : 'Tasks'}
-                </h1>
-                <p className="text-xs text-[var(--foreground)]/50">
-                  {isAr ? 'نظّم مهامك وتابع تقدمك' : 'Organize your tasks and track progress'}
-                </p>
+
+              {/* Stat cards - inline on desktop */}
+              <div className="hidden sm:flex sm:items-center sm:gap-1">
+                {([
+                  { key: 'today' as StatFilter, label: isAr ? 'اليوم' : 'Today', value: stats.todayDue, tone: 'var(--color-primary)' },
+                  { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'Active', value: stats.inProgress, tone: '#3b82f6' },
+                  { key: 'overdue' as StatFilter, label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, tone: '#ef4444' },
+                  { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت' : 'Done', value: stats.completedToday, tone: '#10b981' },
+                  { key: 'completion-rate' as StatFilter, label: isAr ? 'إنجاز' : 'Rate', value: `${stats.completionRate}%`, tone: '#8b5cf6' },
+                ]).map(stat => (
+                  <button
+                    key={stat.key}
+                    type="button"
+                    onClick={() => stat.key !== 'completion-rate' ? handleStatClick(stat.key) : undefined}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-center transition-all',
+                      stat.key !== 'completion-rate' && 'cursor-pointer hover:brightness-95',
+                      statFilter === stat.key
+                        ? 'bg-[rgba(var(--color-primary-rgb),0.12)]'
+                        : 'bg-[var(--color-background)]/60',
+                    )}
+                  >
+                    <span className="text-base font-bold tabular-nums leading-none" style={{ color: stat.tone }}>
+                      {stat.value}
+                    </span>
+                    <span className="text-[9px] font-medium text-[var(--foreground)]/45">{stat.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 gap-px border-t border-[rgba(var(--color-primary-rgb),0.15)] sm:grid-cols-5" style={{ background: 'rgba(var(--color-primary-rgb) / 0.1)' }}>
+          {/* Stat cards - grid on mobile only */}
+          <div className="grid grid-cols-3 gap-px border-t border-[rgba(var(--color-primary-rgb),0.15)] sm:hidden" style={{ background: 'rgba(var(--color-primary-rgb) / 0.1)' }}>
             {([
-              { key: 'today' as StatFilter, label: isAr ? 'مهام اليوم' : "Today's Tasks", value: stats.todayDue, tone: 'var(--color-primary)' },
-              { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'In Progress', value: stats.inProgress, tone: '#3b82f6' },
+              { key: 'today' as StatFilter, label: isAr ? 'اليوم' : 'Today', value: stats.todayDue, tone: 'var(--color-primary)' },
+              { key: 'in-progress' as StatFilter, label: isAr ? 'جارية' : 'Active', value: stats.inProgress, tone: '#3b82f6' },
               { key: 'overdue' as StatFilter, label: isAr ? 'متأخرة' : 'Overdue', value: stats.overdue, tone: '#ef4444' },
-              { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت اليوم' : 'Done Today', value: stats.completedToday, tone: '#10b981' },
-              { key: 'completion-rate' as StatFilter, label: isAr ? 'معدل الإنجاز' : 'Completion', value: `${stats.completionRate}%`, tone: '#8b5cf6' },
+              { key: 'completed-today' as StatFilter, label: isAr ? 'أُنجزت' : 'Done', value: stats.completedToday, tone: '#10b981' },
+              { key: 'completion-rate' as StatFilter, label: isAr ? 'إنجاز' : 'Rate', value: `${stats.completionRate}%`, tone: '#8b5cf6' },
             ]).map(stat => (
               <button
                 key={stat.key}
                 type="button"
                 onClick={() => stat.key !== 'completion-rate' ? handleStatClick(stat.key) : undefined}
                 className={cn(
-                  'flex flex-col gap-1 px-4 py-3 text-start transition-all',
+                  'flex flex-col gap-0.5 px-3 py-2 text-start transition-all',
                   stat.key !== 'completion-rate' && 'cursor-pointer hover:brightness-95',
                   statFilter === stat.key
                     ? 'bg-[rgba(var(--color-primary-rgb),0.12)]'
                     : 'bg-[var(--color-background)]',
                 )}
               >
-                <span className="text-lg font-bold tabular-nums leading-none sm:text-xl" style={{ color: stat.tone }}>
+                <span className="text-base font-bold tabular-nums leading-none" style={{ color: stat.tone }}>
                   {stat.value}
                 </span>
-                <span className="text-[10px] font-medium text-[var(--foreground)]/45 sm:text-[11px]">{stat.label}</span>
+                <span className="text-[10px] font-medium text-[var(--foreground)]/45">{stat.label}</span>
               </button>
             ))}
           </div>
@@ -927,8 +959,32 @@ function BoardColumn({
 }) {
   const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
 
+  // Split overdue vs today for the today-overdue column
+  const overdueTasks = useMemo(() =>
+    columnId === 'today-overdue' ? tasks.filter(t => t.dueDate != null && t.dueDate < today) : [],
+    [columnId, tasks, today]
+  );
+  const todayTasks = useMemo(() =>
+    columnId === 'today-overdue' ? tasks.filter(t => t.dueDate != null && t.dueDate >= today) : [],
+    [columnId, tasks, today]
+  );
+
+  const renderCard = (task: Task, i: number) => (
+    <SortableTaskCard key={task.id} task={task} isAr={isAr} today={today}
+      onEdit={() => onEdit(task)} onComplete={() => onComplete(task.id)}
+      onStart={() => onStart(task.id)} onPostpone={() => onPostpone(task.id)}
+      onMoveToToday={() => onMoveToToday(task.id)} onDelete={() => onDelete(task.id)}
+      onToggleSubtask={(sid) => store.toggleSubtask(task.id, sid)}
+      getRelativeDate={getRelativeDate} getHabitName={getHabitName}
+      index={i} menuOpen={menuOpenId === task.id}
+      setMenuOpen={(open) => setMenuOpenId(open ? task.id : null)} />
+  );
+
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--foreground)]/10">
+    <div className={cn(
+      'flex flex-col overflow-hidden rounded-xl border border-[var(--foreground)]/10',
+      columnId === 'in-progress' && 'bg-blue-500/[0.02]',
+    )}>
       <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: accent }} />
       <div className="flex items-center gap-2 px-3 py-2.5" style={{ background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ color: accent, background: `${accent}15` }}>
@@ -944,17 +1000,43 @@ function BoardColumn({
         <div className="flex min-h-[120px] flex-1 flex-col gap-1.5 p-2">
           {tasks.length === 0 ? (
             <EmptyColumn isAr={isAr} columnId={columnId} />
+          ) : columnId === 'today-overdue' ? (
+            <>
+              {/* Overdue section */}
+              {overdueTasks.length > 0 && (
+                <div className="rounded-lg bg-red-500/[0.04] p-1.5">
+                  <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <span className="text-[10px] font-semibold text-red-500">
+                      {isAr ? 'متأخرة' : 'Overdue'} ({overdueTasks.length})
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {overdueTasks.map((task, i) => renderCard(task, i))}
+                  </div>
+                </div>
+              )}
+              {/* Divider between sections */}
+              {overdueTasks.length > 0 && todayTasks.length > 0 && (
+                <div className="mx-2 border-t border-[var(--foreground)]/8" />
+              )}
+              {/* Today section */}
+              {todayTasks.length > 0 && (
+                <div className="p-1.5">
+                  <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    <span className="text-[10px] font-semibold text-amber-500">
+                      {isAr ? 'اليوم' : 'Today'} ({todayTasks.length})
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {todayTasks.map((task, i) => renderCard(task, overdueTasks.length + i))}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
-            tasks.map((task, i) => (
-              <SortableTaskCard key={task.id} task={task} isAr={isAr} today={today}
-                onEdit={() => onEdit(task)} onComplete={() => onComplete(task.id)}
-                onStart={() => onStart(task.id)} onPostpone={() => onPostpone(task.id)}
-                onMoveToToday={() => onMoveToToday(task.id)} onDelete={() => onDelete(task.id)}
-                onToggleSubtask={(sid) => store.toggleSubtask(task.id, sid)}
-                getRelativeDate={getRelativeDate} getHabitName={getHabitName}
-                index={i} menuOpen={menuOpenId === task.id}
-                setMenuOpen={(open) => setMenuOpenId(open ? task.id : null)} />
-            ))
+            tasks.map((task, i) => renderCard(task, i))
           )}
         </div>
       </SortableContext>
@@ -1016,6 +1098,8 @@ function TaskCard({
   const habitName = task.linkedHabitId ? getHabitName(task.linkedHabitId) : null;
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const isInProgress = task.status === 'in-progress';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -1025,10 +1109,11 @@ function TaskCard({
         'group relative overflow-hidden rounded-lg border border-[var(--foreground)]/10 bg-[var(--color-background)] transition-all',
         isDone && 'opacity-75',
         isOver && '!border-red-400/40 !bg-red-500/[0.04]',
+        isInProgress && '!border-blue-400/30 !bg-blue-500/[0.03]',
       )}
       style={{ borderInlineStartWidth: 3, borderInlineStartColor: priority.border }}
     >
-      <div className="p-2.5">
+      <div className="p-3">
         <div className="flex items-start gap-2.5">
           {/* Toggle */}
           <button type="button" onClick={(e) => { e.stopPropagation(); onComplete(); }}
@@ -1038,12 +1123,20 @@ function TaskCard({
           </button>
 
           <div className="min-w-0 flex-1">
-            {/* Title */}
-            <p className={cn('text-[13px] font-semibold leading-snug', isDone && 'text-[var(--foreground)]/40 line-through')}>
-              {name}
-            </p>
+            {/* Title row with in-progress pulse */}
+            <div className="flex items-center gap-1.5">
+              {isInProgress && (
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                </span>
+              )}
+              <p className={cn('text-[13px] font-semibold leading-snug', isDone && 'text-[var(--foreground)]/40 line-through')}>
+                {name}
+              </p>
+            </div>
 
-            {/* Badges */}
+            {/* Badges row */}
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-medium', priority.bg, priority.color)}>
                 {isAr ? priority.ar : priority.en}
@@ -1053,35 +1146,50 @@ function TaskCard({
                   {task.category}
                 </span>
               )}
-              {task.status === 'in-progress' && (
+              {isOver && (
+                <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-500">
+                  {isAr ? 'متأخرة' : 'Overdue'}
+                </span>
+              )}
+              {isInProgress && (
                 <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-500">
                   {isAr ? 'جارية' : 'In Progress'}
                 </span>
               )}
             </div>
 
-            {/* Due date */}
-            {task.dueDate && (
-              <div className="mt-1.5 flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-[var(--foreground)]/30" />
-                <span className={cn('text-[10px]', getRelativeDate(task.dueDate).cls)}>
-                  {getRelativeDate(task.dueDate).text}
-                </span>
-              </div>
-            )}
-
-            {/* Estimated time */}
-            {task.estimatedMinutes && (
-              <div className="mt-1 flex items-center gap-1">
-                <Timer className="h-3 w-3 text-[var(--foreground)]/30" />
-                <span className="text-[10px] text-[var(--foreground)]/40">{task.estimatedMinutes} {isAr ? 'دقيقة' : 'min'}</span>
-              </div>
-            )}
+            {/* Info row: due date + estimated time inline */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+              {task.dueDate && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-[var(--foreground)]/30" />
+                  <span className={cn('text-[10px]', getRelativeDate(task.dueDate).cls)}>
+                    {getRelativeDate(task.dueDate).text}
+                  </span>
+                </div>
+              )}
+              {task.estimatedMinutes && (
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-[var(--foreground)]/30" />
+                  <span className="text-[10px] text-[var(--foreground)]/40">{task.estimatedMinutes} {isAr ? 'د' : 'min'}</span>
+                </div>
+              )}
+              {isInProgress && task.updatedAt && (
+                <div className="flex items-center gap-1">
+                  <Timer className="h-3 w-3 text-blue-400/50" />
+                  <span className="text-[10px] text-blue-400/70">
+                    {isAr ? 'بدأ' : 'Started'}{' '}
+                    {new Date(task.updatedAt).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Subtask progress */}
             {subtasksTotal > 0 && (
               <div className="mt-1.5">
                 <div className="flex items-center gap-1.5">
+                  <ListChecks className="h-3 w-3 text-[var(--foreground)]/25" />
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--foreground)]/[0.08]">
                     <div className="h-full rounded-full bg-[var(--color-primary)] transition-all" style={{ width: `${subtaskPct}%` }} />
                   </div>
@@ -1090,16 +1198,18 @@ function TaskCard({
               </div>
             )}
 
-            {/* Tags */}
+            {/* Tags (max 2 visible + "+N") */}
             {task.tags && task.tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {task.tags.slice(0, 3).map(t => (
+                {task.tags.slice(0, 2).map(t => (
                   <span key={t} className="rounded-full bg-[var(--color-primary)]/[0.08] px-1.5 py-px text-[9px] font-medium text-[var(--color-primary)]">
                     {t}
                   </span>
                 ))}
-                {task.tags.length > 3 && (
-                  <span className="text-[9px] text-[var(--foreground)]/30">+{task.tags.length - 3}</span>
+                {task.tags.length > 2 && (
+                  <span className="rounded-full bg-[var(--foreground)]/[0.06] px-1.5 py-px text-[9px] font-medium text-[var(--foreground)]/35">
+                    +{task.tags.length - 2}
+                  </span>
                 )}
               </div>
             )}
@@ -1113,45 +1223,60 @@ function TaskCard({
             )}
           </div>
 
-          {/* Actions menu */}
-          <div className="relative" ref={menuRef}>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-              className="rounded-md p-1 text-[var(--foreground)]/30 transition-colors hover:bg-[var(--foreground)]/[0.06] hover:text-[var(--foreground)]/60">
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-            <AnimatePresence>
-              {menuOpen && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                  className="absolute end-0 top-7 z-30 w-40 overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] shadow-xl">
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">
-                    <Edit3 className="h-3 w-3" /> {isAr ? 'تعديل' : 'Edit'}
-                  </button>
-                  {task.status !== 'in-progress' && task.status !== 'completed' && (
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onStart(); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-blue-500 hover:bg-blue-500/5">
-                      <Play className="h-3 w-3" /> {isAr ? 'بدء' : 'Start'}
-                    </button>
-                  )}
-                  {task.dueDate !== today && task.status !== 'completed' && (
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMoveToToday(); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-amber-500 hover:bg-amber-500/5">
-                      <ArrowRight className="h-3 w-3" /> {isAr ? 'نقل لليوم' : 'Move to today'}
-                    </button>
-                  )}
-                  {task.status !== 'completed' && (
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onPostpone(); }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
-                      <CalendarClock className="h-3 w-3" /> {isAr ? 'تأجيل لغداً' : 'Postpone'}
-                    </button>
-                  )}
-                  <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                    className="flex w-full items-center gap-2 border-t border-[var(--foreground)]/5 px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/5">
-                    <Trash2 className="h-3 w-3" /> {isAr ? 'حذف' : 'Delete'}
-                  </button>
-                </motion.div>
+          {/* Quick action buttons + menu */}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {/* Primary quick actions - always visible */}
+            <div className="flex items-center gap-0.5">
+              {task.status === 'todo' && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); onStart(); }}
+                  title={isAr ? 'بدء' : 'Start'}
+                  className="rounded-md p-1 text-blue-500/60 transition-colors hover:bg-blue-500/10 hover:text-blue-500">
+                  <Play className="h-3.5 w-3.5" />
+                </button>
               )}
-            </AnimatePresence>
+              {!isDone && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); onComplete(); }}
+                  title={isAr ? 'إكمال' : 'Complete'}
+                  className="rounded-md p-1 text-emerald-500/60 transition-colors hover:bg-emerald-500/10 hover:text-emerald-500">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+
+              {/* Secondary actions menu */}
+              <div className="relative" ref={menuRef}>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+                  className="rounded-md p-1 text-[var(--foreground)]/30 transition-colors hover:bg-[var(--foreground)]/[0.06] hover:text-[var(--foreground)]/60">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+                <AnimatePresence>
+                  {menuOpen && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                      className="absolute end-0 top-7 z-30 w-40 overflow-hidden rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] shadow-xl">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.05]">
+                        <Edit3 className="h-3 w-3" /> {isAr ? 'تعديل' : 'Edit'}
+                      </button>
+                      {task.dueDate !== today && task.status !== 'completed' && (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMoveToToday(); }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-amber-500 hover:bg-amber-500/5">
+                          <ArrowRight className="h-3 w-3" /> {isAr ? 'نقل لليوم' : 'Move to today'}
+                        </button>
+                      )}
+                      {task.status !== 'completed' && (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onPostpone(); }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-[11px] text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
+                          <CalendarClock className="h-3 w-3" /> {isAr ? 'تأجيل لغداً' : 'Postpone'}
+                        </button>
+                      )}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="flex w-full items-center gap-2 border-t border-[var(--foreground)]/5 px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/5">
+                        <Trash2 className="h-3 w-3" /> {isAr ? 'حذف' : 'Delete'}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
         </div>
       </div>
