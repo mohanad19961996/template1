@@ -22,7 +22,7 @@ import {
   ChevronLeft, ChevronRight, RotateCcw, Zap, Award, Hash, Trophy, Activity,
   Sparkles, ArrowRight, Play, Pause, Square, Timer, MapPin, Repeat, Gift,
   Lightbulb, Maximize2, Hourglass,
-  Palette, ArrowUpDown, SlidersHorizontal, Minus, GripVertical, Tag, Check, CalendarDays, AlertCircle, Folder,
+  Palette, SlidersHorizontal, Minus, GripVertical, Tag, Check, CalendarDays, AlertCircle, Folder,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable';
@@ -963,7 +963,7 @@ export default function HabitsPage() {
   const [showFullTable, setShowFullTable] = useState(false);
   const [fullCalendarHabit, setFullCalendarHabit] = useState<Habit | null>(null);
 
-  const [sortBy, setSortBy] = useState<'default' | 'name' | 'priority' | 'newest' | 'streak' | 'completion' | 'order' | 'custom'>('order');
+  // Sort always by drag order — no sort menu needed
   const [filterType, setFilterType] = useState<'all' | 'positive' | 'avoidance'>('all');
   const [filterPriority, setFilterPriority] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [filterTracking, setFilterTracking] = useState<'all' | 'boolean' | 'count' | 'timer'>('all');
@@ -1208,23 +1208,10 @@ export default function HabitsPage() {
       }
       return true;
     });
-    // Sorting
-    if (sortBy === 'name') {
-      result = [...result].sort((a, b) => (isAr ? a.nameAr : a.nameEn).localeCompare(isAr ? b.nameAr : b.nameEn));
-    } else if (sortBy === 'priority') {
-      const pOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-      result = [...result].sort((a, b) => (pOrder[a.priority] ?? 1) - (pOrder[b.priority] ?? 1));
-    } else if (sortBy === 'newest') {
-      result = [...result].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
-    } else if (sortBy === 'streak') {
-      result = [...result].sort((a, b) => store.getHabitStreak(b.id).current - store.getHabitStreak(a.id).current);
-    } else if (sortBy === 'completion') {
-      result = [...result].sort((a, b) => store.getHabitStats(b.id).completionRate - store.getHabitStats(a.id).completionRate);
-    } else if (sortBy === 'order' || sortBy === 'custom') {
-      result = [...result].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-    }
+    // Always sort by drag order
+    result = [...result].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
     return result;
-  }, [store.habits, store.habitLogs, showArchived, filterCategory, filterType, filterPriority, filterTracking, filterStatus, searchQuery, sortBy, today, isAr, store]);
+  }, [store.habits, store.habitLogs, showArchived, filterCategory, filterType, filterPriority, filterTracking, filterStatus, searchQuery, today, isAr, store]);
 
   const activeHabitsCount = store.habits.filter(h => !h.archived).length;
   const completedTodayCount = store.habits.filter(h =>
@@ -1245,7 +1232,7 @@ export default function HabitsPage() {
     const reordered = arrayMove(filteredHabits, oldIndex, newIndex);
     store.reorderHabits(reordered.map(h => h.id));
   }, [filteredHabits, store]);
-  const isDragMode = sortBy === 'custom';
+  const isDragMode = true;
 
   return (
     <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1400px] mx-auto">
@@ -1418,49 +1405,6 @@ export default function HabitsPage() {
             </Link>
 
 
-            {/* Sort */}
-            {(() => {
-              const sortOptions = [
-                { value: 'default' as const, en: 'Default Order', ar: 'ترتيب افتراضي' },
-                { value: 'name' as const, en: 'Name', ar: 'الاسم' },
-                { value: 'priority' as const, en: 'Priority', ar: 'الأولوية' },
-                { value: 'newest' as const, en: 'Newest', ar: 'الأحدث' },
-                { value: 'streak' as const, en: 'Streak', ar: 'السلسلة' },
-                { value: 'completion' as const, en: 'Completion %', ar: 'نسبة الإنجاز' },
-                { value: 'order' as const, en: 'Order Number', ar: 'رقم الترتيب' },
-                { value: 'custom' as const, en: 'Custom (Drag)', ar: 'ترتيب يدوي (سحب)' },
-              ];
-              const currentSort = sortOptions.find(s => s.value === sortBy) || sortOptions[0];
-              return (
-                <div className="relative group/sort">
-                  <button className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer group-hover/sort:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.1)]" style={{ borderColor: sortBy !== 'default' && sortBy !== 'order' ? 'rgba(var(--color-primary-rgb) / 0.3)' : 'rgba(var(--color-primary-rgb) / 0.12)', background: sortBy !== 'default' && sortBy !== 'order' ? 'rgba(var(--color-primary-rgb) / 0.06)' : 'transparent', color: sortBy !== 'default' && sortBy !== 'order' ? 'var(--color-primary)' : 'var(--foreground)' }}>
-                    <ArrowUpDown className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
-                    {isAr ? currentSort.ar : currentSort.en}
-                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover/sort:rotate-180" style={{ color: 'rgba(var(--color-primary-rgb) / 0.5)' }} />
-                  </button>
-                  <div className="absolute top-full pt-2 start-0 z-50 w-[min(360px,calc(100vw-2rem))] opacity-0 invisible group-hover/sort:opacity-100 group-hover/sort:visible transition-all duration-200 translate-y-1 group-hover/sort:translate-y-0">
-                    <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-[var(--foreground)]/[0.18]" style={{ background: 'var(--color-background)' }}>
-                      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
-                      <div className="p-2">
-                        <div className="grid grid-cols-2 gap-1">
-                        {sortOptions.map((opt) => (
-                            <button key={opt.value} onClick={() => setSortBy(opt.value)}
-                              className={cn('flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all duration-150 text-center border',
-                                sortBy === opt.value
-                                  ? 'text-white shadow-md border-transparent'
-                                  : 'text-[var(--foreground)] border-transparent hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06] hover:border-[var(--color-primary)]/20 active:bg-[var(--color-primary)]/[0.12]')}
-                              style={sortBy === opt.value ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
-                              {isAr ? opt.ar : opt.en}
-                              {sortBy === opt.value && <CheckCircle2 className="h-3.5 w-3.5" />}
-                            </button>
-                        ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
             {/* Advanced Filters */}
             {(() => {
               const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
