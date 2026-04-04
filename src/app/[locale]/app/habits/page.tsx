@@ -1624,10 +1624,10 @@ export default function HabitsPage() {
             />
           </motion.div>
 
-          {/* Habits list (wrapped in DndContext when drag mode) */}
+          {/* Habits grid (wrapped in DndContext when drag mode) */}
           {(() => {
-            const habitRows = (
-              <div className="space-y-1.5">
+            const habitGrid = (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                 {filteredHabits.map((habit, i) => (
                   <SortableItem key={habit.id} id={habit.id} disabled={!isDragMode}>
                     <HabitCompactRow habit={habit} index={i} isAr={isAr} store={store} today={today}
@@ -1646,12 +1646,12 @@ export default function HabitsPage() {
                   </span>
                 </div>
                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={filteredHabits.map(h => h.id)} strategy={verticalListSortingStrategy}>
-                    {habitRows}
+                  <SortableContext items={filteredHabits.map(h => h.id)} strategy={rectSortingStrategy}>
+                    {habitGrid}
                   </SortableContext>
                 </DndContext>
               </>
-            ) : habitRows;
+            ) : habitGrid;
           })()}
 
           {filteredHabits.length === 0 && (
@@ -3009,83 +3009,80 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
     checklist: { en: 'Checklist', ar: 'قائمة' },
   };
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (habit.archived) { toast.notifyWarning(isAr ? 'العادة مؤرشفة' : 'Habit is archived', isAr ? 'استعد العادة أولاً' : 'Restore the habit first'); return; }
+    if (hasDuration && !done) { toast.notifyInfo(isAr ? 'يتطلب مؤقت' : 'Timer required', isAr ? 'شغّل المؤقت أولاً' : 'Start the timer first'); return; }
+    if (tt === 'boolean' || tt === 'checklist') {
+      const existingLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
+      if (existingLog) { store.deleteHabitLog(existingLog.id); }
+      else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); }
+    }
+  };
+
   return (
     <motion.div variants={fadeUp} custom={index} initial="hidden" animate="visible"
       className={cn(
-        'group relative flex items-center gap-2 sm:gap-3 rounded-xl border px-3 py-2 sm:px-4 sm:py-2.5 cursor-pointer transition-all duration-200',
-        done ? 'bg-emerald-500/[0.03] border-emerald-500/20' : 'border-[var(--foreground)]/[0.1] hover:border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.015]',
+        'group relative rounded-2xl border-2 p-3.5 cursor-pointer transition-all duration-200 flex flex-col gap-2.5',
+        done ? 'border-emerald-500/25 bg-emerald-500/[0.04]' : 'border-[var(--foreground)]/[0.08] hover:border-[var(--color-primary)]/25 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)]',
       )}
-      style={{ borderInlineStartWidth: '3px', borderInlineStartColor: hc }}
       onClick={() => onDetail()}
     >
-      {/* Done / Toggle */}
-      <button onClick={(e) => {
-          e.stopPropagation();
-          if (habit.archived) { toast.notifyWarning(isAr ? 'العادة مؤرشفة' : 'Habit is archived', isAr ? 'استعد العادة أولاً' : 'Restore the habit first'); return; }
-          if (hasDuration && !done) { toast.notifyInfo(isAr ? 'يتطلب مؤقت' : 'Timer required', isAr ? 'شغّل المؤقت أولاً' : 'Start the timer first'); return; }
-          if (tt === 'boolean' || tt === 'checklist') {
-            const existingLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
-            if (existingLog) { store.deleteHabitLog(existingLog.id); }
-            else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); }
-          }
-        }}
-        className={cn('shrink-0 transition-colors', (habit.archived || (hasDuration && !done)) && 'cursor-not-allowed')}>
-        {done
-          ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-          : hasDuration
-            ? <Timer className="h-5 w-5 text-[var(--foreground)]/40" />
-            : <Circle className="h-5 w-5 text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
-      </button>
+      {/* Row 1: Done toggle + Name + Detail btn */}
+      <div className="flex items-center gap-2.5">
+        <button onClick={handleToggle}
+          className={cn('shrink-0 transition-all', (habit.archived || (hasDuration && !done)) && 'cursor-not-allowed')}>
+          {done
+            ? <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            : hasDuration
+              ? <Timer className="h-6 w-6" style={{ color: `${hc}70` }} />
+              : <Circle className="h-6 w-6 text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
+        </button>
+        <span className={cn('flex-1 text-[15px] font-bold leading-snug truncate', done && 'line-through text-[var(--foreground)]/40')}>
+          {name}
+        </span>
+        <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
+          className="shrink-0 h-8 w-8 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--foreground)]/[0.06]"
+          style={{ color: `${hc}80` }}
+          title={isAr ? 'فتح' : 'Open'}>
+          <Eye className="h-4 w-4" />
+        </button>
+      </div>
 
-      {/* Name + Category */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={cn('text-sm font-semibold truncate', done && 'line-through opacity-50')}>{name}</span>
-          {catLabel && (
-            <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{ background: `${hc}15`, color: hc, border: `1px solid ${hc}25` }}>
-              {catLabel}
-            </span>
-          )}
-        </div>
-        {/* Timer controls inline for timer habits */}
-        {hasDuration && !habit.archived && (
-          <div className="mt-1" onClick={e => e.stopPropagation()}>
-            <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="xs" />
-          </div>
+      {/* Row 2: Category + Tracking type + Sessions + Time */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {catLabel && (
+          <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold"
+            style={{ background: `${hc}12`, color: hc }}>
+            {catLabel}
+          </span>
+        )}
+        <span className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60">
+          {tt === 'timer' && <Clock className="h-3 w-3" />}
+          {tt === 'count' && <Hash className="h-3 w-3" />}
+          {tt === 'checklist' && <ListChecks className="h-3 w-3" />}
+          {tt === 'boolean' && <CheckCircle2 className="h-3 w-3" />}
+          {isAr ? TRACKING_LABELS[tt]?.ar : TRACKING_LABELS[tt]?.en}
+        </span>
+        {sessionsToday > 0 && (
+          <span className="rounded-lg px-2 py-0.5 text-[11px] font-extrabold tabular-nums"
+            style={{ background: `${hc}12`, color: hc }}>
+            {sessionsToday}x {isAr ? 'اليوم' : 'today'}
+          </span>
+        )}
+        {hasDuration && cumulativeSecsToday > 0 && (
+          <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold font-mono tabular-nums bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50">
+            {formatDurationSecs(cumulativeSecsToday)}
+          </span>
         )}
       </div>
 
-      {/* Tracking type badge */}
-      <span className="shrink-0 hidden sm:flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold"
-        style={{ background: `${hc}10`, color: hc }}>
-        {tt === 'timer' && <Clock className="inline h-2.5 w-2.5 me-0.5" />}
-        {tt === 'count' && <Hash className="inline h-2.5 w-2.5 me-0.5" />}
-        {tt === 'checklist' && <ListChecks className="inline h-2.5 w-2.5 me-0.5" />}
-        {isAr ? TRACKING_LABELS[tt]?.ar : TRACKING_LABELS[tt]?.en}
-      </span>
-
-      {/* Sessions today */}
-      {sessionsToday > 0 && (
-        <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-bold tabular-nums"
-          style={{ color: hc }}>
-          {sessionsToday}x
-        </span>
+      {/* Row 3: Timer controls (only for timer habits) */}
+      {hasDuration && !habit.archived && (
+        <div onClick={e => e.stopPropagation()}>
+          <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" />
+        </div>
       )}
-
-      {/* Cumulative time today for timer habits */}
-      {hasDuration && cumulativeSecsToday > 0 && (
-        <span className="shrink-0 hidden sm:block text-[10px] font-mono font-bold tabular-nums text-[var(--foreground)]/50">
-          {formatDurationSecs(cumulativeSecsToday)}
-        </span>
-      )}
-
-      {/* Detail button */}
-      <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
-        className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-[var(--foreground)]/[0.06]"
-        title={isAr ? 'تفاصيل' : 'Details'}>
-        <Eye className="h-3.5 w-3.5 text-[var(--foreground)]/50" />
-      </button>
     </motion.div>
   );
 }
