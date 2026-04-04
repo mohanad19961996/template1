@@ -1208,6 +1208,7 @@ export default function HabitsPage() {
   }, [store.habits, store.habitLogs, showArchived, filterCategory, filterType, filterPriority, filterTracking, filterStatus, searchQuery, today, isAr, store]);
 
   const activeHabitsCount = store.habits.filter(h => !h.archived).length;
+  const todayScheduledCount = store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, today)).length;
   const completedTodayCount = store.habits.filter(h =>
     !h.archived && isHabitDoneToday(h, store.habitLogs, today)
   ).length;
@@ -1233,31 +1234,51 @@ export default function HabitsPage() {
       {/* ═══ Sticky Active Timer Banner ═══ */}
       <ActiveTimerBanner store={store} isAr={isAr} today={today} onDetail={(h) => setDetailHabit(h)} />
 
-      {/* ═══ Hero — clean minimal header ═══ */}
+      {/* ═══ Hero — themed banner with stats ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-5 flex items-center justify-between gap-4"
+        className="relative overflow-hidden rounded-2xl mb-5"
+        style={{
+          background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.7))',
+          boxShadow: '0 6px 24px rgba(var(--color-primary-rgb) / 0.18)',
+        }}
       >
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            {isAr ? 'العادات' : 'Habits'}
-          </h1>
-          <p className="text-sm text-[var(--foreground)]/50 mt-0.5">
-            {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="text-center px-3 py-1.5 rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02]">
-            <p className="text-lg sm:text-xl font-black tabular-nums leading-none">{activeHabitsCount}</p>
-            <p className="text-[9px] font-semibold text-[var(--foreground)]/45 mt-0.5">{isAr ? 'نشطة' : 'Active'}</p>
+        {/* Subtle decorative glow */}
+        <div className="pointer-events-none absolute -end-16 -top-16 h-48 w-48 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)' }} />
+
+        <div className="relative z-10 flex items-center justify-between gap-4 px-5 py-4 sm:px-7 sm:py-5">
+          {/* Left: Icon + Title */}
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl shrink-0"
+              style={{ background: 'rgba(255,255,255,0.18)' }}>
+              <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {isAr ? 'العادات' : 'Habits'}
+              </h1>
+              <p className="text-[11px] sm:text-xs font-medium text-white/65">
+                {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
+              </p>
+            </div>
           </div>
-          <div className="text-center px-3 py-1.5 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04]">
-            <p className="text-lg sm:text-xl font-black tabular-nums leading-none text-emerald-600">
-              {completedTodayCount}<span className="text-xs text-[var(--foreground)]/30">/{activeHabitsCount}</span>
-            </p>
-            <p className="text-[9px] font-semibold text-emerald-600/60 mt-0.5">{isAr ? 'مكتملة' : 'Done'}</p>
+
+          {/* Right: Stats */}
+          <div className="flex items-center gap-2">
+            {/* Today's target */}
+            <div className="text-center rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.15)' }}>
+              <p className="text-base sm:text-lg font-black tabular-nums leading-none text-white">{todayScheduledCount}</p>
+              <p className="text-[8px] sm:text-[9px] font-bold text-white/60 mt-0.5">{isAr ? 'لليوم' : 'Today'}</p>
+            </div>
+            {/* Done */}
+            <div className="text-center rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.22)' }}>
+              <p className="text-base sm:text-lg font-black tabular-nums leading-none text-white">
+                {completedTodayCount}<span className="text-[10px] font-bold text-white/40">/{todayScheduledCount}</span>
+              </p>
+              <p className="text-[8px] sm:text-[9px] font-bold text-white/60 mt-0.5">{isAr ? 'مكتملة' : 'Done'}</p>
+            </div>
           </div>
         </div>
       </motion.div>
