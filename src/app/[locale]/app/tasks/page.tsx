@@ -159,6 +159,7 @@ export default function TasksPage() {
 
   const handleSave = () => {
     if (!form.titleEn && !form.titleAr) return;
+    if (!form.dueDate) { toast.notifyWarning(isAr ? 'تاريخ الاستحقاق مطلوب' : 'Due date is required'); return; }
     const { newSubtask, tagInput, ...rest } = form;
     const data = {
       ...rest,
@@ -1115,8 +1116,8 @@ export default function TasksPage() {
                     <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
                       className="w-full rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                     {!form.dueDate && (
-                      <p className="mt-1 text-[10px] text-amber-500/80">
-                        {isAr ? '⚠ بدون تاريخ ستظهر في "لاحقاً" فقط' : '⚠ Without a date, task goes to "Upcoming" only'}
+                      <p className="mt-1 text-[10px] text-red-500/80 font-semibold">
+                        {isAr ? '* مطلوب — حدد تاريخ استحقاق للمهمة' : '* Required — set a due date'}
                       </p>
                     )}
                   </div>
@@ -1252,7 +1253,7 @@ export default function TasksPage() {
                     className="rounded-xl px-4 py-2.5 text-sm text-[var(--foreground)]/50 hover:bg-[var(--foreground)]/[0.05]">
                     {isAr ? 'إلغاء' : 'Cancel'}
                   </button>
-                  <button type="button" onClick={handleSave} disabled={!form.titleEn && !form.titleAr}
+                  <button type="button" onClick={handleSave} disabled={(!form.titleEn && !form.titleAr) || !form.dueDate}
                     className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-40"
                     style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' }}>
                     {editingTask ? (isAr ? 'تحديث' : 'Update') : (isAr ? 'إنشاء' : 'Create')}
