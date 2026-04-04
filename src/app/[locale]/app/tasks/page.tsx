@@ -95,6 +95,8 @@ export default function TasksPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [statFilter, setStatFilter] = useState<StatFilter>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [newCatEditing, setNewCatEditing] = useState(false);
+  const [newCatValue, setNewCatValue] = useState('');
   const [detailTask, setDetailTask] = useState<Task | null>(null);
 
   // Filters
@@ -675,6 +677,39 @@ export default function TasksPage() {
                   </button>
                 );
               })}
+
+              {/* Add new category */}
+              {newCatEditing ? (
+                <div className="flex items-center gap-1 rounded-lg border border-dashed border-[var(--color-primary)]/40 bg-[var(--color-primary)]/[0.04] px-2 py-1">
+                  <input
+                    autoFocus
+                    value={newCatValue}
+                    onChange={e => setNewCatValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newCatValue.trim()) {
+                        // Create a dummy task to establish the category, or just set filter
+                        setFilterCategory(newCatValue.trim());
+                        setNewCatEditing(false);
+                        setNewCatValue('');
+                        toast.notifySuccess(isAr ? 'استخدم الفئة عند إنشاء مهمة' : 'Use this category when creating a task');
+                      }
+                      if (e.key === 'Escape') { setNewCatEditing(false); setNewCatValue(''); }
+                    }}
+                    onBlur={() => { setNewCatEditing(false); setNewCatValue(''); }}
+                    placeholder={isAr ? 'اسم الفئة...' : 'Category name...'}
+                    className="w-20 bg-transparent text-[11px] font-bold outline-none placeholder:text-[var(--foreground)]/30"
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setNewCatEditing(true)}
+                  className="flex items-center gap-1 rounded-lg border border-dashed px-2.5 py-1.5 text-[11px] font-bold transition-all duration-150 border-[var(--foreground)]/[0.12] text-[var(--foreground)]/40 hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.04]"
+                >
+                  <Plus className="h-3 w-3" />
+                  {isAr ? 'فئة جديدة' : 'New'}
+                </button>
+              )}
             </div>
           </div>
         </div>
