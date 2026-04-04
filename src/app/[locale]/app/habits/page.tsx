@@ -1233,109 +1233,32 @@ export default function HabitsPage() {
       {/* ═══ Sticky Active Timer Banner ═══ */}
       <ActiveTimerBanner store={store} isAr={isAr} today={today} onDetail={(h) => setDetailHabit(h)} />
 
-      {/* ═══ Hero + Quote — compact combined banner ═══ */}
+      {/* ═══ Hero — clean minimal header ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative overflow-hidden rounded-2xl mb-5 group/hero cursor-default"
-        style={{
-          background: `linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.65))`,
-          boxShadow: '0 8px 32px rgba(var(--color-primary-rgb) / 0.2), inset 0 1px 0 rgba(255,255,255,0.12)',
-        }}
+        transition={{ duration: 0.5 }}
+        className="mb-5 flex items-center justify-between gap-4"
       >
-        {/* Shimmer on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700"
-          style={{ background: 'linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%)', backgroundSize: '200% 100%', animation: 'shimmer 2s ease infinite' }} />
-        {/* Glow blob */}
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute start-0 top-0 h-full w-1/2 rounded-full blur-3xl opacity-30"
-          style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.25), transparent 70%)' }}
-          animate={{ opacity: [0.15, 0.3, 0.15] }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4 px-5 py-5 sm:px-7 sm:py-6">
-          {/* Left: Title block */}
-          <div className="flex items-center gap-4 md:shrink-0">
-            <motion.div
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center rounded-2xl shrink-0"
-              style={{
-                background: 'rgba(255,255,255,0.18)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.25)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              <motion.div
-                animate={{ rotate: [0, 10, -6, 0], scale: [1, 1.08, 1] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-white" strokeWidth={2.25} />
-              </motion.div>
-            </motion.div>
-            <div>
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white"
-                style={{ textShadow: '0 2px 16px rgba(0,0,0,0.15)' }}
-              >
-                {isAr ? 'العادات' : 'Habits'}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.25 }}
-                className="text-sm sm:text-base font-semibold text-white/75 mt-0.5"
-              >
-                {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
-              </motion.p>
-            </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+            {isAr ? 'العادات' : 'Habits'}
+          </h1>
+          <p className="text-sm text-[var(--foreground)]/50 mt-0.5">
+            {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="text-center px-3 py-1.5 rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02]">
+            <p className="text-lg sm:text-xl font-black tabular-nums leading-none">{activeHabitsCount}</p>
+            <p className="text-[9px] font-semibold text-[var(--foreground)]/45 mt-0.5">{isAr ? 'نشطة' : 'Active'}</p>
           </div>
-
-          {/* Right: Stats inline */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.7 }}
-            className="flex items-center gap-2 sm:gap-3"
-          >
-            {/* Active */}
-            <div className="flex items-center gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5"
-              style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <Target className="h-4 w-4 text-white sm:h-5 sm:w-5" />
-              <div className="min-w-0 text-start">
-                <p className="text-lg font-black tabular-nums leading-none text-white sm:text-xl">{activeHabitsCount}</p>
-                <p className="text-[9px] font-bold text-white/70 sm:text-[10px]">{isAr ? 'نشطة' : 'Active'}</p>
-              </div>
-            </div>
-
-            {/* Done today */}
-            <div className="flex items-center gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5"
-              style={{ background: 'rgba(16,185,129,0.25)', backdropFilter: 'blur(8px)', border: '1px solid rgba(16,185,129,0.35)' }}>
-              <CheckCircle2 className="h-4 w-4 text-emerald-200 sm:h-5 sm:w-5" />
-              <div className="min-w-0 text-start">
-                <p className="text-lg font-black tabular-nums leading-none text-white sm:text-xl">
-                  {completedTodayCount}<span className="text-xs font-bold text-white/50">/{activeHabitsCount}</span>
-                </p>
-                <p className="text-[9px] font-bold text-emerald-100/80 sm:text-[10px]">{isAr ? 'مكتملة' : 'Done'}</p>
-              </div>
-            </div>
-
-            {/* Archived */}
-            <div className="flex items-center gap-2 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5"
-              style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-              <Archive className="h-4 w-4 text-white/80 sm:h-5 sm:w-5" />
-              <div className="min-w-0 text-start">
-                <p className="text-lg font-black tabular-nums leading-none text-white sm:text-xl">{store.habits.filter(h => h.archived).length}</p>
-                <p className="text-[9px] font-bold text-white/60 sm:text-[10px]">{isAr ? 'مؤرشفة' : 'Archived'}</p>
-              </div>
-            </div>
-          </motion.div>
+          <div className="text-center px-3 py-1.5 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04]">
+            <p className="text-lg sm:text-xl font-black tabular-nums leading-none text-emerald-600">
+              {completedTodayCount}<span className="text-xs text-[var(--foreground)]/30">/{activeHabitsCount}</span>
+            </p>
+            <p className="text-[9px] font-semibold text-emerald-600/60 mt-0.5">{isAr ? 'مكتملة' : 'Done'}</p>
+          </div>
         </div>
       </motion.div>
 
