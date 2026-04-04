@@ -147,25 +147,30 @@ function recoverTimer(state: AppState): AppState {
     const endedAt = new Date().toISOString();
 
     // Auto-log habit completion if timer was linked to a habit
-    // Always create a new log — timer habits can be done multiple times per day
     let habitLogs = state.habitLogs;
     const linkedHabitId = t.habitId ?? session?.habitId;
     if (linkedHabitId && t.targetDuration) {
       const today = todayString();
-      const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-      habitLogs = [...habitLogs, {
-        id: generateId(),
-        habitId: linkedHabitId,
-        date: today,
-        time: nowTime,
-        duration: t.targetDuration, // exact seconds
-        note: 'Auto-completed by timer',
-        reminderUsed: false,
-        perceivedDifficulty: 'medium' as const,
-        completed: true,
-        status: 'completed' as const,
-        source: 'timer' as const,
-      }];
+      const habit = state.habits.find(h => h.id === linkedHabitId);
+      const maxReps = habit?.maxDailyReps || Infinity;
+      const todayCompletedCount = habitLogs.filter(l => l.habitId === linkedHabitId && l.date === today && l.completed).length;
+      // Only log if maxDailyReps not reached and no existing timer log for this session
+      if (maxReps === Infinity || todayCompletedCount < maxReps) {
+        const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        habitLogs = [...habitLogs, {
+          id: generateId(),
+          habitId: linkedHabitId,
+          date: today,
+          time: nowTime,
+          duration: t.targetDuration, // exact seconds
+          note: 'Auto-completed by timer',
+          reminderUsed: false,
+          perceivedDifficulty: 'medium' as const,
+          completed: true,
+          status: 'completed' as const,
+          source: 'timer' as const,
+        }];
+      }
     }
 
     return {

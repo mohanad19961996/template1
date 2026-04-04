@@ -76,7 +76,11 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     if (!currentSession) return;
     const secs = elapsed;
     if (secs > 0 && !habit.archived) {
-      const isCompleted = hasDuration ? (secs >= targetSecs) : !done;
+      // Check maxDailyReps before logging completion
+      const maxReps = habit.maxDailyReps || Infinity;
+      const todayCompletedCount = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
+      const wouldComplete = hasDuration ? (secs >= targetSecs) : !done;
+      const isCompleted = wouldComplete && (maxReps === Infinity || todayCompletedCount < maxReps);
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),

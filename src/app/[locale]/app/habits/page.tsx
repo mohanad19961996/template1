@@ -998,6 +998,14 @@ export default function HabitsPage() {
       const habit = store.habits.find(h => h.id === ht.activeHabitId);
       if (!habit?.expectedDuration) return;
       if (autoCompleteRef.current === active.sessionId) return;
+      // Check maxDailyReps before auto-completing
+      const maxReps = habit.maxDailyReps || Infinity;
+      const todayCompletedCount = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
+      if (maxReps !== Infinity && todayCompletedCount >= maxReps) {
+        autoCompleteRef.current = active.sessionId;
+        if (ht.currentSession) store.completeTimer(ht.currentSession.id);
+        return;
+      }
       autoCompleteRef.current = active.sessionId;
       const durationSecs = habit.expectedDuration * 60; // convert minutes target to seconds
       store.logHabit({
@@ -3272,8 +3280,8 @@ function HabitFlipCard({ habit, index, isAr, store, today, onEdit, onArchive, on
     if (!hasMultipleReps) {
       if (done && todayLog) { store.deleteHabitLog(todayLog.id); return; }
     }
-    // For multi-rep habits: don't allow if all reps done
-    if (hasMultipleReps && allRepsDone) return;
+    // Don't allow if all reps done (applies to any habit with maxDailyReps)
+    if (allRepsDone) return;
     store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: true });
   };
 
