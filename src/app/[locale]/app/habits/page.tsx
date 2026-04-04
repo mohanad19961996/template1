@@ -3023,66 +3023,63 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
   return (
     <motion.div variants={fadeUp} custom={index} initial="hidden" animate="visible"
       className={cn(
-        'group relative rounded-2xl border-2 p-3.5 cursor-pointer transition-all duration-200 flex flex-col gap-2.5',
-        done ? 'border-emerald-500/25 bg-emerald-500/[0.04]' : 'border-[var(--foreground)]/[0.08] hover:border-[var(--color-primary)]/25 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)]',
+        'group relative rounded-xl border p-2.5 transition-all duration-200 flex flex-col gap-1.5',
+        done ? 'border-emerald-500/20 bg-emerald-500/[0.03]' : 'border-[var(--foreground)]/[0.08] hover:border-[var(--color-primary)]/20 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)]',
       )}
-      onClick={() => onDetail()}
+      style={{ borderInlineStartWidth: '3px', borderInlineStartColor: done ? '#22c55e' : hc }}
     >
-      {/* Row 1: Done toggle + Name + Detail btn */}
-      <div className="flex items-center gap-2.5">
+      {/* Row 1: Done toggle + Name + badges */}
+      <div className="flex items-center gap-2">
         <button onClick={handleToggle}
           className={cn('shrink-0 transition-all', (habit.archived || (hasDuration && !done)) && 'cursor-not-allowed')}>
           {done
-            ? <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            ? <CheckCircle2 className="h-[18px] w-[18px] text-emerald-500" />
             : hasDuration
-              ? <Timer className="h-6 w-6" style={{ color: `${hc}70` }} />
-              : <Circle className="h-6 w-6 text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
+              ? <Timer className="h-[18px] w-[18px]" style={{ color: `${hc}70` }} />
+              : <Circle className="h-[18px] w-[18px] text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
         </button>
-        <span className={cn('flex-1 text-[15px] font-bold leading-snug truncate', done && 'line-through text-[var(--foreground)]/40')}>
+        <span className={cn('flex-1 text-[13px] font-bold leading-tight truncate', done && 'line-through text-[var(--foreground)]/35')}>
           {name}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
-          className="shrink-0 h-8 w-8 rounded-xl flex items-center justify-center transition-all hover:bg-[var(--foreground)]/[0.06]"
-          style={{ color: `${hc}80` }}
-          title={isAr ? 'فتح' : 'Open'}>
-          <Eye className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Row 2: Category + Tracking type + Sessions + Time */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {catLabel && (
-          <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold"
-            style={{ background: `${hc}12`, color: hc }}>
-            {catLabel}
-          </span>
-        )}
-        <span className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60">
-          {tt === 'timer' && <Clock className="h-3 w-3" />}
-          {tt === 'count' && <Hash className="h-3 w-3" />}
-          {tt === 'checklist' && <ListChecks className="h-3 w-3" />}
-          {tt === 'boolean' && <CheckCircle2 className="h-3 w-3" />}
-          {isAr ? TRACKING_LABELS[tt]?.ar : TRACKING_LABELS[tt]?.en}
+        <span className="shrink-0 rounded px-1.5 py-px text-[9px] font-bold" style={{ background: `${hc}10`, color: hc }}>
+          {catLabel}
         </span>
         {sessionsToday > 0 && (
-          <span className="rounded-lg px-2 py-0.5 text-[11px] font-extrabold tabular-nums"
-            style={{ background: `${hc}12`, color: hc }}>
-            {sessionsToday}x {isAr ? 'اليوم' : 'today'}
+          <span className="shrink-0 text-[10px] font-extrabold tabular-nums" style={{ color: hc }}>
+            {sessionsToday}x
           </span>
         )}
+      </div>
+
+      {/* Row 2: Tracking type + timer info + Details button */}
+      <div className="flex items-center gap-1.5">
+        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[var(--foreground)]/45">
+          {tt === 'timer' && <Clock className="h-2.5 w-2.5" />}
+          {tt === 'count' && <Hash className="h-2.5 w-2.5" />}
+          {tt === 'checklist' && <ListChecks className="h-2.5 w-2.5" />}
+          {tt === 'boolean' && <CheckCircle2 className="h-2.5 w-2.5" />}
+          {isAr ? TRACKING_LABELS[tt]?.ar : TRACKING_LABELS[tt]?.en}
+        </span>
         {hasDuration && cumulativeSecsToday > 0 && (
-          <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold font-mono tabular-nums bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50">
+          <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--foreground)]/40">
             {formatDurationSecs(cumulativeSecsToday)}
           </span>
         )}
+        {/* Timer controls inline */}
+        {hasDuration && !habit.archived && (
+          <div className="ms-auto" onClick={e => e.stopPropagation()}>
+            <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="xs" />
+          </div>
+        )}
+        <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
+          className="shrink-0 ms-auto flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold transition-all duration-200"
+          style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}18` }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = hc; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = hc; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `${hc}10`; e.currentTarget.style.color = hc; e.currentTarget.style.borderColor = `${hc}18`; }}>
+          <Eye className="h-3 w-3" />
+          {isAr ? 'التفاصيل' : 'Details'}
+        </button>
       </div>
-
-      {/* Row 3: Timer controls (only for timer habits) */}
-      {hasDuration && !habit.archived && (
-        <div onClick={e => e.stopPropagation()}>
-          <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" />
-        </div>
-      )}
     </motion.div>
   );
 }
