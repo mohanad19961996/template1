@@ -9,13 +9,12 @@ import { GlobalTimerBanner } from '@/components/app/global-timer-banner';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
-import { computeTimerRemaining, formatLocalDate } from '@/types/app';
+import { computeTimerRemaining, formatLocalDate, generateId, todayString, computeTimerElapsed } from '@/types/app';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Global timer completion checker — polls every second to detect when a
-// countdown/pomodoro timer reaches zero (based on absolute timestamps).
-// This does NOT tick or mutate elapsed — display is computed from timestamps.
+// Global timer checker — polls every second to detect when a countdown reaches zero.
+// Logs the session duration and checks cumulative daily total for habit completion.
 function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
   const store = useAppStore();
   const storeRef = useRef(store);
@@ -28,10 +27,43 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
       const s = storeRef.current;
       const t = s.activeTimer;
       if (!t || t.state !== 'running' || !t.endsAt) return;
+
       if (new Date(t.endsAt).getTime() <= Date.now()) {
-        const habit = t.habitId ? s.habits.find(h => h.id === t.habitId) : null;
+        const session = t.sessionId ? s.timerSessions.find(ts => ts.id === t.sessionId) : null;
+        const linkedHabitId = t.habitId ?? session?.habitId;
+        const habit = linkedHabitId ? s.habits.find(h => h.id === linkedHabitId) : null;
         const label = habit ? (habit.nameEn || habit.nameAr) : (t.labelEn || t.labelAr || 'Timer');
-        s.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0, endsAt: undefined });
+        const elapsed = t.targetDuration || 0;
+
+        // Log this session's time and check cumulative completion
+        if (linkedHabitId && elapsed > 0 && habit && !habit.archived) {
+          const today = todayString();
+          const habitTarget = habit.expectedDuration || 0;
+          const maxReps = habit.maxDailyReps || Infinity;
+          // Per-rep cumulative: check if this session crosses a new completion threshold
+          const prevTotal = s.habitLogs
+            .filter(l => l.habitId === linkedHabitId && l.date === today)
+            .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+          const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
+          const newReps = habitTarget > 0 ? Math.floor((prevTotal + elapsed) / habitTarget) : 0;
+          const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
+          s.logHabit({
+            habitId: linkedHabitId,
+            date: today,
+            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+            duration: elapsed,
+            note: '', reminderUsed: false, perceivedDifficulty: 'medium',
+            completed: isCompleted,
+            source: 'timer',
+          });
+        }
+
+        // Complete the timer session
+        if (session) {
+          s.completeTimer(session.id);
+        } else {
+          s.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0, endsAt: undefined });
+        }
         onCompleteRef.current(label);
       }
     }, 1000);

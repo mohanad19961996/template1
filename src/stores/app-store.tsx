@@ -21,7 +21,12 @@ function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_APP_STATE;
     const parsed = JSON.parse(raw);
-    return normalizeState({ ...DEFAULT_APP_STATE, ...parsed });
+    const normalized = normalizeState({ ...DEFAULT_APP_STATE, ...parsed });
+    // Persist migrations immediately so they don't re-run
+    if (JSON.stringify(normalized) !== raw) {
+      saveState(normalized);
+    }
+    return normalized;
   } catch {
     return DEFAULT_APP_STATE;
   }
@@ -37,23 +42,75 @@ function saveState(state: AppState) {
 // ── Data Normalization (backward compat for new fields) ───
 
 function normalizeState(state: AppState): AppState {
+  // Migrate expectedDuration from minutes to seconds (one-time)
+  const needsDurationMigration = !(state as any)._durationMigratedToSecs;
+
+  const habits = state.habits.map(h => ({
+    ...h,
+    expectedDuration: h.expectedDuration
+      ? (needsDurationMigration ? h.expectedDuration * 60 : h.expectedDuration)
+      : h.expectedDuration,
+    trackingType: h.trackingType ?? (h.expectedDuration ? 'timer' : 'boolean'),
+    targetValue: h.targetValue ?? (h.expectedDuration ? h.expectedDuration : 1),
+    targetUnit: h.targetUnit ?? (h.expectedDuration ? 'minutes' : 'times'),
+    scheduleType: h.scheduleType ?? (h.frequency === 'custom' ? 'custom' : h.frequency === 'weekly' ? 'weekly' : 'daily'),
+    scheduleDays: h.scheduleDays ?? h.customDays,
+    allowPartial: h.allowPartial ?? false,
+    allowSkip: h.allowSkip ?? false,
+  }));
+
+  // Fix timer habit log completion flags: recalculate based on cumulative per-rep logic
+  const needsLogFix = !(state as any)._timerLogsCumulativeFixed2;
+  let habitLogs = state.habitLogs.map(l => ({
+    ...l,
+    status: l.status ?? (l.completed ? 'completed' : 'missed'),
+    source: l.source ?? 'manual',
+  }));
+
+  if (needsLogFix) {
+    // Build a map of timer habits by id
+    const timerHabits = new Map<string, { expectedDuration: number; maxDailyReps: number }>();
+    for (const h of habits) {
+      if (h.expectedDuration) {
+        timerHabits.set(h.id, { expectedDuration: h.expectedDuration, maxDailyReps: h.maxDailyReps || Infinity });
+      }
+    }
+    // Group ALL logs for timer habits by habitId + date (regardless of source)
+    const timerLogsByKey = new Map<string, typeof habitLogs>();
+    for (const log of habitLogs) {
+      if (!timerHabits.has(log.habitId)) continue;
+      const key = `${log.habitId}|${log.date}`;
+      if (!timerLogsByKey.has(key)) timerLogsByKey.set(key, []);
+      timerLogsByKey.get(key)!.push(log);
+    }
+    // For each group, recalculate which logs should be completed
+    const fixedIds = new Map<string, boolean>();
+    for (const [key, logs] of timerLogsByKey) {
+      const habitId = key.split('|')[0];
+      const h = timerHabits.get(habitId)!;
+      let cumulative = 0;
+      let repsEarned = 0;
+      for (const log of logs) {
+        cumulative += log.duration ?? 0;
+        const newReps = Math.floor(cumulative / h.expectedDuration);
+        const shouldComplete = newReps > repsEarned && (h.maxDailyReps === Infinity || newReps <= h.maxDailyReps);
+        if (shouldComplete) repsEarned = newReps;
+        if (log.completed !== shouldComplete) {
+          fixedIds.set(log.id, shouldComplete);
+        }
+      }
+    }
+    if (fixedIds.size > 0) {
+      habitLogs = habitLogs.map(l => fixedIds.has(l.id) ? { ...l, completed: fixedIds.get(l.id)! } : l);
+    }
+  }
+
   return {
     ...state,
-    habits: state.habits.map(h => ({
-      ...h,
-      trackingType: h.trackingType ?? (h.expectedDuration ? 'timer' : 'boolean'),
-      targetValue: h.targetValue ?? (h.expectedDuration ? h.expectedDuration : 1),
-      targetUnit: h.targetUnit ?? (h.expectedDuration ? 'minutes' : 'times'),
-      scheduleType: h.scheduleType ?? (h.frequency === 'custom' ? 'custom' : h.frequency === 'weekly' ? 'weekly' : 'daily'),
-      scheduleDays: h.scheduleDays ?? h.customDays,
-      allowPartial: h.allowPartial ?? false,
-      allowSkip: h.allowSkip ?? false,
-    })),
-    habitLogs: state.habitLogs.map(l => ({
-      ...l,
-      status: l.status ?? (l.completed ? 'completed' : 'missed'),
-      source: l.source ?? 'manual',
-    })),
+    _durationMigratedToSecs: true,
+    _timerLogsCumulativeFixed2: true,
+    habits,
+    habitLogs,
     categoryOrder: state.categoryOrder ?? [],
     deletedCategories: state.deletedCategories ?? [],
   };
@@ -146,31 +203,34 @@ function recoverTimer(state: AppState): AppState {
     const session = state.timerSessions.find(s => s.id === t.sessionId);
     const endedAt = new Date().toISOString();
 
-    // Auto-log habit completion if timer was linked to a habit
+    // Auto-log habit session time and check cumulative completion
     let habitLogs = state.habitLogs;
     const linkedHabitId = t.habitId ?? session?.habitId;
     if (linkedHabitId && t.targetDuration) {
       const today = todayString();
       const habit = state.habits.find(h => h.id === linkedHabitId);
       const maxReps = habit?.maxDailyReps || Infinity;
-      const todayCompletedCount = habitLogs.filter(l => l.habitId === linkedHabitId && l.date === today && l.completed).length;
-      // Only log if maxDailyReps not reached and no existing timer log for this session
-      if (maxReps === Infinity || todayCompletedCount < maxReps) {
-        const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        habitLogs = [...habitLogs, {
-          id: generateId(),
-          habitId: linkedHabitId,
-          date: today,
-          time: nowTime,
-          duration: t.targetDuration, // exact seconds
-          note: 'Auto-completed by timer',
-          reminderUsed: false,
-          perceivedDifficulty: 'medium' as const,
-          completed: true,
-          status: 'completed' as const,
-          source: 'timer' as const,
-        }];
-      }
+      const habitTarget = habit?.expectedDuration || 0;
+      // Per-rep cumulative: check if this session crosses a new completion threshold
+      const prevTotal = habitLogs
+        .filter(l => l.habitId === linkedHabitId && l.date === today)
+        .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+      const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
+      const newReps = habitTarget > 0 ? Math.floor((prevTotal + t.targetDuration) / habitTarget) : 0;
+      const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      habitLogs = [...habitLogs, {
+        id: generateId(),
+        habitId: linkedHabitId,
+        date: today,
+        time: nowTime,
+        duration: t.targetDuration,
+        note: '',
+        reminderUsed: false,
+        perceivedDifficulty: 'medium' as const,
+        completed: isCompleted,
+        source: 'timer' as const,
+      }];
     }
 
     return {
@@ -276,6 +336,7 @@ interface AppStore extends AppState {
   // Custom categories
   addCustomCategory: (name: string) => void;
   deleteCustomCategory: (name: string) => void;
+  renameCategory: (oldName: string, newName: string) => void;
   reorderCategories: (orderedCategories: string[]) => void;
 
   // Settings
@@ -716,6 +777,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       startedAt: now,
       endsAt: data.targetDuration ? new Date(nowMs + data.targetDuration * 1000).toISOString() : undefined,
       targetDuration: data.targetDuration,
+      habitTargetDuration: data.habitTargetDuration,
       pomodoroPhase: data.mode === 'pomodoro' ? 'work' : undefined,
       pomodoroRound: data.mode === 'pomodoro' ? 1 : undefined,
     };
@@ -1108,6 +1170,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [update]);
 
+  const renameCategory = useCallback((oldName: string, newName: string) => {
+    if (!newName.trim() || oldName === newName) return;
+    update(s => ({
+      ...s,
+      habits: s.habits.map(h => h.category === oldName ? { ...h, category: newName } : h),
+      customCategories: s.customCategories.map(c => c === oldName ? newName : c),
+      categoryOrder: (s.categoryOrder ?? []).map(c => c === oldName ? newName : c),
+      deletedCategories: (s.deletedCategories ?? []).filter(c => c !== oldName),
+    }));
+  }, [update]);
+
   const reorderCategories = useCallback((orderedCategories: string[]) => {
     update(s => ({ ...s, categoryOrder: orderedCategories }));
   }, [update]);
@@ -1161,7 +1234,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     addTask, updateTask, deleteTask, toggleTaskStatus, reorderTasks, toggleSubtask,
     addGoal, updateGoal, deleteGoal, toggleGoalMilestone,
     logMood, getMoodForDate,
-    addCustomCategory, deleteCustomCategory, reorderCategories,
+    addCustomCategory, deleteCustomCategory, renameCategory, reorderCategories,
     updateSettings,
     getLogsForDate, exportData, importData, resetData,
   };

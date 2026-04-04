@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import { useToast } from '@/components/app/toast-notifications';
-import { Habit, formatTimerDuration, resolveHabitColor, computeTimerElapsed, computeTimerRemaining, todayString } from '@/types/app';
+import { Habit, formatTimerDuration, formatDurationSecs, resolveHabitColor, computeTimerElapsed, computeTimerRemaining, todayString } from '@/types/app';
 import { useTimerDisplay } from '@/lib/use-timer-display';
 import { Play, Pause, Square, Timer, X, CheckCircle2 } from 'lucide-react';
 
@@ -19,13 +19,13 @@ function fmtSecs(totalSecs: number): string {
 }
 
 // Per-habit timer state & actions
-export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore>) {
+export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore>, customDurationSecs?: number) {
   const active = store.activeTimer;
   // Session lookup (fallback for old data without habitId on ActiveTimer, and for cancel/stop logging)
   const currentSession = active ? store.timerSessions.find(t => t.id === active.sessionId) : null;
   // Prefer ActiveTimer.habitId, fall back to session lookup for backward compat
   const activeHabitId = active?.habitId ?? (currentSession?.type === 'habit-linked' ? currentSession.habitId ?? null : null);
-  const isMyTimer = !!activeHabitId && activeHabitId === habit.id;
+  const isMyTimer = !!activeHabitId && activeHabitId === habit.id && active?.state !== 'completed';
   const hasActiveTimer = !!active && active.state !== 'completed';
   const anotherRunning = hasActiveTimer && !isMyTimer;
   const running = isMyTimer && active?.state === 'running';
@@ -41,7 +41,11 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
   const { elapsed } = useTimerDisplay(isMyTimer ? active : null);
 
   const hasDuration = !!habit.expectedDuration;
-  const targetSecs = hasDuration ? habit.expectedDuration! * 60 : 0;
+  const habitTargetSecs = hasDuration ? habit.expectedDuration! : 0; // original habit target in seconds
+  // Custom duration for countdown (may differ from habit target); falls back to habit target
+  const timerDurationSecs = customDurationSecs && customDurationSecs > 0 ? customDurationSecs : habitTargetSecs;
+  // For progress/display, use the habit's original target
+  const targetSecs = habitTargetSecs;
 
   const start = () => {
     if (anotherRunning) return;
@@ -50,41 +54,54 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
       const ct = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       if (ct < habit.windowStart || ct > habit.windowEnd) return;
     }
+    const countdownSecs = hasDuration ? timerDurationSecs : undefined;
     store.startTimer({
       type: 'habit-linked', mode: hasDuration ? 'countdown' : 'stopwatch',
       habitId: habit.id, labelEn: habit.nameEn, labelAr: habit.nameAr,
       startedAt: new Date().toISOString(), duration: 0,
-      targetDuration: hasDuration ? targetSecs : undefined,
+      targetDuration: countdownSecs,
+      habitTargetDuration: hasDuration ? habitTargetSecs : undefined,
     });
   };
   const pause = () => store.pauseTimer();
   const resume = () => store.resumeTimer();
+  // Helper: check if this session crosses a new completion threshold
+  // E.g. target=45m: 0-44m = 0 reps, 45-89m = 1 rep, 90-134m = 2 reps, etc.
+  const getCumulativeCompleted = (today: string, additionalSecs: number) => {
+    if (!hasDuration || targetSecs <= 0) return false;
+    const maxReps = habit.maxDailyReps || Infinity;
+    const prevTotal = store.habitLogs
+      .filter(l => l.habitId === habit.id && l.date === today)
+      .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+    const prevReps = Math.floor(prevTotal / targetSecs);
+    const newReps = Math.floor((prevTotal + additionalSecs) / targetSecs);
+    // Completed if we crossed a new threshold AND haven't exceeded maxReps
+    return newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
+  };
+
   const cancel = () => {
     if (currentSession && elapsed > 0 && !habit.archived) {
       const today = todayString();
+      const isCompleted = getCumulativeCompleted(today, elapsed);
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        duration: elapsed, // exact seconds — no rounding, no time lost
-        note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: false,
+        duration: elapsed,
+        note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
       });
     }
     store.cancelTimer();
   };
-  const stop = (today: string, done: boolean) => {
+  const stop = (today: string, _done: boolean) => {
     if (!currentSession) return;
     const secs = elapsed;
     if (secs > 0 && !habit.archived) {
-      // Check maxDailyReps before logging completion
-      const maxReps = habit.maxDailyReps || Infinity;
-      const todayCompletedCount = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.completed).length;
-      const wouldComplete = hasDuration ? (secs >= targetSecs) : !done;
-      const isCompleted = wouldComplete && (maxReps === Infinity || todayCompletedCount < maxReps);
+      const isCompleted = getCumulativeCompleted(today, secs);
       store.logHabit({
         habitId: habit.id, date: today,
         time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        duration: secs, // exact seconds — no rounding, no time lost
+        duration: secs,
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
       });
@@ -92,7 +109,23 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
     store.completeTimer(currentSession.id);
   };
 
-  return { isMyTimer, anotherRunning, running, paused, elapsed, targetSecs, hasDuration, blockingHabitName, blockingTimerState, start, pause, resume, cancel, stop };
+  const activeTimerDuration = isMyTimer ? (active?.targetDuration || 0) : 0;
+  const hasCustomDuration = hasDuration && activeTimerDuration > 0 && activeTimerDuration !== habitTargetSecs;
+  // Cumulative today total (for display)
+  const todayCumulativeSecs = store.habitLogs
+    .filter(l => l.habitId === habit.id && l.date === todayString())
+    .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+  const cumulativeWithCurrent = todayCumulativeSecs + (isMyTimer ? elapsed : 0);
+  // Per-rep: how many full reps earned (capped at maxDailyReps), and progress toward next
+  const maxRepsForCalc = habit.maxDailyReps || Infinity;
+  const rawEarned = hasDuration && targetSecs > 0 ? Math.floor(todayCumulativeSecs / targetSecs) : 0;
+  const rawEarnedWithCurrent = hasDuration && targetSecs > 0 ? Math.floor(cumulativeWithCurrent / targetSecs) : 0;
+  const earnedReps = maxRepsForCalc === Infinity ? rawEarned : Math.min(rawEarned, maxRepsForCalc);
+  const earnedRepsWithCurrent = maxRepsForCalc === Infinity ? rawEarnedWithCurrent : Math.min(rawEarnedWithCurrent, maxRepsForCalc);
+  const progressTowardNext = hasDuration && targetSecs > 0 ? (cumulativeWithCurrent % targetSecs) / targetSecs : 0;
+  const habitDoneLogged = hasDuration && earnedReps >= 1;
+
+  return { isMyTimer, anotherRunning, running, paused, elapsed, targetSecs, hasDuration, blockingHabitName, blockingTimerState, habitDoneLogged, activeTimerDuration, hasCustomDuration, todayCumulativeSecs, cumulativeWithCurrent, earnedReps, earnedRepsWithCurrent, progressTowardNext, start, pause, resume, cancel, stop };
 }
 
 // Global timer state — for auto-complete logic
@@ -110,10 +143,10 @@ export function useStoreHabitTimer(store: ReturnType<typeof useAppStore>) {
 }
 
 // Compact timer controls — reusable across all views
-export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm', disabled = false }: {
-  habit: Habit; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string; done: boolean; size?: 'sm' | 'xs' | 'md'; disabled?: boolean;
+export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm', disabled = false, customDurationSecs }: {
+  habit: Habit; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string; done: boolean; size?: 'sm' | 'xs' | 'md'; disabled?: boolean; customDurationSecs?: number;
 }) {
-  const t = useHabitTimer(habit, store);
+  const t = useHabitTimer(habit, store, customDurationSecs);
   const toast = useToast();
   if (habit.archived) return null;
 
@@ -131,12 +164,11 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const todayReps = todayCompletedLogs.length;
   const todayTotalSecs = store.habitLogs
     .filter(l => l.habitId === habit.id && l.date === today)
-    .reduce((sum, l) => {
-      const d = l.duration ?? 0;
-      return sum + (d <= 300 ? d * 60 : d); // normalize old minutes to seconds
-    }, 0);
+    .reduce((sum, l) => sum + (l.duration ?? 0), 0);
   const allRepsDone = maxReps !== Infinity && todayReps >= maxReps;
-  const cantStart = isStrictLocked || allRepsDone;
+  // For timer habits: block when earned reps reach maxReps
+  const allTimerRepsDone = t.hasDuration && t.targetSecs > 0 && maxReps !== Infinity && t.earnedReps >= maxReps;
+  const cantStart = isStrictLocked || allRepsDone || allTimerRepsDone;
 
   const notifyDisabled = () => {
     if (t.anotherRunning && t.blockingHabitName) {
@@ -162,8 +194,11 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
     }
   };
 
-  const remaining = t.hasDuration && t.isMyTimer ? Math.max(0, t.targetSecs - t.elapsed) : 0;
-  const progress = t.hasDuration && t.isMyTimer && t.targetSecs > 0 ? Math.min(1, t.elapsed / t.targetSecs) : 0;
+  // Remaining uses the timer countdown duration (which may be custom)
+  const countdownTotal = t.isMyTimer && t.activeTimerDuration > 0 ? t.activeTimerDuration : t.targetSecs;
+  const remaining = t.hasDuration && t.isMyTimer ? Math.max(0, countdownTotal - t.elapsed) : 0;
+  // Progress tracks toward the NEXT rep (not overall), resets after each completion
+  const progress = t.hasDuration && t.targetSecs > 0 ? Math.min(1, t.progressTowardNext) : 0;
 
   // Large (md) layout — full visual block
   if (size === 'md') {
@@ -209,11 +244,9 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
               <button onClick={() => t.pause()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-amber-500/15 text-amber-600 transition-all hover:bg-amber-500/25">
                 <Pause className="h-5 w-5" /> {isAr ? 'إيقاف مؤقت' : 'Pause'}
               </button>
-              {!t.hasDuration && (
-                <button onClick={() => t.stop(today, done)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500/15 text-emerald-600 transition-all hover:bg-emerald-500/25">
-                  <Square className="h-5 w-5" /> {isAr ? 'إنهاء' : 'Stop'}
-                </button>
-              )}
+              <button onClick={() => t.stop(today, done)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500/15 text-emerald-600 transition-all hover:bg-emerald-500/25">
+                <Square className="h-5 w-5" /> {isAr ? 'إنهاء' : 'Stop'}
+              </button>
             </>
           )}
           {t.paused && (
@@ -222,11 +255,9 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
                 style={{ background: `${habit.color}18`, color: habit.color }}>
                 <Play className="h-5 w-5" /> {isAr ? 'استئناف' : 'Resume'}
               </button>
-              {!t.hasDuration && (
-                <button onClick={() => t.stop(today, done)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500/15 text-emerald-600 transition-all hover:bg-emerald-500/25">
-                  <CheckCircle2 className="h-5 w-5" /> {isAr ? 'إنهاء' : 'Done'}
-                </button>
-              )}
+              <button onClick={() => t.stop(today, done)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500/15 text-emerald-600 transition-all hover:bg-emerald-500/25">
+                <CheckCircle2 className="h-5 w-5" /> {isAr ? 'إنهاء' : 'Done'}
+              </button>
               <button onClick={() => t.cancel()} className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-red-500/10 text-red-500 transition-all hover:bg-red-500/20">
                 <X className="h-5 w-5" />
               </button>
@@ -269,20 +300,27 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const timerSegments = 20;
   const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
 
-  const canDoMore = done && !allRepsDone;
+  // Per-rep status: done means at least 1 rep earned
+  const cumulativeDone = t.earnedReps >= 1;
+  const allTimerRepsComplete = allTimerRepsDone;
+  const canDoMore = cumulativeDone && !allTimerRepsComplete && !allRepsDone;
   const statusLabel = t.running
     ? (isAr ? 'قيد التشغيل' : 'Running')
     : t.paused
       ? (isAr ? 'متوقف مؤقتًا' : 'Paused')
-      : allRepsDone
-        ? (isAr ? 'مكتمل' : 'Completed')
-        : canDoMore
-          ? (isAr ? `${todayReps} جلسة مكتملة` : `${todayReps} session${todayReps > 1 ? 's' : ''} done`)
+      : allTimerRepsComplete
+        ? (isAr ? `مكتمل ${t.earnedReps}/${maxReps}` : `Done ${t.earnedReps}/${maxReps}`)
+        : cumulativeDone
+          ? (maxReps !== Infinity
+            ? (isAr ? `${t.earnedReps}/${maxReps} مكتمل` : `${t.earnedReps}/${maxReps} done`)
+            : (isAr ? `${t.earnedReps}x مكتمل` : `${t.earnedReps}x done`))
           : cantStart
             ? (isAr ? 'غير متاح' : 'Unavailable')
-            : (isAr ? 'جاهز' : 'Ready');
+            : todayTotalSecs > 0
+              ? (isAr ? `${fmtSecs(todayTotalSecs)} / ${fmtSecs(t.targetSecs)}` : `${fmtSecs(todayTotalSecs)} / ${fmtSecs(t.targetSecs)}`)
+              : (isAr ? 'جاهز' : 'Ready');
 
-  const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : cantStart ? '#ef4444' : `${hc}60`;
+  const statusDotColor = t.running ? '#22c55e' : t.paused ? '#f59e0b' : allTimerRepsComplete ? '#22c55e' : cumulativeDone ? '#3b82f6' : cantStart ? '#ef4444' : `${hc}60`;
 
   const displayTime = isActive
     ? (t.hasDuration ? formatTimerDuration(remaining) : formatTimerDuration(t.elapsed))
@@ -304,7 +342,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
   return (
     <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
-      <div className="hc-timer rounded-xl overflow-hidden relative h-[100px]" style={{ background: timerBg, border: `1.5px solid ${timerBorder}` }}>
+      <div className="hc-timer rounded-xl overflow-hidden relative" style={{ background: timerBg, border: `1.5px solid ${timerBorder}`, minHeight: isActive && t.hasCustomDuration ? 120 : 100 }}>
         {t.running && (
           <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
         )}
@@ -320,25 +358,29 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           <div className={cn(
             'text-lg font-mono font-black tracking-tight text-center transition-all duration-300',
             t.running && 'scale-105',
-            isIdle && !done && !allRepsDone && 'opacity-40',
-          )} style={{ color: allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : hc }}>
-            {allRepsDone && !isActive ? (
-              <div className="flex items-center justify-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
+            isIdle && !cumulativeDone && 'opacity-40',
+          )} style={{ color: allTimerRepsComplete ? '#22c55e' : canDoMore ? '#3b82f6' : hc }}>
+            {allTimerRepsComplete && !isActive ? (
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center justify-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
+                </div>
+                <span className="text-[9px] font-bold text-emerald-600/60">{t.earnedReps}/{maxReps} — {fmtSecs(todayTotalSecs)}</span>
               </div>
             ) : canDoMore && !isActive ? (
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-sm font-bold">{todayReps}x ✓</span>
-                <span className="text-[9px] opacity-60">{isAr ? 'ابدأ جلسة أخرى' : 'Start another'}</span>
+                <span className="text-sm font-bold text-emerald-600">{t.earnedReps}x ✓</span>
+                <span className="text-[9px] opacity-60">{isAr ? `${fmtSecs(todayTotalSecs)} — ابدأ جلسة أخرى` : `${fmtSecs(todayTotalSecs)} — start next`}</span>
               </div>
             ) : displayTime}
           </div>
 
-          {isIdle && t.hasDuration && !allRepsDone && !canDoMore && (
+          {isIdle && t.hasDuration && !allTimerRepsComplete && !canDoMore && (
             <div className="text-center mt-0.5">
               <span className="text-[9px] font-semibold text-[var(--foreground)]/40">
-                {isAr ? `الهدف: ${habit.expectedDuration} دقيقة` : `Target: ${habit.expectedDuration} min`}
+                {isAr ? `الهدف: ${formatDurationSecs(habit.expectedDuration!)}` : `Target: ${formatDurationSecs(habit.expectedDuration!)}`}
+                {todayTotalSecs > 0 && ` — ${fmtSecs(todayTotalSecs)} ${isAr ? 'إجمالي' : 'done'}`}
               </span>
             </div>
           )}
@@ -348,32 +390,32 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
               <div className="flex items-center justify-between mb-0.5">
                 {isActive && (
                   <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
-                    {formatTimerDuration(t.elapsed)} / {formatTimerDuration(t.targetSecs)}
+                    {fmtSecs(Math.floor(t.cumulativeWithCurrent % t.targetSecs))} / {fmtSecs(t.targetSecs)}
+                    {t.todayCumulativeSecs > 0 && <span className="text-[var(--foreground)]/40"> ({isAr ? 'إجمالي' : 'total'}: {fmtSecs(Math.floor(t.cumulativeWithCurrent))})</span>}
                   </span>
                 )}
-                {!isActive && canDoMore && (
-                  <span className="text-[9px] font-bold text-blue-500">
-                    {fmtSecs(todayTotalSecs)} {isAr ? 'إجمالي' : 'total'}
+                {!isActive && todayTotalSecs > 0 && (
+                  <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
+                    {fmtSecs(todayTotalSecs % t.targetSecs)} / {fmtSecs(t.targetSecs)}
+                    {t.earnedReps > 0 && <span className="text-emerald-600"> ({t.earnedReps}x ✓)</span>}
                   </span>
                 )}
-                {!isActive && !canDoMore && (
+                {!isActive && todayTotalSecs === 0 && (
                   <span className="text-[9px] font-bold text-[var(--foreground)]/30">
                     0:00 / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
-                <span className="text-[10px] font-black" style={{ color: isActive ? hc : allRepsDone ? '#22c55e' : canDoMore ? '#3b82f6' : `${hc}40` }}>
-                  {isActive ? `${pctText}%` : allRepsDone ? '100%' : canDoMore ? `${todayReps}x` : '0%'}
+                <span className="text-[10px] font-black" style={{ color: isActive ? hc : allTimerRepsComplete ? '#22c55e' : canDoMore ? '#3b82f6' : `${hc}40` }}>
+                  {pctText != null ? `${pctText}%` : allTimerRepsComplete ? '100%' : todayTotalSecs > 0 ? `${Math.round(progress * 100)}%` : '0%'}
                 </span>
               </div>
               <div className="flex gap-[2px]">
                 {Array.from({ length: timerSegments }).map((_, si) => (
                   <div key={si} className="flex-1 h-1.5 rounded-sm transition-all duration-300"
                     style={{
-                      background: allRepsDone && !isActive
+                      background: allTimerRepsComplete && !isActive
                         ? '#22c55e'
-                        : canDoMore && !isActive
-                          ? '#3b82f6'
-                          : si < filledSegs ? hc : `${hc}10`,
+                        : si < filledSegs ? hc : `${hc}10`,
                       transitionDelay: isActive ? `${si * 20}ms` : '0ms',
                     }} />
                 ))}
@@ -385,6 +427,25 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
             <div className="mt-1 text-center">
               <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
                 {Math.floor(t.elapsed / 60)} {isAr ? 'دقيقة' : 'min'} {Math.floor(t.elapsed % 60).toString().padStart(2, '0')} {isAr ? 'ثانية' : 'sec'}
+              </span>
+            </div>
+          )}
+
+          {/* Done badge — shows rep count when running */}
+          {isActive && t.earnedRepsWithCurrent >= 1 && (
+            <div className="mt-1 flex items-center justify-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+              <span className="text-[9px] font-black text-emerald-600">
+                {t.earnedRepsWithCurrent}x ✓ — {fmtSecs(Math.floor(t.cumulativeWithCurrent))} {isAr ? 'إجمالي' : 'total'}
+              </span>
+            </div>
+          )}
+
+          {/* Custom timer info */}
+          {isActive && t.hasCustomDuration && !cumulativeDone && (
+            <div className="mt-1 text-center">
+              <span className="text-[8px] font-medium text-[var(--foreground)]/40">
+                {isAr ? `الهدف: ${formatDurationSecs(t.targetSecs)} | المؤقت: ${formatDurationSecs(countdownTotal)}` : `Target: ${formatDurationSecs(t.targetSecs)} | Timer: ${formatDurationSecs(countdownTotal)}`}
               </span>
             </div>
           )}
@@ -406,12 +467,10 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-600 transition-all active:scale-95">
               <Pause className="h-3.5 w-3.5" /> {isAr ? 'إيقاف' : 'Pause'}
             </button>
-            {!t.hasDuration && (
-              <button onClick={() => t.stop(today, done)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-                <Square className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Stop'}
-              </button>
-            )}
+            <button onClick={() => t.stop(today, done)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
+              <Square className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Stop'}
+            </button>
           </>
         )}
         {t.paused && (
@@ -421,12 +480,10 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
               style={{ background: `${hc}15`, color: hc }}>
               <Play className="h-3.5 w-3.5" /> {isAr ? 'استئناف' : 'Resume'}
             </button>
-            {!t.hasDuration && (
-              <button onClick={() => t.stop(today, done)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-                <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Done'}
-              </button>
-            )}
+            <button onClick={() => t.stop(today, done)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
+              <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Done'}
+            </button>
             <button onClick={() => t.cancel()}
               className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg text-[11px] font-bold bg-red-500/10 text-red-500 transition-all active:scale-95">
               <X className="h-3.5 w-3.5" />

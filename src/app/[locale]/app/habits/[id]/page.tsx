@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import { HabitTimerControls } from '@/components/app/habit-timer-controls';
-import { Habit, HabitHistoryEntry, HabitLog, WeekDay, todayString, resolveHabitColor, parseLocalDate } from '@/types/app';
+import { Habit, HabitHistoryEntry, HabitLog, WeekDay, todayString, resolveHabitColor, parseLocalDate, formatDurationSecs } from '@/types/app';
 import {
   ArrowLeft, Calendar as CalendarIcon, Clock, Flame, Target, Edit3, Archive,
   ChevronLeft, ChevronRight, Star, BarChart3, TrendingUp, Activity,
@@ -361,7 +361,7 @@ export default function HabitDetailPage() {
             } else if (isTimerHabit) {
               toast.notifyInfo(
                 isAr ? 'استخدم المؤقت' : 'Use the timer',
-                isAr ? `هذه العادة تحتاج مؤقت (${habit.expectedDuration} دقيقة) لإكمالها` : `This habit requires the timer (${habit.expectedDuration} min) to complete`
+                isAr ? `هذه العادة تحتاج مؤقت (${formatDurationSecs(habit.expectedDuration!)}) لإكمالها` : `This habit requires the timer (${formatDurationSecs(habit.expectedDuration!)}) to complete`
               );
             } else {
               handleToggleDay();
@@ -404,7 +404,7 @@ export default function HabitDetailPage() {
             <div className="flex items-center gap-2">
               <Timer className="h-4 w-4 text-[var(--foreground)]/40" />
               <span className="text-xs font-medium text-[var(--foreground)]/50">
-                {isAr ? `المؤقت: ${habit.expectedDuration} دقيقة — استخدم بطاقة العادة للتسجيل` : `Timer: ${habit.expectedDuration} min — use the habit card to log`}
+                {isAr ? `المؤقت: ${formatDurationSecs(habit.expectedDuration!)} — استخدم بطاقة العادة للتسجيل` : `Timer: ${formatDurationSecs(habit.expectedDuration!)} — use the habit card to log`}
               </span>
             </div>
           </div>
@@ -795,7 +795,7 @@ export default function HabitDetailPage() {
                 <InfoItem label={isAr ? 'الوقت المفضل' : 'Preferred Time'} value={habit.preferredTime} icon={<Clock className="h-3.5 w-3.5" />} />
               )}
               {habit.expectedDuration && (
-                <InfoItem label={isAr ? 'المدة المتوقعة' : 'Duration'} value={`${habit.expectedDuration} ${isAr ? 'دقيقة' : 'min'}`} icon={<Timer className="h-3.5 w-3.5" />} />
+                <InfoItem label={isAr ? 'المدة المتوقعة' : 'Duration'} value={formatDurationSecs(habit.expectedDuration!)} icon={<Timer className="h-3.5 w-3.5" />} />
               )}
               {(habit.placeEn || habit.placeAr) && (
                 <InfoItem label={isAr ? 'المكان' : 'Place'} value={isAr ? habit.placeAr || habit.placeEn || '' : habit.placeEn || habit.placeAr || ''} icon={<MapPin className="h-3.5 w-3.5" />} />

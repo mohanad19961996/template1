@@ -113,7 +113,7 @@ export interface Habit {
   placeEn?: string;
   placeAr?: string;
   preferredTime?: string; // HH:mm — when to do this habit
-  expectedDuration?: number; // minutes — expected time to complete this habit
+  expectedDuration?: number; // seconds — expected time to complete this habit (migrated from minutes)
   windowStart?: string; // HH:mm — ideal window start (optional)
   windowEnd?: string;   // HH:mm — ideal window end (optional)
   strictWindow?: boolean; // if true, habit can ONLY be done within windowStart-windowEnd, auto-missed otherwise
@@ -238,6 +238,7 @@ export interface TimerSession {
   events?: TimerEvent[];    // full timeline of start/pause/resume/finish
   duration: number;         // seconds elapsed
   targetDuration?: number;  // seconds target
+  habitTargetDuration?: number; // seconds — original habit target (may differ from timer countdown)
   pomodoroConfig?: PomodoroConfig;
   pomodoroRound?: number;
   productivityRating?: MoodLevel;
@@ -466,6 +467,9 @@ export interface AppState {
   deletedCategories: string[];
   settings: UserSettings;
   activeTimer: ActiveTimer | null;
+  _durationMigratedToSecs?: boolean;
+  _timerLogsCumulativeFixed?: boolean;
+  _timerLogsCumulativeFixed2?: boolean;
 }
 
 export interface ActiveTimer {
@@ -483,6 +487,8 @@ export interface ActiveTimer {
   remainingMs?: number;      // ms remaining at pause (countdown/pomodoro)
   elapsedMs?: number;        // ms elapsed at pause (stopwatch) or total elapsed for completed
   targetDuration?: number;   // seconds — total target for countdown/pomodoro
+  habitTargetDuration?: number; // seconds — original habit target (for auto-completion, may differ from targetDuration)
+  habitDoneLogged?: boolean;    // true once habit has been auto-logged as done mid-timer
   // ── Pomodoro ──
   pomodoroPhase?: 'work' | 'short-break' | 'long-break';
   pomodoroRound?: number;
@@ -595,6 +601,21 @@ export function formatDuration(minutes: number): string {
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+/** Format seconds as a compact human-readable label: "45m", "1h 30m", "45m 30s", "30s" */
+export function formatDurationSecs(totalSecs: number): string {
+  if (totalSecs <= 0) return '0s';
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = Math.floor(totalSecs % 60);
+  if (h > 0 && m > 0 && s > 0) return `${h}h ${m}m ${s}s`;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0 && s > 0) return `${h}h ${s}s`;
+  if (h > 0) return `${h}h`;
+  if (m > 0 && s > 0) return `${m}m ${s}s`;
+  if (m > 0) return `${m}m`;
+  return `${s}s`;
 }
 
 export function formatTimerDuration(seconds: number): string {
