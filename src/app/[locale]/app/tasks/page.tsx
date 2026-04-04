@@ -687,17 +687,18 @@ export default function TasksPage() {
                     onChange={e => setNewCatValue(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && newCatValue.trim()) {
-                        // Create a dummy task to establish the category, or just set filter
-                        setFilterCategory(newCatValue.trim());
+                        const catName = newCatValue.trim();
+                        resetForm();
+                        setForm(f => ({ ...f, category: catName }));
+                        setShowForm(true);
                         setNewCatEditing(false);
                         setNewCatValue('');
-                        toast.notifySuccess(isAr ? 'استخدم الفئة عند إنشاء مهمة' : 'Use this category when creating a task');
                       }
                       if (e.key === 'Escape') { setNewCatEditing(false); setNewCatValue(''); }
                     }}
-                    onBlur={() => { setNewCatEditing(false); setNewCatValue(''); }}
+                    onBlur={() => { if (!newCatValue.trim()) { setNewCatEditing(false); setNewCatValue(''); } }}
                     placeholder={isAr ? 'اسم الفئة...' : 'Category name...'}
-                    className="w-20 bg-transparent text-[11px] font-bold outline-none placeholder:text-[var(--foreground)]/30"
+                    className="w-24 bg-transparent text-[11px] font-bold outline-none placeholder:text-[var(--foreground)]/30"
                   />
                 </div>
               ) : (
