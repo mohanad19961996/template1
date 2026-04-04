@@ -434,11 +434,11 @@ function NewCategoryTile({ isAr, store, allCategories }: { isAr: boolean; store:
       onClick={() => setEditing(true)}
       className={cn(
         categoryTileBase,
-        'border-dashed border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:-translate-y-[1px] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/[0.07] hover:shadow-[0_8px_20px_-8px_rgba(var(--color-primary-rgb),0.16)] active:translate-y-0',
+        'border-dashed border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
       )}
     >
-      <Plus className="mx-auto h-4 w-4 opacity-40" style={{ color: 'var(--color-primary)' }} />
-      <span className="text-[9px] font-bold text-[var(--foreground)]/50 sm:text-[10px]">
+      <Plus className="h-3.5 w-3.5 shrink-0 opacity-40" style={{ color: 'var(--color-primary)' }} />
+      <span className="text-[10px] font-bold text-[var(--foreground)]/50">
         {isAr ? 'فئة جديدة' : 'New'}
       </span>
     </button>
@@ -456,7 +456,7 @@ function useOrderedCategories(allCategories: string[], categoryOrder: string[] |
 }
 
 const categoryTileBase =
-  'group relative flex min-h-[2.35rem] flex-col justify-center gap-0.5 rounded-lg border-2 px-2 py-1.5 text-start transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]';
+  'group relative flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-start transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]';
 
 /** Sortable category tile for inline editing inside CategoryChipsRail */
 function SortableCategoryTile({ id, label, count, isSelected, isEditMode, canDelete, onSelect, onDelete, onRename, isAr }: {
@@ -510,29 +510,24 @@ function SortableCategoryTile({ id, label, count, isSelected, isEditMode, canDel
           isEditMode
             ? 'border-dashed border-[var(--foreground)]/20 bg-[var(--foreground)]/[0.02] text-[var(--foreground)] cursor-pointer hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.04]'
             : isSelected
-              ? 'border-[var(--color-primary)] text-white shadow-[0_10px_28px_-4px_rgba(var(--color-primary-rgb),0.35)] ring-2 ring-[var(--color-primary)]/25'
-              : 'border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:-translate-y-[1px] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/[0.07] hover:shadow-[0_8px_20px_-8px_rgba(var(--color-primary-rgb),0.16)] active:translate-y-0',
+              ? 'border-[var(--color-primary)] text-white shadow-sm'
+              : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
         )}
-        style={!isEditMode && isSelected ? { background: 'linear-gradient(145deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.75))' } : undefined}
+        style={!isEditMode && isSelected ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
       >
         {isEditMode && (
-          <span {...attributes} {...listeners} className="absolute top-1 start-1 cursor-grab active:cursor-grabbing text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70">
+          <span {...attributes} {...listeners} className="shrink-0 cursor-grab active:cursor-grabbing text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70">
             <GripVertical className="h-3 w-3" />
           </span>
         )}
-        <span className="line-clamp-2 text-[10px] font-bold leading-tight sm:text-[11px]">
+        <span className="truncate text-[11px] font-bold">
           {label}
           {isEditMode && <Edit3 className="inline h-2.5 w-2.5 ms-1 opacity-40" />}
         </span>
         {!isEditMode && (
-          <div className={cn('mt-0 flex items-center justify-between gap-1 border-t pt-1', isSelected ? 'border-white/20 opacity-95' : 'border-[var(--foreground)]/[0.1] opacity-90')}>
-            <span className={cn('text-[8px] font-bold uppercase tracking-wider sm:text-[9px]', isSelected ? 'opacity-80' : 'text-[var(--foreground)]/50')}>
-              {isAr ? 'العدد' : 'Count'}
-            </span>
-            <span className={cn('rounded px-1.5 py-px text-[10px] font-black tabular-nums sm:text-xs', isSelected ? 'bg-white/20 text-white' : 'bg-[var(--foreground)]/[0.08] text-[var(--foreground)]')}>
-              {count}
-            </span>
-          </div>
+          <span className={cn('shrink-0 ms-auto rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', isSelected ? 'bg-white/25 text-white' : 'bg-[var(--foreground)]/[0.07] text-[var(--foreground)]/60')}>
+            {count}
+          </span>
         )}
       </button>
       {isEditMode && (
@@ -669,9 +664,9 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
             <SortableContext items={orderedCategories} strategy={rectSortingStrategy}>
               <div
                 className="grid gap-1.5 sm:gap-2"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))' }}
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))' }}
               >
-                {/* "All" tile — not draggable, always first */}
+                {/* "All" chip — not draggable, always first */}
                 {!isEditMode && (
                   <button
                     type="button"
@@ -679,22 +674,21 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
                     className={cn(
                       categoryTileBase,
                       filterCategory === 'all'
-                        ? 'border-[var(--color-primary)] text-white shadow-[0_10px_28px_-4px_rgba(var(--color-primary-rgb),0.35)] ring-2 ring-[var(--color-primary)]/25'
-                        : 'border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:-translate-y-[1px] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/[0.07] hover:shadow-[0_8px_20px_-8px_rgba(var(--color-primary-rgb),0.16)] active:translate-y-0',
+                        ? 'border-[var(--color-primary)] text-white shadow-sm'
+                        : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
                     )}
                     style={
                       filterCategory === 'all'
-                        ? { background: 'linear-gradient(145deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.75))' }
+                        ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' }
                         : undefined
                     }
                   >
-                    <span className="text-[9px] font-black uppercase tracking-wide opacity-80 sm:text-[10px]">
+                    <span className="text-[11px] font-bold">
                       {isAr ? 'الكل' : 'All'}
                     </span>
-                    <div className="flex items-baseline justify-between gap-1.5">
-                      <span className="text-xs font-black tabular-nums sm:text-sm">{totalAll}</span>
-                      <span className="text-[8px] font-bold opacity-70 sm:text-[9px]">{isAr ? 'إجمالي' : 'total'}</span>
-                    </div>
+                    <span className={cn('shrink-0 ms-auto rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', filterCategory === 'all' ? 'bg-white/25 text-white' : 'bg-[var(--foreground)]/[0.07] text-[var(--foreground)]/60')}>
+                      {totalAll}
+                    </span>
                   </button>
                 )}
 
@@ -1371,88 +1365,67 @@ export default function HabitsPage() {
         </p>
       </motion.div>
 
-          {/* Toolbar */}
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 mb-4 sm:mb-6 relative z-[100]">
-            {/* Archive */}
-            <button onClick={() => setShowArchived(!showArchived)}
-              className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer',
-                showArchived
-                  ? 'text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.2)]'
-                  : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]')}
-              style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-              onMouseEnter={(e) => { if (!showArchived) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; }}
-              onMouseLeave={(e) => { if (!showArchived) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; }}>
-              <Archive className="h-4 w-4" />
-              {showArchived ? (isAr ? 'المؤرشفة' : 'Archived') : (isAr ? 'الأرشيف' : 'Archive')}
-            </button>
-
-            {/* Compliance */}
-            <button onClick={() => setShowFullTable(true)}
-              className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-all duration-300 cursor-pointer hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]"
-              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.04)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.background = 'transparent'; }}>
-              <Table2 className="h-4 w-4" />
-              {isAr ? 'جدول الالتزام' : 'Compliance Table'}
-            </button>
-            <Link href="/app/habits/log"
-              className="habits-toolbar-btn flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-all duration-300 hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]"
-              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.04)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.background = 'transparent'; }}>
-              <CalendarIcon className="h-4 w-4" />
-              {isAr ? 'السجل' : 'History'}
-            </Link>
-
-
-            {/* Advanced Filters */}
-            {(() => {
-              const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
-              return (
-                <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer',
-                    showAdvancedFilters || activeFilterCount > 0
-                      ? 'text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.2)]'
-                      : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.08)]')}
-                  style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-                  onMouseEnter={(e) => { if (!showAdvancedFilters && activeFilterCount === 0) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.3)'; }}
-                  onMouseLeave={(e) => { if (!showAdvancedFilters && activeFilterCount === 0) e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; }}>
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {isAr ? 'فلاتر' : 'Filters'}
-                  {activeFilterCount > 0 && <span className="text-[11px] font-black bg-[var(--color-primary)] text-white h-5 min-w-[20px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
-                </button>
-              );
-            })()}
-
-          </motion.div>
-
-          {/* Search + Add New Habit — side by side */}
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2.5} className="mb-5 flex items-center gap-2.5 sm:gap-3">
+          {/* Unified toolbar: Search + Create + Archive + Compliance + History + Filters */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="mb-4 flex items-center gap-1.5 sm:gap-2 relative z-[100]">
             {/* Search */}
-            <div className="relative flex-1 group/search">
-              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
+            <div className="relative flex-1 min-w-0 group/search">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute end-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.15] transition-colors">
+                <button onClick={() => setSearchQuery('')} className="absolute end-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.15] transition-colors">
                   <X className="h-3 w-3 text-[var(--foreground)]/50" />
                 </button>
               )}
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isAr ? 'ابحث عن عادة...' : 'Search habits...'}
-                className="w-full rounded-2xl border-2 ps-11 pe-10 py-3 text-sm font-semibold placeholder:text-[var(--foreground)]/30 placeholder:font-medium focus:outline-none transition-all duration-200 bg-[var(--foreground)]/[0.02]"
-                style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.1)' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--color-primary-rgb) / 0.08)'; e.currentTarget.style.background = 'var(--color-background)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.1)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'rgba(var(--foreground-rgb, 0 0 0) / 0.02)'; }} />
+                placeholder={isAr ? 'بحث...' : 'Search...'}
+                className="w-full rounded-xl border ps-9 pe-9 py-2 text-[13px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-200 bg-transparent"
+                style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; }} />
             </div>
-            {/* Add Habit */}
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
+            {/* Create */}
+            <motion.button whileTap={{ scale: 0.95 }}
               onClick={() => { resetForm(); setShowForm(true); }}
-              className="shrink-0 flex items-center gap-2 rounded-2xl px-5 sm:px-7 py-3 text-sm font-extrabold text-white transition-all app-btn-primary"
-              style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 6px 20px rgba(var(--color-primary-rgb) / 0.25)' }}>
-              <Plus className="h-5 w-5" />
+              className="shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 sm:px-5 py-2 text-[13px] font-bold text-white transition-all"
+              style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.2)' }}>
+              <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
             </motion.button>
+            {/* Archive */}
+            <button onClick={() => setShowArchived(!showArchived)}
+              className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold transition-all cursor-pointer',
+                showArchived ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25')}
+              style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+              <Archive className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{isAr ? 'الأرشيف' : 'Archive'}</span>
+            </button>
+            {/* Compliance */}
+            <button onClick={() => setShowFullTable(true)}
+              className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all cursor-pointer hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25"
+              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+              <Table2 className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">{isAr ? 'جدول الالتزام' : 'Compliance'}</span>
+            </button>
+            {/* History */}
+            <Link href="/app/habits/log"
+              className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25"
+              style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+              <CalendarIcon className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">{isAr ? 'السجل' : 'Log'}</span>
+            </Link>
+            {/* Filters */}
+            {(() => {
+              const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
+              return (
+                <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold transition-all cursor-pointer',
+                    showAdvancedFilters || activeFilterCount > 0 ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25')}
+                  style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{isAr ? 'فلاتر' : 'Filters'}</span>
+                  {activeFilterCount > 0 && <span className="text-[10px] font-black bg-white/25 text-white h-4 min-w-[16px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
+                </button>
+              );
+            })()}
           </motion.div>
 
           {/* Advanced Filters Panel */}
