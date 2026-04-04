@@ -14,7 +14,7 @@ import {
   Filter, AlertCircle, CheckCircle2, Circle, Trash2, Edit3,
   ListChecks, CalendarClock, BarChart3, Play, ArrowRight,
   MoreHorizontal, Tag, ClipboardList, TrendingUp, Percent,
-  Link2, Timer, ChevronUp, Columns3,
+  Link2, Timer, ChevronUp, ChevronLeft, ChevronRight, Columns3,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
@@ -89,7 +89,9 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [viewMode, setViewMode] = useState<'board' | 'list' | 'calendar'>('board');
+  const [calDate, setCalDate] = useState(today);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [showFilters, setShowFilters] = useState(false);
   const [statFilter, setStatFilter] = useState<StatFilter>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -457,18 +459,18 @@ export default function TasksPage() {
 
         {/* View toggle */}
         <div className="flex shrink-0 rounded-xl border p-0.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          <button type="button" onClick={() => setViewMode('board')}
-            className={cn('rounded-lg px-2 py-1.5 text-[13px] font-bold transition-all', viewMode === 'board' ? 'text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
-            style={viewMode === 'board' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
-            aria-label={isAr ? 'لوحة' : 'Board'}>
-            <Columns3 className="h-3.5 w-3.5" />
-          </button>
-          <button type="button" onClick={() => setViewMode('list')}
-            className={cn('rounded-lg px-2 py-1.5 text-[13px] font-bold transition-all', viewMode === 'list' ? 'text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
-            style={viewMode === 'list' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
-            aria-label={isAr ? 'قائمة' : 'List'}>
-            <ListChecks className="h-3.5 w-3.5" />
-          </button>
+          {([
+            { key: 'board' as const, icon: Columns3, labelAr: 'لوحة', labelEn: 'Board' },
+            { key: 'list' as const, icon: ListChecks, labelAr: 'قائمة', labelEn: 'List' },
+            { key: 'calendar' as const, icon: Calendar, labelAr: 'تقويم', labelEn: 'Calendar' },
+          ]).map(v => (
+            <button key={v.key} type="button" onClick={() => setViewMode(v.key)}
+              className={cn('rounded-lg px-2 py-1.5 text-[13px] font-bold transition-all', viewMode === v.key ? 'text-white shadow-sm' : 'text-[var(--foreground)]/40 hover:text-[var(--color-primary)]')}
+              style={viewMode === v.key ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
+              aria-label={isAr ? v.labelAr : v.labelEn}>
+              <v.icon className="h-3.5 w-3.5" />
+            </button>
+          ))}
         </div>
 
         {/* Filter button */}
@@ -745,6 +747,225 @@ export default function TasksPage() {
               ))}
             </div>
           )}
+        </motion.div>
+      )}
+
+      {/* ═══ CALENDAR VIEW ═══ */}
+      {viewMode === 'calendar' && (
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="mt-3">
+          {(() => {
+            const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+            const DAY_NAMES_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const DAY_NAMES_AR = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+            const dayNames = isAr ? DAY_NAMES_AR : DAY_NAMES_EN;
+
+            const { year, month } = calMonth;
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const pad = (n: number) => String(n).padStart(2, '0');
+
+            const prevMonth = () => setCalMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 });
+            const nextMonth = () => setCalMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 });
+            const goToday = () => { const d = new Date(); setCalMonth({ year: d.getFullYear(), month: d.getMonth() }); setCalDate(today); };
+
+            // Tasks for selected date
+            const selectedDateTasks = allTasks.filter(t => {
+              if (t.status === 'cancelled') return false;
+              if (t.dueDate === calDate) return true;
+              if (t.status === 'completed' && t.completedAt?.startsWith(calDate)) return true;
+              return false;
+            });
+            const doneTasks = selectedDateTasks.filter(t => t.status === 'completed');
+            const pendingTasks = selectedDateTasks.filter(t => t.status !== 'completed');
+            const isToday = calDate === today;
+            const isFuture = calDate > today;
+            const isPast = calDate < today;
+
+            // Count tasks per day for dots
+            const taskCountForDay = (d: number) => {
+              const ds = `${year}-${pad(month + 1)}-${pad(d)}`;
+              return allTasks.filter(t => t.status !== 'cancelled' && (t.dueDate === ds || (t.status === 'completed' && t.completedAt?.startsWith(ds)))).length;
+            };
+            const hasOverdueForDay = (d: number) => {
+              const ds = `${year}-${pad(month + 1)}-${pad(d)}`;
+              return ds < today && allTasks.some(t => t.dueDate === ds && t.status !== 'completed' && t.status !== 'cancelled');
+            };
+
+            const selectedDateLabel = (() => {
+              const d = new Date(calDate + 'T00:00:00');
+              if (calDate === today) return isAr ? 'اليوم' : 'Today';
+              return d.toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { weekday: 'long', day: 'numeric', month: 'long' });
+            })();
+
+            return (
+              <div className="grid gap-3 lg:grid-cols-[1fr_1.2fr]">
+                {/* Calendar grid */}
+                <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.14)' }}>
+                  {/* Month header */}
+                  <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'rgba(var(--color-primary-rgb) / 0.05)' }}>
+                    <button onClick={prevMonth} className="rounded-lg p-1.5 hover:bg-[var(--foreground)]/[0.06] transition-colors">
+                      <ChevronLeft className="h-4 w-4 text-[var(--foreground)]/60" />
+                    </button>
+                    <div className="text-center">
+                      <span className="text-sm font-bold">{isAr ? MONTH_NAMES_AR[month] : MONTH_NAMES_EN[month]} {year}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={goToday} className="rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.08] transition-colors">
+                        {isAr ? 'اليوم' : 'Today'}
+                      </button>
+                      <button onClick={nextMonth} className="rounded-lg p-1.5 hover:bg-[var(--foreground)]/[0.06] transition-colors">
+                        <ChevronRight className="h-4 w-4 text-[var(--foreground)]/60" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Day names */}
+                  <div className="grid grid-cols-7 border-t" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+                    {dayNames.map(d => (
+                      <div key={d} className="py-1.5 text-center text-[10px] font-bold text-[var(--foreground)]/40">{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Day cells */}
+                  <div className="grid grid-cols-7">
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} className="h-10" />)}
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                      const ds = `${year}-${pad(month + 1)}-${pad(d)}`;
+                      const isSelected = ds === calDate;
+                      const isTodayCell = ds === today;
+                      const count = taskCountForDay(d);
+                      const hasOverdue = hasOverdueForDay(d);
+                      return (
+                        <button key={d} onClick={() => setCalDate(ds)}
+                          className={cn(
+                            'relative h-10 flex flex-col items-center justify-center gap-0.5 transition-all text-[12px] font-semibold',
+                            isSelected ? 'text-white' : isTodayCell ? 'text-[var(--color-primary)] font-bold' : 'text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.04]',
+                          )}
+                          style={isSelected ? { background: 'var(--color-primary)', borderRadius: 8 } : undefined}
+                        >
+                          {d}
+                          {count > 0 && !isSelected && (
+                            <div className="flex gap-px">
+                              <span className={cn('h-1 w-1 rounded-full', hasOverdue ? 'bg-red-500' : 'bg-[var(--color-primary)]')} />
+                              {count > 1 && <span className="h-1 w-1 rounded-full bg-[var(--color-primary)]/50" />}
+                            </div>
+                          )}
+                          {isSelected && count > 0 && (
+                            <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-[14px] rounded-full bg-white text-[8px] font-black text-[var(--color-primary)] flex items-center justify-center">{count}</span>
+                          )}
+                          {isTodayCell && !isSelected && (
+                            <span className="absolute bottom-0.5 h-0.5 w-3 rounded-full bg-[var(--color-primary)]" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected day details */}
+                <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.14)' }}>
+                  <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'rgba(var(--color-primary-rgb) / 0.05)' }}>
+                    <div>
+                      <p className="text-sm font-bold">{selectedDateLabel}</p>
+                      <p className="text-[10px] text-[var(--foreground)]/45">
+                        {selectedDateTasks.length === 0
+                          ? (isAr ? 'لا توجد مهام' : 'No tasks')
+                          : `${doneTasks.length}/${selectedDateTasks.length} ${isAr ? 'مكتملة' : 'done'}`}
+                      </p>
+                    </div>
+                    {calDate !== today && (
+                      <button onClick={goToday} className="rounded-lg px-2.5 py-1 text-[11px] font-bold text-[var(--color-primary)] border border-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/[0.06] transition-colors">
+                        {isAr ? 'ارجع لليوم' : 'Go to today'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-3 space-y-2 max-h-[500px] overflow-y-auto">
+                    {selectedDateTasks.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 text-[var(--foreground)]/20" />
+                        <p className="text-sm font-medium text-[var(--foreground)]/40">
+                          {isFuture
+                            ? (isAr ? 'لا توجد مهام مجدولة لهذا اليوم' : 'No tasks scheduled for this day')
+                            : isPast
+                              ? (isAr ? 'لا توجد مهام لهذا اليوم' : 'No tasks for this day')
+                              : (isAr ? 'لا توجد مهام اليوم' : 'No tasks today')}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Pending / scheduled tasks */}
+                        {pendingTasks.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-1.5 flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                              {isFuture ? (isAr ? 'مجدولة' : 'Scheduled') : isToday ? (isAr ? 'متبقية' : 'Remaining') : (isAr ? 'لم تكتمل' : 'Not completed')}
+                              <span className="text-[var(--foreground)]/30">({pendingTasks.length})</span>
+                            </p>
+                            <div className="space-y-1.5">
+                              {pendingTasks.map(task => {
+                                const name = isAr ? (task.titleAr || task.titleEn) : (task.titleEn || task.titleAr);
+                                const pri = PRIORITY_CONFIG[task.priority];
+                                const isOver = task.dueDate != null && task.dueDate < today && task.status !== 'completed';
+                                return (
+                                  <button key={task.id} onClick={() => setDetailTask(task)}
+                                    className="w-full text-start rounded-xl border p-2.5 transition-all hover:shadow-md cursor-pointer"
+                                    style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.1)', borderInlineStartWidth: 3, borderInlineStartColor: isOver ? '#ef4444' : pri.border }}>
+                                    <div className="flex items-center gap-2">
+                                      <Circle className="h-4 w-4 shrink-0 text-[var(--foreground)]/20" />
+                                      <span className="text-[13px] font-bold flex-1 truncate">{name}</span>
+                                      <span className={cn('rounded px-1.5 py-0.5 text-[9px] font-bold', pri.bg, pri.color)}>{isAr ? pri.ar : pri.en}</span>
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2 ps-6">
+                                      {task.category && <span className="text-[10px] text-[var(--foreground)]/40">{task.category}</span>}
+                                      {task.estimatedMinutes && <span className="flex items-center gap-0.5 text-[10px] text-[var(--foreground)]/35"><Clock className="h-2.5 w-2.5" />{task.estimatedMinutes}{isAr ? 'د' : 'm'}</span>}
+                                      {(task.subtasks?.length ?? 0) > 0 && <span className="text-[10px] text-[var(--foreground)]/35">{task.subtasks!.filter(s => s.completed).length}/{task.subtasks!.length} {isAr ? 'فرعية' : 'subtasks'}</span>}
+                                      {isOver && <span className="text-[10px] font-bold text-red-500">{isAr ? 'متأخرة' : 'Overdue'}</span>}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Completed tasks */}
+                        {doneTasks.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-1.5 flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              {isAr ? 'مكتملة' : 'Completed'}
+                              <span className="text-[var(--foreground)]/30">({doneTasks.length})</span>
+                            </p>
+                            <div className="space-y-1.5">
+                              {doneTasks.map(task => {
+                                const name = isAr ? (task.titleAr || task.titleEn) : (task.titleEn || task.titleAr);
+                                return (
+                                  <button key={task.id} onClick={() => setDetailTask(task)}
+                                    className="w-full text-start rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-2.5 transition-all hover:shadow-md cursor-pointer"
+                                    style={{ borderInlineStartWidth: 3, borderInlineStartColor: '#10b981' }}>
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                                      <span className="text-[13px] font-bold flex-1 truncate line-through text-[var(--foreground)]/40">{name}</span>
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2 ps-6">
+                                      {task.category && <span className="text-[10px] text-[var(--foreground)]/30">{task.category}</span>}
+                                      {task.completedAt && <span className="text-[10px] text-emerald-500/60">{new Date(task.completedAt).toLocaleTimeString(isAr ? 'ar' : 'en', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </motion.div>
       )}
 
