@@ -1424,28 +1424,34 @@ export default function HabitsPage() {
               );
             })()}
 
-            {/* Search */}
-            <div className="relative w-full sm:w-auto sm:ms-auto group/search">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-300 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.4)' }} />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isAr ? 'بحث...' : 'Search...'}
-                className="rounded-xl border ps-9 pe-3 py-2 sm:py-2.5 text-xs sm:text-sm font-medium w-full sm:w-[220px] placeholder:text-[var(--foreground)] focus:outline-none transition-all duration-300 bg-transparent"
-                style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08), 0 4px 16px rgba(var(--color-primary-rgb) / 0.06)'; e.currentTarget.style.background = 'rgba(var(--color-primary-rgb) / 0.02)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'transparent'; }} />
-            </div>
           </motion.div>
 
-          {/* Add New Habit — prominent CTA */}
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2.5} className="mb-6">
+          {/* Search + Add New Habit — side by side */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2.5} className="mb-5 flex items-center gap-2.5 sm:gap-3">
+            {/* Search */}
+            <div className="relative flex-1 group/search">
+              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute end-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.15] transition-colors">
+                  <X className="h-3 w-3 text-[var(--foreground)]/50" />
+                </button>
+              )}
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={isAr ? 'ابحث عن عادة...' : 'Search habits...'}
+                className="w-full rounded-2xl border-2 ps-11 pe-10 py-3 text-sm font-semibold placeholder:text-[var(--foreground)]/30 placeholder:font-medium focus:outline-none transition-all duration-200 bg-[var(--foreground)]/[0.02]"
+                style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.1)' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--color-primary-rgb) / 0.08)'; e.currentTarget.style.background = 'var(--color-background)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.1)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'rgba(var(--foreground-rgb, 0 0 0) / 0.02)'; }} />
+            </div>
+            {/* Add Habit */}
             <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => { resetForm(); setShowForm(true); }}
-              className="w-full sm:w-auto sm:mx-auto sm:flex app-btn-primary inline-flex items-center justify-center gap-2 sm:gap-2.5 rounded-2xl px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-black text-white transition-all"
-              style={{ boxShadow: '0 8px 24px rgba(var(--color-primary-rgb) / 0.3), 0 2px 6px rgba(var(--color-primary-rgb) / 0.15)' }}
-            >
-              <Plus className="h-5 w-5" /> {isAr ? 'إضافة عادة جديدة' : 'Add New Habit'}
+              className="shrink-0 flex items-center gap-2 rounded-2xl px-5 sm:px-7 py-3 text-sm font-extrabold text-white transition-all app-btn-primary"
+              style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 6px 20px rgba(var(--color-primary-rgb) / 0.25)' }}>
+              <Plus className="h-5 w-5" />
+              <span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
             </motion.button>
           </motion.div>
 
