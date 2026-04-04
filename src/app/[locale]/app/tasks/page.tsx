@@ -1114,6 +1114,11 @@ export default function TasksPage() {
                     <FieldLabel>{isAr ? 'تاريخ الاستحقاق' : 'Due Date'}</FieldLabel>
                     <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
                       className="w-full rounded-xl border border-[var(--foreground)]/10 bg-transparent px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                    {!form.dueDate && (
+                      <p className="mt-1 text-[10px] text-amber-500/80">
+                        {isAr ? '⚠ بدون تاريخ ستظهر في "لاحقاً" فقط' : '⚠ Without a date, task goes to "Upcoming" only'}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <FieldLabel>{isAr ? 'الوقت' : 'Time'}</FieldLabel>
