@@ -68,7 +68,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[800px] mx-auto">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[800px] mx-auto">
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">{isAr ? 'الإعدادات' : 'Settings'}</h1>
         <p className="text-sm text-[var(--foreground)]/70 mt-1">{isAr ? 'تخصيص تجربتك' : 'Customize your experience'}</p>

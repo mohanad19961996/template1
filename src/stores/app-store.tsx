@@ -581,7 +581,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       if (h.frequency === 'daily') return true;
       if (h.frequency === 'weekly') {
         const dayOfWeek = todayDate.getDay() as number;
-        return h.customDays?.includes(dayOfWeek as any) ?? dayOfWeek === 0;
+        if (h.customDays?.length) return h.customDays.includes(dayOfWeek as any);
+        return dayOfWeek === 0;
+      }
+      if (h.frequency === 'monthly') {
+        if (h.customMonthDays?.length) return h.customMonthDays.includes(todayDate.getDate());
+        return todayDate.getDate() === 1;
       }
       if (h.frequency === 'custom' && h.customScheduleType) {
         if (h.customScheduleType === 'weekdays' && h.customDays?.length) {

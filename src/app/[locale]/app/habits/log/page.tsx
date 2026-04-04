@@ -98,7 +98,7 @@ export default function HabitsLogPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1000px] mx-auto">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1000px] mx-auto">
       {/* Header */}
       <div className="mb-8">
         <Link href="/app/habits" className="inline-flex items-center gap-1.5 text-sm font-bold mb-4 transition-all duration-300 hover:gap-2.5 group" style={{ color: 'var(--color-primary)' }}>
@@ -172,7 +172,7 @@ export default function HabitsLogPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         {[
           { label: isAr ? 'إنجازات' : 'Completions', value: totalCompletions, icon: CheckCircle2 },
           { label: isAr ? 'أيام نشطة' : 'Active Days', value: dayData.length, icon: CalendarIcon },

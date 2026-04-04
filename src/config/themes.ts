@@ -56,6 +56,14 @@ export const themes: Record<string, ThemeConfig> = {
     accent: { light: "#4338CA", dark: "#A5B4FC" },
     rgb: { light: "79 70 229", dark: "129 140 248" },
   },
+  teal: {
+    name: "teal",
+    label: "Teal",
+    labelAr: "تركواز",
+    primary: { light: "#0D9488", dark: "#2DD4BF" },
+    accent: { light: "#0F766E", dark: "#5EEAD4" },
+    rgb: { light: "13 148 136", dark: "45 212 191" },
+  },
   black: {
     name: "black",
     label: "Black",

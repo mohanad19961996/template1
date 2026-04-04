@@ -110,9 +110,20 @@ export default function DashboardPage() {
   const activeHabits = useMemo(() => store.habits.filter(h => !h.archived), [store.habits]);
   const todayHabits = useMemo(() => activeHabits.filter(h => {
     if (h.frequency === 'daily') return true;
+    const d = parseLocalDate(today);
     if (h.frequency === 'weekly') {
-      const dow = parseLocalDate(today).getDay();
-      return h.customDays?.includes(dow as any) ?? true;
+      const dow = d.getDay();
+      if (h.customDays?.length) return h.customDays.includes(dow as any);
+      return dow === 0; // default to Sunday
+    }
+    if (h.frequency === 'monthly') {
+      if (h.customMonthDays?.length) return h.customMonthDays.includes(d.getDate());
+      return d.getDate() === 1;
+    }
+    if (h.frequency === 'custom' && h.customScheduleType) {
+      if (h.customScheduleType === 'weekdays' && h.customDays?.length) return h.customDays.includes(d.getDay() as any);
+      if (h.customScheduleType === 'monthdays' && h.customMonthDays?.length) return h.customMonthDays.includes(d.getDate());
+      if (h.customScheduleType === 'yeardays' && h.customYearDays?.length) return h.customYearDays.some(yd => yd.month === d.getMonth() && yd.day === d.getDate());
     }
     return true;
   }), [activeHabits, today]);
@@ -165,7 +176,7 @@ export default function DashboardPage() {
   const GreetingIcon = hour < 12 ? Sun : hour < 17 ? Coffee : Moon;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1400px] mx-auto">
       {/* Active Timer */}
       <ActiveTimerCard store={store} isAr={isAr} />
 

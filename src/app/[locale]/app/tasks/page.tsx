@@ -231,7 +231,7 @@ export default function TasksPage() {
   // ── Render ──
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1600px] mx-auto">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1600px] mx-auto">
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* HEADER */}

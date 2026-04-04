@@ -7,9 +7,8 @@ import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard, ListChecks, GraduationCap, Timer, BarChart3,
-  Calendar, Bell, Brain, Apple, Target, Settings,
-  Sparkles, X, AlarmClock, ClipboardList, Library,
+  LayoutDashboard, ListChecks, Timer,
+  Settings, Sparkles, X, ClipboardList, Library,
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,28 +33,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/app', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: LayoutDashboard },
       { href: '/app/habits', labelEn: "Today's Habits", labelAr: 'عادات اليوم', icon: ListChecks },
       { href: '/app/habits/all', labelEn: 'All Habits', labelAr: 'كل العادات', icon: Library },
-      { href: '/app/skills', labelEn: 'Skills', labelAr: 'المهارات', icon: GraduationCap },
       { href: '/app/tasks', labelEn: 'Tasks', labelAr: 'المهام', icon: ClipboardList },
       { href: '/app/timers', labelEn: 'Timers', labelAr: 'المؤقتات', icon: Timer },
-    ],
-  },
-  {
-    titleEn: 'Insights',
-    titleAr: 'التحليلات',
-    items: [
-      { href: '/app/analytics', labelEn: 'Analytics', labelAr: 'التحليلات', icon: BarChart3 },
-      { href: '/app/calendar', labelEn: 'Calendar', labelAr: 'التقويم', icon: Calendar },
-      { href: '/app/goals', labelEn: 'Goals', labelAr: 'الأهداف', icon: Target },
-      { href: '/app/alarms', labelEn: 'Alarms', labelAr: 'المنبهات', icon: AlarmClock },
-      { href: '/app/reminders', labelEn: 'Reminders', labelAr: 'التذكيرات', icon: Bell },
-    ],
-  },
-  {
-    titleEn: 'Wellness',
-    titleAr: 'العافية',
-    items: [
-      { href: '/app/hormones', labelEn: 'Hormones', labelAr: 'الهرمونات', icon: Brain },
-      { href: '/app/nutrition', labelEn: 'Nutrition', labelAr: 'التغذية', icon: Apple },
     ],
   },
 ];

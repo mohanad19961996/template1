@@ -2788,7 +2788,7 @@ select.app-input option {
   .tab-trigger { padding: 0.625rem 1rem; }
 }
 
-/* ── Mobile-specific ── */
+/* ── Mobile-specific (phones, ≤640px) ── */
 @media (max-width: 640px) {
   :root {
     --section-y: clamp(2rem, 6vw, 3rem);
@@ -2798,6 +2798,28 @@ select.app-input option {
   .hero-cta-stack {
     flex-direction: column;
     width: 100%;
+  }
+
+  /* ── App page container: tighter padding on mobile ── */
+  .px-4.sm\:px-6.lg\:px-8 {
+    padding-inline: 0.75rem;
+  }
+
+  /* ── Grids: force fewer columns on small screens ── */
+  /* 4-col grids become 2-col */
+  .grid.grid-cols-4,
+  .grid.lg\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* ── Modals: full width with minimal margin ── */
+  [class*="fixed"][class*="inset-x"] {
+    inset-inline: 0.5rem;
+  }
+
+  /* ── Dropdowns: constrain width to viewport ── */
+  [class*="absolute"][class*="z-50"] {
+    max-width: calc(100vw - 1rem);
   }
 
   /* Bottom sheet base */
@@ -2822,10 +2844,15 @@ select.app-input option {
   }
 }
 
-/* ── Tablet optimization ── */
+/* ── Tablet optimization (641px – 1024px) ── */
 @media (min-width: 641px) and (max-width: 1024px) {
   :root {
     --section-y: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  /* ── Tighter page padding on tablet ── */
+  .px-4.sm\:px-6.lg\:px-8 {
+    padding-inline: 1rem;
   }
 }
 

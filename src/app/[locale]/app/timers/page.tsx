@@ -321,7 +321,7 @@ export default function TimersPage() {
 
   const containerClass = fullscreen
     ? 'fixed inset-0 z-[var(--z-modal)] bg-[var(--color-background)] flex flex-col items-center justify-center'
-    : 'px-4 sm:px-6 lg:px-8 py-6 pb-20 max-w-[1400px] mx-auto';
+    : 'px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1400px] mx-auto';
 
   /* ────────────────────────────────────────────────────────────── */
   return (
@@ -863,7 +863,7 @@ export default function TimersPage() {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 mb-4">
                       {isAr ? 'المدة' : 'Duration'}
                     </h3>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[5, 10, 15, 25, 30, 45, 60, 90].map(m => {
                         const isSelected = customH === 0 && customS === 0 && customM === m;
                         return (

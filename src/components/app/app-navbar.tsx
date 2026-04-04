@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useLocale } from 'next-intl';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { Menu, Moon, Sun, Globe, PanelLeftClose, PanelLeftOpen, CheckCircle2, Timer, Pause, Play, ListChecks, ArrowRight, ChevronDown } from 'lucide-react';
@@ -11,9 +11,43 @@ import { Link } from '@/i18n/navigation';
 import { useTimerDisplay } from '@/lib/use-timer-display';
 
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useAppStore } from '@/stores/app-store';
 import { Habit, WeekDay, todayString, parseLocalDate, resolveHabitColor, formatTimerDuration } from '@/types/app';
+
+const NAV_DROPDOWN_EASE = [0.16, 1, 0.3, 1] as const;
+
+const navDropdownMotion = {
+  initial: { opacity: 0, y: 12, scale: 0.94 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 8, scale: 0.97 },
+  transition: { duration: 0.28, ease: NAV_DROPDOWN_EASE },
+};
+
+const NAV_DROPDOWN_LEAVE_MS = 100;
+
+function useNavbarDropdownHover() {
+  const [open, setOpen] = useState(false);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+  }, []);
+
+  const onEnter = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    setOpen(true);
+  };
+
+  const onLeave = () => {
+    leaveTimerRef.current = setTimeout(() => setOpen(false), NAV_DROPDOWN_LEAVE_MS);
+  };
+
+  return { open, onEnter, onLeave };
+}
 
 interface AppNavbarProps {
   sidebarCollapsed: boolean;
@@ -41,11 +75,13 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
 
   const langLabel = locale === 'ar' ? 'EN' : 'عربي';
 
-  // Scroll progress
+  // Scroll progress + sticky depth
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => {
       const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      setHeaderScrolled(scrollTop > 6);
       const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
       if (scrollHeight <= 0) { setScrollProgress(0); return; }
       setScrollProgress(Math.min(100, Math.round((scrollTop / scrollHeight) * 100)));
@@ -60,40 +96,43 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
   const titles: Record<string, { en: string; ar: string }> = {
     app: { en: 'Dashboard', ar: 'لوحة التحكم' },
     habits: { en: '', ar: '' },
-    skills: { en: 'Skills', ar: 'المهارات' },
     timers: { en: 'Timers', ar: 'المؤقتات' },
-    analytics: { en: 'Analytics', ar: 'التحليلات' },
-    calendar: { en: 'Calendar', ar: 'التقويم' },
-    goals: { en: 'Goals', ar: 'الأهداف' },
-    alarms: { en: 'Alarms', ar: 'المنبهات' },
-    reminders: { en: 'Reminders', ar: 'التذكيرات' },
-    hormones: { en: 'Hormones', ar: 'الهرمونات' },
-    nutrition: { en: 'Nutrition', ar: 'التغذية' },
     settings: { en: 'Settings', ar: 'الإعدادات' },
   };
   const pageTitle = titles[segment] || titles.app;
 
   return (
     <header
-      className="sticky top-0 z-[var(--z-sticky)] flex flex-col"
-      style={{ background: 'var(--color-background)' }}
+      className={cn(
+        'sticky top-0 z-[var(--z-sticky)] flex flex-col transition-[box-shadow,background-color] duration-300 ease-out',
+        headerScrolled &&
+          'shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12),0_4px_24px_-4px_rgba(var(--color-primary-rgb),0.07)] dark:shadow-[0_12px_48px_-12px_rgba(0,0,0,0.45)]',
+      )}
+      style={{
+        background: 'color-mix(in srgb, var(--color-background) 88%, transparent)',
+        backdropFilter: 'saturate(1.15) blur(14px)',
+        WebkitBackdropFilter: 'saturate(1.15) blur(14px)',
+      }}
     >
-      {/* Top scroll progress bar */}
-      <div className="h-1 w-full" style={{ background: 'rgba(var(--color-primary-rgb) / 0.1)' }}>
+      {/* Scroll progress — slim accent track */}
+      <div
+        className="relative h-[3px] w-full overflow-hidden"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(var(--color-primary-rgb) / 0.12), transparent)' }}
+      >
         <div
           className="h-full rounded-e-full"
           style={{
             width: `${scrollProgress}%`,
-            background: 'var(--color-primary)',
+            maxWidth: '100%',
+            background: 'linear-gradient(90deg, rgb(var(--color-primary-rgb) / 0.65), var(--color-primary))',
+            boxShadow: '0 0 14px rgb(var(--color-primary-rgb) / 0.45)',
             transition: 'width 0.1s linear',
           }}
         />
       </div>
 
       {/* Main navbar */}
-      <div
-        className="h-20 flex items-center justify-between gap-4 px-5 sm:px-8"
-      >
+      <div className="flex min-h-[3.5rem] sm:min-h-[4.5rem] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
         {/* Left side */}
         <div className="flex items-center gap-4">
           {/* Mobile menu button — hidden on lg+ (sidebar visible) */}
@@ -102,7 +141,7 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
               whileHover={{ scale: 1.08, y: -1 }}
               whileTap={{ scale: 0.92 }}
               onClick={onOpenMobile}
-              className="h-11 w-11 icon-btn"
+              className="h-10 w-10 sm:h-11 sm:w-11 icon-btn"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
@@ -139,13 +178,13 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
 
           {/* Page title */}
           {(isAr ? pageTitle.ar : pageTitle.en) && (
-            <div className="flex items-center gap-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
               <motion.h1
                 key={segment}
-                initial={{ opacity: 0, y: 4 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="text-xl font-bold tracking-tight"
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                className="truncate border-s-[3px] border-[var(--color-primary)] ps-3 text-xl font-bold tracking-tight text-[var(--foreground)]"
               >
                 {isAr ? pageTitle.ar : pageTitle.en}
               </motion.h1>
@@ -153,63 +192,82 @@ export function AppNavbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: A
           )}
         </div>
 
-        {/* Right side — controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Timer status */}
-          <NavTimerStatus isAr={isAr} />
-
-          {/* Habit progress */}
-          <HabitProgress isAr={isAr} />
-
-          {/* Live clock */}
-          <LiveClock isAr={isAr} />
-
-          {/* Theme color switcher */}
-          <ThemeSwitcher />
-
-          {/* Language switcher */}
-          <motion.button
-            whileHover={{ scale: 1.06, y: -1 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={switchLocale}
-            className="h-11 px-4 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold uppercase tracking-wider cursor-pointer icon-btn !w-auto"
-            aria-label="Switch language"
+        {/* Right side — grouped status strip + actions */}
+        <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
+          <div
+            className="hidden min-w-0 items-center gap-2 rounded-[14px] border border-[rgba(var(--color-primary-rgb)/0.1)] bg-[rgba(var(--color-primary-rgb)/0.035)] px-2 py-1 sm:flex sm:gap-2.5 md:gap-3 md:px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] dark:border-white/[0.06] dark:bg-white/[0.03] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
           >
-            <Globe className="h-4 w-4 opacity-70" />
-            <motion.span
-              key={locale}
-              initial={{ y: 6, opacity: 0, filter: 'blur(4px)' }}
-              animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            >
-              {langLabel}
-            </motion.span>
-          </motion.button>
+            <NavTimerStatus isAr={isAr} />
+            <span
+              className="hidden md:block h-7 w-px shrink-0 bg-[rgba(var(--color-primary-rgb)/0.12)] dark:bg-white/10"
+              aria-hidden
+            />
+            <HabitProgress isAr={isAr} />
+            <span
+              className="hidden md:block h-7 w-px shrink-0 bg-[rgba(var(--color-primary-rgb)/0.12)] dark:bg-white/10"
+              aria-hidden
+            />
+            <LiveClock isAr={isAr} />
+          </div>
 
-          {/* Dark mode toggle */}
-          {mounted && (
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <ThemeSwitcher />
             <motion.button
-              whileHover={{ scale: 1.08, y: -1 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={toggleDark}
-              className="h-11 w-11 icon-btn cursor-pointer"
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.94 }}
+              onClick={switchLocale}
+              className="icon-btn !h-10 sm:!h-11 !w-auto cursor-pointer gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-4 text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.08em]"
+              aria-label="Switch language"
             >
-              <motion.div
-                key={theme}
-                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              <Globe className="h-4 w-4 opacity-60" strokeWidth={2.25} />
+              <motion.span
+                key={locale}
+                initial={{ y: 6, opacity: 0, filter: 'blur(4px)' }}
+                animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </motion.div>
+                {langLabel}
+              </motion.span>
             </motion.button>
-          )}
+
+            {mounted && (
+              <motion.button
+                whileHover={{ scale: 1.06, y: -1 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={toggleDark}
+                className="group icon-btn relative h-10 w-10 sm:h-11 sm:w-11 cursor-pointer overflow-hidden"
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                <span
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{
+                    background:
+                      'radial-gradient(circle at 30% 20%, rgba(var(--color-primary-rgb) / 0.2), transparent 55%)',
+                  }}
+                />
+                <motion.div
+                  key={theme}
+                  className="relative"
+                  initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                >
+                  {isDark ? <Sun className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.25} /> : <Moon className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.25} />}
+                </motion.div>
+              </motion.button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Bottom border */}
-      <div className="h-px w-full" style={{ background: 'rgba(var(--color-primary-rgb) / 0.18)' }} />
+      <div
+        className="h-px w-full"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent, rgba(var(--color-primary-rgb) / 0.16), transparent)',
+        }}
+        aria-hidden
+      />
     </header>
   );
 }
@@ -245,7 +303,7 @@ function LiveClock({ isAr }: { isAr: boolean }) {
       className={cn(
         'hidden md:flex flex-col items-center justify-center gap-0.5 px-3.5 py-1.5 rounded-xl select-none cursor-default',
         'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        hovered && 'scale-[2] z-50 shadow-2xl rounded-2xl',
+        hovered && 'z-50 scale-[1.08] rounded-2xl shadow-2xl sm:scale-[1.12]',
       )}
       style={{
         background: hovered ? 'var(--color-background)' : 'rgba(var(--color-primary-rgb) / 0.04)',
@@ -303,7 +361,7 @@ function isHabitScheduledForDate(habit: Habit, dateStr: string): boolean {
 function HabitProgress({ isAr }: { isAr: boolean }) {
   const store = useAppStore();
   const today = todayString();
-  const [open, setOpen] = useState(false);
+  const { open, onEnter, onLeave } = useNavbarDropdownHover();
 
   const { done, total, scheduled, completedIds } = useMemo(() => {
     const sched = store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, today));
@@ -317,11 +375,7 @@ function HabitProgress({ isAr }: { isAr: boolean }) {
   const pendingHabits = scheduled.filter(h => !completedIds.has(h.id));
 
   return (
-    <div
-      className="relative hidden md:block"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div className="relative hidden md:block" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Trigger */}
       <motion.div
         whileHover={{ scale: 1.04, y: -1 }}
@@ -342,7 +396,7 @@ function HabitProgress({ isAr }: { isAr: boolean }) {
           <span className={cn('text-sm font-extrabold tabular-nums', allDone ? 'text-emerald-500' : 'text-[var(--foreground)]')}>
             {done}<span className="text-[var(--foreground)]/40">/{total}</span>
           </span>
-          <ChevronDown className={cn('h-3 w-3 text-[var(--foreground)]/40 transition-transform duration-200', open && 'rotate-180')} />
+          <ChevronDown className={cn('h-3 w-3 text-[var(--foreground)]/40 transition-transform duration-300 ease-out', open && 'rotate-180')} />
         </div>
         <div className="text-[11px] font-semibold text-[var(--foreground)]/50">
           {allDone
@@ -351,17 +405,27 @@ function HabitProgress({ isAr }: { isAr: boolean }) {
         </div>
       </motion.div>
 
-      {/* Dropdown — pt-1 creates hover bridge so menu stays open when moving mouse to it */}
-      {open && (
-        <div className={cn('absolute top-full pt-1 z-50', isAr ? 'right-0' : 'left-0')}>
-          <div
-            className="rounded-2xl min-w-[280px] overflow-hidden backdrop-blur-xl"
-            style={{
-              background: 'var(--color-background)',
-              border: '1.5px solid rgba(var(--color-primary-rgb) / 0.15)',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.08)',
-            }}
+      {/* Dropdown — pt-1 creates hover bridge; AnimatePresence runs exit before unmount */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="habit-progress-dropdown"
+            className={cn('absolute top-full z-50 pt-1', isAr ? 'right-0' : 'left-0')}
+            style={{ transformOrigin: isAr ? 'top right' : 'top left' }}
+            initial={navDropdownMotion.initial}
+            animate={navDropdownMotion.animate}
+            exit={navDropdownMotion.exit}
+            transition={navDropdownMotion.transition}
           >
+            <div
+              className="min-w-[280px] overflow-hidden rounded-2xl backdrop-blur-xl"
+              style={{
+                background: 'var(--color-background)',
+                border: '1.5px solid rgba(var(--color-primary-rgb) / 0.15)',
+                boxShadow:
+                  '0 20px 50px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
+              }}
+            >
             {/* Header — progress */}
             <div className="px-4 pt-3 pb-2.5 border-b border-[var(--foreground)]/[0.06]">
               <div className="flex items-center justify-between mb-2">
@@ -449,9 +513,10 @@ function HabitProgress({ isAr }: { isAr: boolean }) {
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -461,15 +526,11 @@ function NavTimerStatus({ isAr }: { isAr: boolean }) {
   const store = useAppStore();
   const active = store.activeTimer;
   const { elapsed } = useTimerDisplay(active && active.state !== 'completed' ? active : null);
-  const [open, setOpen] = useState(false);
+  const { open, onEnter, onLeave } = useNavbarDropdownHover();
 
   if (!active || active.state === 'completed') {
     return (
-      <div
-        className="relative hidden sm:block"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-      >
+      <div className="relative hidden sm:block" onMouseEnter={onEnter} onMouseLeave={onLeave}>
         <motion.div whileHover={{ scale: 1.04, y: -1 }}>
           <div
             className={cn(
@@ -490,44 +551,55 @@ function NavTimerStatus({ isAr }: { isAr: boolean }) {
           </div>
         </motion.div>
 
-        {open && (
-          <div className={cn('absolute top-full pt-1 z-50', isAr ? 'right-0' : 'left-0')}>
-            <div
-              className="rounded-2xl min-w-[240px] overflow-hidden backdrop-blur-xl"
-              style={{
-                background: 'var(--color-background)',
-                border: '1.5px solid rgba(var(--color-primary-rgb) / 0.15)',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.08)',
-              }}
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              key="timer-empty-dropdown"
+              className={cn('absolute top-full z-50 pt-1', isAr ? 'right-0' : 'left-0')}
+              style={{ transformOrigin: isAr ? 'top right' : 'top left' }}
+              initial={navDropdownMotion.initial}
+              animate={navDropdownMotion.animate}
+              exit={navDropdownMotion.exit}
+              transition={navDropdownMotion.transition}
             >
-              <div className="px-4 py-4 text-center">
-                <div className="h-10 w-10 rounded-xl mx-auto mb-2.5 flex items-center justify-center" style={{ background: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-                  <Timer className="h-5 w-5 text-[var(--color-primary)]" />
+              <div
+                className="min-w-[240px] overflow-hidden rounded-2xl backdrop-blur-xl"
+                style={{
+                  background: 'var(--color-background)',
+                  border: '1.5px solid rgba(var(--color-primary-rgb) / 0.15)',
+                  boxShadow:
+                    '0 20px 50px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.04), inset 0 1px 0 rgba(255,255,255,0.08)',
+                }}
+              >
+                <div className="px-4 py-4 text-center">
+                  <div className="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+                    <Timer className="h-5 w-5 text-[var(--color-primary)]" />
+                  </div>
+                  <p className="mb-1 text-sm font-bold text-[var(--foreground)]/70">
+                    {isAr ? 'لا يوجد مؤقت نشط' : 'No Active Timer'}
+                  </p>
+                  <p className="text-[11px] text-[var(--foreground)]/40">
+                    {isAr ? 'ابدأ مؤقتاً من صفحة المؤقتات' : 'Start a timer from the timers page'}
+                  </p>
                 </div>
-                <p className="text-sm font-bold text-[var(--foreground)]/70 mb-1">
-                  {isAr ? 'لا يوجد مؤقت نشط' : 'No Active Timer'}
-                </p>
-                <p className="text-[11px] text-[var(--foreground)]/40">
-                  {isAr ? 'ابدأ مؤقتاً من صفحة المؤقتات' : 'Start a timer from the timers page'}
-                </p>
+                <div className="border-t border-[var(--foreground)]/[0.06] px-3 py-2.5">
+                  <Link
+                    href="/app/timers"
+                    className={cn(
+                      'flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all duration-200',
+                      'bg-[var(--color-primary)] text-white',
+                      'hover:opacity-90 hover:shadow-md',
+                      'active:scale-[0.98]',
+                    )}
+                  >
+                    {isAr ? 'فتح صفحة المؤقتات' : 'Open Timers Page'}
+                    <ArrowRight className={cn('h-3 w-3', isAr && 'rotate-180')} />
+                  </Link>
+                </div>
               </div>
-              <div className="px-3 py-2.5 border-t border-[var(--foreground)]/[0.06]">
-                <Link
-                  href="/app/timers"
-                  className={cn(
-                    'flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold transition-all duration-200',
-                    'bg-[var(--color-primary)] text-white',
-                    'hover:opacity-90 hover:shadow-md',
-                    'active:scale-[0.98]',
-                  )}
-                >
-                  {isAr ? 'فتح صفحة المؤقتات' : 'Open Timers Page'}
-                  <ArrowRight className={cn('h-3 w-3', isAr && 'rotate-180')} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -552,11 +624,7 @@ function NavTimerStatus({ isAr }: { isAr: boolean }) {
       : (isAr ? 'ساعة إيقاف' : 'Stopwatch');
 
   return (
-    <div
-      className="relative hidden sm:block"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div className="relative hidden sm:block" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Trigger */}
       <motion.div whileHover={{ scale: 1.05, y: -1 }}>
         <div
@@ -598,17 +666,25 @@ function NavTimerStatus({ isAr }: { isAr: boolean }) {
         </div>
       </motion.div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className={cn('absolute top-full pt-1 z-50', isAr ? 'right-0' : 'left-0')}>
-          <div
-            className="rounded-2xl min-w-[280px] overflow-hidden backdrop-blur-xl"
-            style={{
-              background: 'var(--color-background)',
-              border: `1.5px solid ${hc}20`,
-              boxShadow: `0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06), 0 4px 16px ${hc}10, inset 0 1px 0 rgba(255,255,255,0.08)`,
-            }}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="timer-active-dropdown"
+            className={cn('absolute top-full z-50 pt-1', isAr ? 'right-0' : 'left-0')}
+            style={{ transformOrigin: isAr ? 'top right' : 'top left' }}
+            initial={navDropdownMotion.initial}
+            animate={navDropdownMotion.animate}
+            exit={navDropdownMotion.exit}
+            transition={navDropdownMotion.transition}
           >
+            <div
+              className="min-w-[280px] overflow-hidden rounded-2xl backdrop-blur-xl"
+              style={{
+                background: 'var(--color-background)',
+                border: `1.5px solid ${hc}20`,
+                boxShadow: `0 20px 50px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.08), 0 4px 20px ${hc}12, inset 0 1px 0 rgba(255,255,255,0.08)`,
+              }}
+            >
             {/* Header */}
             <div className="px-4 pt-3 pb-2.5 border-b border-[var(--foreground)]/[0.06]">
               <div className="flex items-center gap-2.5">
@@ -725,8 +801,9 @@ function NavTimerStatus({ isAr }: { isAr: boolean }) {
               </Link>
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
