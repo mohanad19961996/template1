@@ -4126,14 +4126,20 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
                 <Edit3 className="h-3.5 w-3.5" />
                 {isAr ? 'تعديل' : 'Edit'}
               </button>
-              {onArchive && (
-                <button onClick={() => { onArchive(); onClose(); toast.notifySuccess(isAr ? (habit.archived ? 'تم استعادة العادة' : 'تم أرشفة العادة') : (habit.archived ? 'Habit restored' : 'Habit archived')); }}
-                  className="shrink-0 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm border-amber-500/25 text-amber-600 bg-amber-500/5 hover:bg-amber-500/10"
-                  title={isAr ? (habit.archived ? 'استعادة' : 'أرشفة') : (habit.archived ? 'Restore' : 'Archive')}>
-                  <Archive className="h-3.5 w-3.5" />
-                  {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
-                </button>
-              )}
+              {onArchive && (() => {
+                const archivedCount = store.habits.filter(h => h.archived).length;
+                return (
+                  <button onClick={() => { onArchive(); onClose(); toast.notifySuccess(isAr ? (habit.archived ? 'تم استعادة العادة' : 'تم أرشفة العادة') : (habit.archived ? 'Habit restored' : 'Habit archived')); }}
+                    className="shrink-0 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm border-amber-500/25 text-amber-600 bg-amber-500/5 hover:bg-amber-500/10"
+                    title={isAr ? (habit.archived ? 'استعادة' : 'أرشفة') : (habit.archived ? 'Restore' : 'Archive')}>
+                    <Archive className="h-3.5 w-3.5" />
+                    {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
+                    {archivedCount > 0 && (
+                      <span className="rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-black tabular-nums text-amber-600">{archivedCount}</span>
+                    )}
+                  </button>
+                );
+              })()}
               {onDelete && (
                 <button onClick={() => setShowDeleteConfirm(true)}
                   className="shrink-0 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm border-red-500/25 text-red-500 bg-red-500/5 hover:bg-red-500/10"
