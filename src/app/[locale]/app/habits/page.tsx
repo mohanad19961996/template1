@@ -552,13 +552,13 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
   }, [orderedCategories, store]);
 
   const handleDelete = useCallback((category: string) => {
-    const habitsInCategory = store.habits.filter(h => h.category === category);
-    if (habitsInCategory.length > 0) {
+    const activeHabitsInCategory = store.habits.filter(h => !h.archived && h.category === category);
+    if (activeHabitsInCategory.length > 0) {
       toast.notifyWarning(
         isAr ? 'لا يمكن حذف الفئة' : 'Cannot delete category',
         isAr
-          ? `${habitsInCategory.length} عادة تستخدم هذه الفئة. غيّر فئتها أولاً`
-          : `${habitsInCategory.length} habit${habitsInCategory.length > 1 ? 's' : ''} use this category. Move them first`
+          ? `${activeHabitsInCategory.length} عادة نشطة تستخدم هذه الفئة. غيّر فئتها أولاً`
+          : `${activeHabitsInCategory.length} active habit${activeHabitsInCategory.length > 1 ? 's' : ''} use this category. Move them first`
       );
       return;
     }
@@ -574,8 +574,8 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
   }, [store, isAr, filterCategory, setFilterCategory, toast]);
 
   const getDeleteStatus = useCallback((category: string): boolean | 'has_habits' => {
-    const habitsInCategory = store.habits.filter(h => h.category === category);
-    if (habitsInCategory.length > 0) return 'has_habits';
+    const activeHabitsInCategory = store.habits.filter(h => !h.archived && h.category === category);
+    if (activeHabitsInCategory.length > 0) return 'has_habits';
     return true;
   }, [store.habits]);
 
