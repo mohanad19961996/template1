@@ -1205,54 +1205,119 @@ export default function HabitsPage() {
       {/* ═══ Sticky Active Timer Banner ═══ */}
       <ActiveTimerBanner store={store} isAr={isAr} today={today} onDetail={(h) => setDetailHabit(h)} />
 
-      {/* ═══ Hero — themed banner with stats ═══ */}
+      {/* ═══ Hero — clean themed banner ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl mb-5"
+        className="relative overflow-hidden rounded-2xl mb-3"
         style={{
           background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.7))',
           boxShadow: '0 6px 24px rgba(var(--color-primary-rgb) / 0.18)',
         }}
       >
-        {/* Subtle decorative glow */}
         <div className="pointer-events-none absolute -end-16 -top-16 h-48 w-48 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)' }} />
-
-        <div className="relative z-10 flex items-center justify-between gap-4 px-5 py-4 sm:px-7 sm:py-5">
-          {/* Left: Icon + Title */}
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 sm:h-12 sm:w-12 flex items-center justify-center rounded-xl shrink-0"
-              style={{ background: 'rgba(255,255,255,0.18)' }}>
-              <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                {isAr ? 'العادات' : 'Habits'}
-              </h1>
-              <p className="text-[11px] sm:text-xs font-medium text-white/65">
-                {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
-              </p>
-            </div>
+        <div className="relative z-10 flex items-center gap-3 px-5 py-3.5 sm:px-7 sm:py-4">
+          <div className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl shrink-0"
+            style={{ background: 'rgba(255,255,255,0.18)' }}>
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
-
-          {/* Right: Stats */}
-          <div className="flex items-center gap-2">
-            {/* Today's target */}
-            <div className="text-center rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <p className="text-base sm:text-lg font-black tabular-nums leading-none text-white">{todayScheduledCount}</p>
-              <p className="text-[8px] sm:text-[9px] font-bold text-white/60 mt-0.5">{isAr ? 'لليوم' : 'Today'}</p>
-            </div>
-            {/* Done */}
-            <div className="text-center rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.22)' }}>
-              <p className="text-base sm:text-lg font-black tabular-nums leading-none text-white">
-                {completedTodayCount}<span className="text-[10px] font-bold text-white/40">/{todayScheduledCount}</span>
-              </p>
-              <p className="text-[8px] sm:text-[9px] font-bold text-white/60 mt-0.5">{isAr ? 'مكتملة' : 'Done'}</p>
-            </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
+              {isAr ? 'العادات' : 'Habits'}
+            </h1>
+            <p className="text-[10px] sm:text-[11px] font-medium text-white/60">
+              {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
+            </p>
           </div>
         </div>
       </motion.div>
+
+      {/* ═══ Stats Section ═══ */}
+      {(() => {
+        const completionRate = todayScheduledCount > 0 ? Math.round((completedTodayCount / todayScheduledCount) * 100) : 0;
+        const bestStreak = store.habits.filter(h => !h.archived).reduce((max, h) => {
+          const s = store.getHabitStreak(h.id);
+          return s.best > max ? s.best : max;
+        }, 0);
+        const currentStreaks = store.habits.filter(h => !h.archived).map(h => store.getHabitStreak(h.id).current).filter(c => c > 0);
+        const activeStreaks = currentStreaks.length;
+        const todayTimeSecs = store.habitLogs
+          .filter(l => l.date === today && l.duration)
+          .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+        const todayTimeLabel = todayTimeSecs >= 3600
+          ? `${Math.floor(todayTimeSecs / 3600)}h ${Math.floor((todayTimeSecs % 3600) / 60)}m`
+          : todayTimeSecs >= 60 ? `${Math.floor(todayTimeSecs / 60)}m` : `${todayTimeSecs}s`;
+
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+            className="mb-3 grid grid-cols-2 sm:grid-cols-5 gap-2"
+          >
+            {/* Today's Progress */}
+            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
+              <div className="relative h-9 w-9 shrink-0">
+                <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-[var(--foreground)]/[0.06]" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--color-primary)" strokeWidth="3"
+                    strokeDasharray={`${completionRate * 0.88} 88`} strokeLinecap="round" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black" style={{ color: 'var(--color-primary)' }}>{completionRate}%</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold tabular-nums">{completedTodayCount}<span className="text-[var(--foreground)]/30">/{todayScheduledCount}</span></p>
+                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
+              </div>
+            </div>
+
+            {/* Active Streaks */}
+            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-orange-500/10">
+                <Flame className="h-4.5 w-4.5 text-orange-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold tabular-nums">{activeStreaks}</p>
+                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'سلاسل نشطة' : 'Active streaks'}</p>
+              </div>
+            </div>
+
+            {/* Best Streak */}
+            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-purple-500/10">
+                <Award className="h-4.5 w-4.5 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold tabular-nums">{bestStreak} <span className="text-[9px] font-semibold text-[var(--foreground)]/30">{isAr ? 'يوم' : 'days'}</span></p>
+                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'أفضل سلسلة' : 'Best streak'}</p>
+              </div>
+            </div>
+
+            {/* Today's Time */}
+            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10">
+                <Timer className="h-4.5 w-4.5 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold tabular-nums">{todayTimeSecs > 0 ? todayTimeLabel : '0m'}</p>
+                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'وقت اليوم' : "Today's time"}</p>
+              </div>
+            </div>
+
+            {/* Total Habits */}
+            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5 col-span-2 sm:col-span-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-emerald-500/10">
+                <Target className="h-4.5 w-4.5 text-emerald-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold tabular-nums">{activeHabitsCount}</p>
+                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'عادة نشطة' : 'Active habits'}</p>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Quote — below hero */}
       <motion.div
