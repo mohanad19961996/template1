@@ -700,6 +700,9 @@ export default function HabitDetailPage() {
                 <InfoItem label={isAr ? 'المكان' : 'Place'} value={isAr ? habit.placeAr || habit.placeEn || '' : habit.placeEn || habit.placeAr || ''} icon={<MapPin className="h-3.5 w-3.5" />} />
               )}
               <InfoItem label={isAr ? 'تاريخ الإنشاء' : 'Created'} value={new Date(habit.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })} icon={<CalendarIcon className="h-3.5 w-3.5" />} />
+              {habit.endDate && (
+                <InfoItem label={isAr ? 'ينتهي في' : 'Ends on'} value={new Date(habit.endDate + 'T00:00:00').toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })} icon={<Target className="h-3.5 w-3.5" />} />
+              )}
             </div>
           </div>
 

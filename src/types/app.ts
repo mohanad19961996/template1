@@ -135,6 +135,8 @@ export interface Habit {
   // Overall goals (total repetitions and/or total hours)
   goalReps?: number;  // target total repetitions
   goalHours?: number; // target total hours
+  // End date — when this habit should end (display only, no logic effect)
+  endDate?: string; // YYYY-MM-DD — the goal is to maintain this habit until this date
   // Card display size
   colSpan?: number; // 1-4 columns this card spans
   rowSpan?: number; // 1-3 rows this card spans

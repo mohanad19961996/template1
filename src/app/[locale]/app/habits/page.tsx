@@ -976,7 +976,7 @@ export default function HabitsPage() {
     placeEn: '', placeAr: '', preferredTime: '', expectedDuration: '' as string | number,
     windowStart: '', windowEnd: '', strictWindow: false, maxDailyReps: '' as string | number,
     completionWindowStart: '', completionWindowEnd: '',
-    orderNumber: '' as string | number, colSpan: 1, rowSpan: 1,
+    orderNumber: '' as string | number, colSpan: 1, rowSpan: 1, endDate: '',
     streakGoal: '' as string | number, streakRewardEn: '', streakRewardAr: '',
     streakGoal2: '' as string | number, streakRewardEn2: '', streakRewardAr2: '',
     streakGoal3: '' as string | number, streakRewardEn3: '', streakRewardAr3: '',
@@ -1001,7 +1001,7 @@ export default function HabitsPage() {
       placeEn: '', placeAr: '', preferredTime: '', expectedDuration: '',
       windowStart: '', windowEnd: '', strictWindow: false, maxDailyReps: '',
       completionWindowStart: '', completionWindowEnd: '',
-      orderNumber: '', colSpan: 1, rowSpan: 1,
+      orderNumber: '', colSpan: 1, rowSpan: 1, endDate: '',
       streakGoal: '', streakRewardEn: '', streakRewardAr: '',
       streakGoal2: '', streakRewardEn2: '', streakRewardAr2: '',
       streakGoal3: '', streakRewardEn3: '', streakRewardAr3: '',
@@ -1065,7 +1065,7 @@ export default function HabitsPage() {
       windowEnd: habit.windowEnd ?? '',
       strictWindow: habit.strictWindow ?? false, maxDailyReps: habit.maxDailyReps ?? '',
       completionWindowStart: habit.completionWindowStart ?? '', completionWindowEnd: habit.completionWindowEnd ?? '',
-      orderNumber: habit.order ?? '', colSpan: habit.colSpan ?? 1, rowSpan: habit.rowSpan ?? 1,
+      orderNumber: habit.order ?? '', colSpan: habit.colSpan ?? 1, rowSpan: habit.rowSpan ?? 1, endDate: habit.endDate ?? '',
       streakGoal: habit.streakGoal ?? '', streakRewardEn: habit.streakRewardEn ?? '', streakRewardAr: habit.streakRewardAr ?? '',
       streakGoal2: habit.streakGoal2 ?? '', streakRewardEn2: habit.streakRewardEn2 ?? '', streakRewardAr2: habit.streakRewardAr2 ?? '',
       streakGoal3: habit.streakGoal3 ?? '', streakRewardEn3: habit.streakRewardEn3 ?? '', streakRewardAr3: habit.streakRewardAr3 ?? '',
@@ -1122,6 +1122,7 @@ export default function HabitsPage() {
       order: orderNumber !== '' ? Number(orderNumber) : undefined,
       colSpan: formData.colSpan && formData.colSpan > 1 ? formData.colSpan : undefined,
       rowSpan: formData.rowSpan && formData.rowSpan > 1 ? formData.rowSpan : undefined,
+      endDate: formData.endDate || undefined,
       streakGoal: streakGoal !== '' ? Number(streakGoal) : undefined,
       streakRewardEn: formData.streakRewardEn || undefined,
       streakRewardAr: formData.streakRewardAr || undefined,
@@ -1217,19 +1218,35 @@ export default function HabitsPage() {
         }}
       >
         <div className="pointer-events-none absolute -end-16 -top-16 h-48 w-48 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)' }} />
-        <div className="relative z-10 flex items-center gap-3 px-5 py-3.5 sm:px-7 sm:py-4">
-          <div className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl shrink-0"
-            style={{ background: 'rgba(255,255,255,0.18)' }}>
+        <div className="relative z-10 flex flex-col items-center justify-center gap-1 px-5 py-3 sm:px-7 sm:py-3.5">
+          <motion.div
+            className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl"
+            style={{ background: 'rgba(255,255,255,0.18)' }}
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          >
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
-              {isAr ? 'العادات' : 'Habits'}
-            </h1>
-            <p className="text-[10px] sm:text-[11px] font-medium text-white/60">
-              {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
-            </p>
-          </div>
+          </motion.div>
+          <motion.h1
+            className="text-4xl sm:text-5xl font-black tracking-tight text-white"
+            animate={{ scale: [1, 1.04, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            {isAr ? 'العادات' : 'Habits'}
+          </motion.h1>
+          <motion.div
+            className="h-[3px] rounded-full bg-white/90"
+            initial={{ width: 0 }}
+            animate={{ width: ['0%', '60%', '40%', '50%'] }}
+            transition={{ duration: 2, ease: 'easeOut' }}
+          />
+          <motion.p
+            className="text-sm sm:text-base font-semibold text-white/90"
+            animate={{ opacity: [0.8, 1, 0.8] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
+          </motion.p>
         </div>
       </motion.div>
 
@@ -1355,13 +1372,18 @@ export default function HabitsPage() {
               style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
               <Archive className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{isAr ? 'الأرشيف' : 'Archive'}</span>
+              {store.habits.filter(h => h.archived).length > 0 && (
+                <span className={cn('rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', showArchived ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600')}>
+                  {store.habits.filter(h => h.archived).length}
+                </span>
+              )}
             </button>
             {/* Compliance */}
             <button onClick={() => setShowFullTable(true)}
               className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all cursor-pointer hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25"
               style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
               <Table2 className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">{isAr ? 'جدول الالتزام' : 'Compliance'}</span>
+              <span className="hidden lg:inline">{isAr ? 'الالتزام الشهري' : 'Monthly Compliance'}</span>
             </button>
             {/* History */}
             <Link href="/app/habits/log"
@@ -1504,6 +1526,34 @@ export default function HabitsPage() {
               toast={toast}
             />
           </motion.div>
+
+          {/* Archive mode banner */}
+          {showArchived && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 flex items-center gap-4 rounded-2xl border-2 border-amber-500/25 bg-amber-500/[0.06] px-5 py-4"
+            >
+              <div className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center bg-amber-500/15">
+                <Archive className="h-6 w-6 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-black text-amber-700 dark:text-amber-400">
+                  {isAr ? 'وضع الأرشيف' : 'Archive Mode'}
+                </p>
+                <p className="text-sm font-semibold text-amber-600/70 dark:text-amber-400/60 mt-0.5">
+                  {isAr
+                    ? `${store.habits.filter(h => h.archived).length} عادة مؤرشفة — يمكنك استعادتها أو حذفها نهائياً`
+                    : `${store.habits.filter(h => h.archived).length} archived habits — restore or permanently delete`}
+                </p>
+              </div>
+              <button onClick={() => setShowArchived(false)}
+                className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-amber-700 dark:text-amber-400 border-2 border-amber-500/25 hover:bg-amber-500/15 transition-all">
+                <X className="h-4 w-4" />
+                {isAr ? 'خروج من الأرشيف' : 'Exit Archive'}
+              </button>
+            </motion.div>
+          )}
 
           {/* Habits grid (wrapped in DndContext when drag mode) */}
           {(() => {
@@ -2493,6 +2543,32 @@ export default function HabitsPage() {
                   </div>
                 </div>
 
+                {/* ── End Date (goal horizon) ── */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-5 w-5 rounded-md bg-[var(--color-primary)]/10 flex items-center justify-center"><CalendarIcon className="h-3 w-3 text-[var(--color-primary)]" /></div>
+                    <span className="text-xs font-bold">{isAr ? 'تاريخ انتهاء العادة' : 'Habit End Date'}</span>
+                    <span className="text-[9px] text-[var(--foreground)]/40">{isAr ? '(اختياري)' : '(optional)'}</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--foreground)]/40 mb-2">
+                    {isAr ? 'الهدف هو الالتزام بهذه العادة حتى هذا التاريخ. لا يؤثر على أي وظيفة — فقط للعرض.' : 'The goal is to maintain this habit until this date. Display only — no effect on functionality.'}
+                  </p>
+                  <input type="date" value={formData.endDate} onChange={e => setFormData(f => ({ ...f, endDate: e.target.value }))}
+                    className="w-full sm:w-64 rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
+                  {formData.endDate && (() => {
+                    const diff = Math.ceil((new Date(formData.endDate).getTime() - Date.now()) / 86400000);
+                    return (
+                      <p className={cn('text-[10px] font-semibold mt-1', diff > 0 ? 'text-[var(--color-primary)]' : 'text-red-500')}>
+                        {diff > 0
+                          ? (isAr ? `${diff} يوم متبقي` : `${diff} days remaining`)
+                          : diff === 0
+                            ? (isAr ? 'اليوم هو آخر يوم!' : 'Today is the last day!')
+                            : (isAr ? `انتهت قبل ${Math.abs(diff)} يوم` : `Ended ${Math.abs(diff)} days ago`)}
+                      </p>
+                    );
+                  })()}
+                </div>
+
                 {/* ── Section: Streak Challenges (3 tiers) ── */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -2964,24 +3040,39 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
   return (
     <motion.div variants={fadeUp} custom={index} initial="hidden" animate="visible"
       className={cn(
-        'group relative rounded-xl border p-2.5 transition-all duration-200 flex flex-col gap-1.5',
-        done ? 'border-emerald-500/20 bg-emerald-500/[0.03]' : 'border-[var(--foreground)]/[0.08] hover:border-[var(--color-primary)]/20 hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)]',
+        'group relative rounded-2xl p-3 transition-all duration-200 flex flex-col gap-1.5 cursor-default',
+        habit.archived
+          ? 'opacity-75'
+          : 'habit-card-animate hover:-translate-y-0.5',
       )}
-      style={{ borderInlineStartWidth: '3px', borderInlineStartColor: done ? '#22c55e' : hc }}
+      style={{
+        border: `2.5px solid ${habit.archived ? 'rgba(245,158,11,0.5)' : done ? 'rgba(34,197,94,0.5)' : `rgba(var(--color-primary-rgb) / 0.45)`}`,
+        borderInlineStartWidth: '5px',
+        borderInlineStartColor: habit.archived ? '#f59e0b' : done ? '#22c55e' : hc,
+        background: habit.archived ? 'rgba(245,158,11,0.03)' : done ? 'rgba(34,197,94,0.03)' : 'var(--color-background)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      }}
     >
       {/* Row 1: Done toggle + Name + badges */}
       <div className="flex items-center gap-2">
         <button onClick={handleToggle}
           className={cn('shrink-0 transition-all', (habit.archived || (hasDuration && !done)) && 'cursor-not-allowed')}>
-          {done
-            ? <CheckCircle2 className="h-[18px] w-[18px] text-emerald-500" />
-            : hasDuration
-              ? <Timer className="h-[18px] w-[18px]" style={{ color: `${hc}70` }} />
-              : <Circle className="h-[18px] w-[18px] text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
+          {habit.archived
+            ? <Archive className="h-[18px] w-[18px] text-amber-500" />
+            : done
+              ? <CheckCircle2 className="h-[18px] w-[18px] text-emerald-500" />
+              : hasDuration
+                ? <Timer className="h-[18px] w-[18px]" style={{ color: `${hc}70` }} />
+                : <Circle className="h-[18px] w-[18px] text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
         </button>
-        <span className={cn('flex-1 text-[13px] font-bold leading-tight truncate', done && 'line-through text-[var(--foreground)]/35')}>
+        <span className={cn('flex-1 text-[13px] font-bold leading-tight truncate', habit.archived && 'text-[var(--foreground)]/40', done && !habit.archived && 'line-through text-[var(--foreground)]/35')}>
           {name}
         </span>
+        {habit.archived && (
+          <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/20">
+            {isAr ? 'مؤرشفة' : 'Archived'}
+          </span>
+        )}
         <span className="shrink-0 rounded px-1.5 py-px text-[9px] font-bold" style={{ background: `${hc}10`, color: hc }}>
           {catLabel}
         </span>
@@ -3501,33 +3592,31 @@ function HabitsInsights({ isAr, store }: { isAr: boolean; store: ReturnType<type
 /* ─── Full-screen Compliance Table ─── */
 function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit[]; isAr: boolean; store: ReturnType<typeof useAppStore>; onClose: () => void }) {
   const today = todayString();
-  const [pageOffset, setPageOffset] = useState(0);
-  const DAYS_PER_PAGE = 14;
+  const now = new Date();
+  const [viewMonth, setViewMonth] = useState({ year: now.getFullYear(), month: now.getMonth() });
 
-  // Calculate dates for current page
+  const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  // Calculate all dates in the current month
   const pageDates = useMemo(() => {
+    const { year, month } = viewMonth;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const dates: string[] = [];
-    const base = parseLocalDate(today);
-    base.setDate(base.getDate() - (DAYS_PER_PAGE - 1) + pageOffset * DAYS_PER_PAGE);
-    for (let i = 0; i < DAYS_PER_PAGE; i++) {
-      const d = new Date(base);
-      d.setDate(d.getDate() + i);
-      dates.push(formatLocalDate(d));
+    for (let d = 1; d <= daysInMonth; d++) {
+      dates.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
     }
     return dates;
-  }, [today, pageOffset]);
+  }, [viewMonth]);
 
-  const rangeLabel = useMemo(() => {
-    const start = new Date(pageDates[0]);
-    const end = new Date(pageDates[pageDates.length - 1]);
-    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    const yOpts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-    const loc = isAr ? 'ar-SA-u-nu-latn' : 'en-US';
-    if (start.getFullYear() !== end.getFullYear()) {
-      return `${start.toLocaleDateString(loc, yOpts)} – ${end.toLocaleDateString(loc, yOpts)}`;
-    }
-    return `${start.toLocaleDateString(loc, opts)} – ${end.toLocaleDateString(loc, yOpts)}`;
-  }, [pageDates, isAr]);
+  const monthLabel = isAr
+    ? `${MONTH_NAMES_AR[viewMonth.month]} ${viewMonth.year}`
+    : `${MONTH_NAMES_EN[viewMonth.month]} ${viewMonth.year}`;
+
+  const prevMonth = () => setViewMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 });
+  const nextMonth = () => setViewMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 });
+  const goCurrentMonth = () => { const n = new Date(); setViewMonth({ year: n.getFullYear(), month: n.getMonth() }); };
+  const isCurrentMonth = viewMonth.year === now.getFullYear() && viewMonth.month === now.getMonth();
 
   // Overall stats
   const overallRate = useMemo(() => {
@@ -3567,28 +3656,27 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
               <Table2 className="h-5 w-5 text-[var(--color-primary)]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">{isAr ? 'جدول الالتزام' : 'Habit Compliance'}</h2>
+              <h2 className="text-lg font-bold tracking-tight">{isAr ? 'جدول الالتزام الشهري' : 'Monthly Compliance'}</h2>
               <p className="text-xs text-[var(--foreground)]">{isAr ? `${habits.length} عادة • معدل الالتزام ${overallRate}%` : `${habits.length} habits • ${overallRate}% overall rate`}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Navigation */}
-            <button onClick={() => setPageOffset(p => p - 1)}
+            {/* Month Navigation */}
+            <button onClick={prevMonth}
               className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-[var(--foreground)]/[0.08] transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="text-center min-w-[160px]">
-              <p className="text-xs font-semibold">{rangeLabel}</p>
+              <p className="text-sm font-bold">{monthLabel}</p>
             </div>
-            <button onClick={() => setPageOffset(p => p + 1)}
-              disabled={pageOffset >= 0}
-              className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-[var(--foreground)]/[0.08] transition-colors disabled:opacity-30">
+            <button onClick={nextMonth}
+              className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-[var(--foreground)]/[0.08] transition-colors">
               <ChevronRight className="h-4 w-4" />
             </button>
-            {pageOffset !== 0 && (
-              <button onClick={() => setPageOffset(0)}
+            {!isCurrentMonth && (
+              <button onClick={goCurrentMonth}
                 className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2.5 py-1.5 rounded-lg hover:bg-[var(--color-primary)]/20 transition-colors">
-                {isAr ? 'اليوم' : 'Today'}
+                {isAr ? 'الشهر الحالي' : 'Current Month'}
               </button>
             )}
             {/* Close */}
@@ -3612,39 +3700,31 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
             <table className="w-full">
               <thead className="sticky top-0 z-20 bg-[var(--color-background)]">
                 <tr className="border-b border-[var(--foreground)]/[0.1]">
-                  <th className="text-start px-5 py-3.5 text-xs font-bold text-[var(--foreground)] uppercase tracking-wider sticky start-0 z-30 bg-[var(--color-background)] min-w-[200px] border-e border-[var(--foreground)]/[0.15]">
+                  <th className="text-start px-3 py-2 text-[10px] font-bold text-[var(--foreground)]/60 uppercase tracking-wider sticky start-0 z-30 bg-[var(--color-background)] min-w-[140px] max-w-[160px] border-e border-[var(--foreground)]/[0.15]">
                     {isAr ? 'العادة' : 'Habit'}
                   </th>
                   {pageDates.map(d => {
-                    const dt = new Date(d);
+                    const dt = new Date(d + 'T00:00:00');
                     const isToday = d === today;
                     const isFuture = d > today;
                     return (
                       <th key={d} className={cn(
-                        'px-1 py-3.5 text-center min-w-[52px]',
-                        isToday && 'bg-[var(--color-primary)]/[0.08]',
+                        'px-0 py-1.5 text-center border-e border-[var(--foreground)]/[0.06]',
+                        isToday && 'bg-[var(--color-primary)]/[0.1]',
                         isFuture && 'opacity-40',
-                      )}>
-                        <span className="text-[9px] font-medium text-[var(--foreground)] block">
-                          {(isAr ? DAY_LABELS.ar : DAY_LABELS.en)[dt.getDay()]}
-                        </span>
+                      )} style={{ width: `${100 / (pageDates.length + 4)}%` }}>
                         <span className={cn(
-                          'text-sm font-bold block mt-0.5',
-                          isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]0'
+                          'text-[10px] font-bold block',
+                          isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]/70'
                         )}>{dt.getDate()}</span>
-                        {dt.getDate() === 1 && (
-                          <span className="text-[8px] text-[var(--foreground)] block">
-                            {dt.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'short' })}
-                          </span>
-                        )}
                       </th>
                     );
                   })}
-                  <th className="px-3 py-3.5 text-center min-w-[60px] border-s border-[var(--foreground)]/[0.15]">
-                    <span className="text-[10px] font-bold text-[var(--foreground)] uppercase tracking-wider">{isAr ? 'العدد' : 'Total'}</span>
+                  <th className="px-1.5 py-2 text-center min-w-[40px] border-s border-[var(--foreground)]/[0.15]">
+                    <span className="text-[9px] font-bold text-[var(--foreground)]/60">{isAr ? 'العدد' : '#'}</span>
                   </th>
-                  <th className="px-3 py-3.5 text-center min-w-[70px] border-s border-[var(--foreground)]/[0.15]">
-                    <span className="text-[10px] font-bold text-[var(--foreground)] uppercase tracking-wider">{isAr ? 'المعدل' : 'Rate'}</span>
+                  <th className="px-1.5 py-2 text-center min-w-[45px] border-s border-[var(--foreground)]/[0.15]">
+                    <span className="text-[9px] font-bold text-[var(--foreground)]/60">{isAr ? 'المعدل' : '%'}</span>
                   </th>
                 </tr>
               </thead>
@@ -3662,13 +3742,16 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                       'border-b border-[var(--foreground)]/[0.15] hover:bg-[var(--foreground)]/[0.02] transition-colors',
                       hi % 2 === 1 && 'bg-[var(--foreground)]/[0.015]'
                     )}>
-                      <td className="px-5 py-3 sticky start-0 z-10 bg-[var(--color-background)] border-e border-[var(--foreground)]/[0.15]">
-                        <div className="flex items-center gap-3">
-                          <div className="h-3 w-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: habit.color }} />
+                      <td className="px-2 py-1.5 sticky start-0 z-10 bg-[var(--color-background)] border-e border-[var(--foreground)]/[0.15]">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: habit.color }} />
                           <div className="min-w-0">
-                            <span className="text-sm font-semibold truncate block max-w-[160px]">{isAr ? habit.nameAr : habit.nameEn}</span>
-                            <span className="text-[10px] text-[var(--foreground)] block">
-                              {isAr ? (CATEGORY_LABELS[habit.category]?.ar ?? habit.category) : (CATEGORY_LABELS[habit.category]?.en ?? habit.category)}
+                            <span className="text-[11px] font-bold truncate block max-w-[120px]">{isAr ? habit.nameAr : habit.nameEn}</span>
+                            <span className="text-[8px] font-semibold text-[var(--foreground)]/35">
+                              {habit.frequency === 'daily' ? (isAr ? 'يومي' : 'Daily')
+                                : habit.frequency === 'weekly' ? (isAr ? 'أسبوعي' : 'Weekly')
+                                : habit.frequency === 'monthly' ? (isAr ? 'شهري' : 'Monthly')
+                                : (isAr ? 'مخصص' : 'Custom')}
                             </span>
                           </div>
                         </div>
@@ -3676,54 +3759,43 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                       {pageDates.map(d => {
                         const isFuture = d > today;
                         const beforeCreated = habit.createdAt.split('T')[0] > d;
-                        const done = !isFuture && !beforeCreated && store.habitLogs.some(l => l.habitId === habit.id && l.date === d && l.completed);
                         const isToday = d === today;
+                        const scheduled = !beforeCreated && isHabitScheduledForDate(habit, d);
+                        const log = !isFuture && !beforeCreated ? store.habitLogs.find(l => l.habitId === habit.id && l.date === d && l.completed) : null;
+                        const done = !!log;
+                        // Check if done late (outside strict window)
+                        const doneLate = done && habit.strictWindow && habit.windowStart && habit.windowEnd && log?.time
+                          ? (log.time < habit.windowStart || log.time > habit.windowEnd) : false;
+
                         return (
                           <td key={d} className={cn(
-                            'px-1 py-3 text-center',
-                            isToday && 'bg-[var(--color-primary)]/[0.08]',
+                            'px-0 py-1 text-center border-e border-[var(--foreground)]/[0.06]',
+                            isToday && 'bg-[var(--color-primary)]/[0.1]',
                           )}>
                             {beforeCreated ? (
-                              <div className="h-8 w-8 mx-auto rounded-lg bg-red-500/8 flex items-center justify-center">
-                                <X className="h-3.5 w-3.5 text-red-400/40" />
-                              </div>
-                            ) : isFuture ? (
-                              <div className="h-8 w-8 mx-auto rounded-lg bg-gray-200 dark:bg-gray-700" />
+                              <span className="text-[8px] text-[var(--foreground)]/15">—</span>
+                            ) : !scheduled ? (
+                              <X className="h-2.5 w-2.5 text-red-300/40 mx-auto" />
+                            ) : (isFuture || isToday) && !done ? (
+                              <span className="inline-block h-2.5 w-2.5 rounded-full mx-auto" style={{ background: '#9ca3af' }} />
+                            ) : done && doneLate ? (
+                              <span className="inline-block h-3 w-3 rounded-full bg-amber-500/25 border border-amber-500/40 mx-auto" />
                             ) : done ? (
-                              <div className="h-8 w-8 mx-auto rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              </div>
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mx-auto" />
                             ) : (
-                              <div className="h-8 w-8 mx-auto rounded-lg bg-red-500/8 flex items-center justify-center">
-                                <X className="h-3.5 w-3.5 text-red-400/60" />
-                              </div>
+                              <span className="inline-block h-3 w-3 rounded-full bg-red-500/20 border border-red-400/30 mx-auto" />
                             )}
                           </td>
                         );
                       })}
-                      <td className="px-3 py-3 text-center border-s border-[var(--foreground)]/[0.15]">
-                        <div className="flex flex-col items-center">
-                          <span className="text-base font-bold text-[var(--color-primary)]">{totalAllTime}</span>
-                          <span className="text-[9px] text-[var(--foreground)]">{isAr ? 'مرة' : 'times'}</span>
-                        </div>
+                      <td className="px-1 py-1 text-center border-s border-[var(--foreground)]/[0.15]">
+                        <span className="text-[11px] font-bold text-[var(--color-primary)]">{totalAllTime}</span>
                       </td>
-                      <td className="px-3 py-3 text-center border-s border-[var(--foreground)]/[0.15]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className={cn(
-                            'text-sm font-bold',
-                            rate >= 80 ? 'text-emerald-500' :
-                            rate >= 50 ? 'text-amber-500' :
-                            'text-red-400'
-                          )}>{rate}%</span>
-                          <div className="w-10 h-1.5 rounded-full bg-[var(--foreground)]/[0.05] overflow-hidden">
-                            <div className={cn(
-                              'h-full rounded-full transition-all',
-                              rate >= 80 ? 'bg-emerald-500' :
-                              rate >= 50 ? 'bg-amber-500' :
-                              'bg-red-400'
-                            )} style={{ width: `${rate}%` }} />
-                          </div>
-                        </div>
+                      <td className="px-1 py-1 text-center border-s border-[var(--foreground)]/[0.15]">
+                        <span className={cn(
+                          'text-[11px] font-bold',
+                          rate >= 80 ? 'text-emerald-500' : rate >= 50 ? 'text-amber-500' : 'text-red-400'
+                        )}>{rate}%</span>
                       </td>
                     </tr>
                   );
@@ -3732,8 +3804,8 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
               {/* Footer summary */}
               <tfoot className="sticky bottom-0 z-20 bg-[var(--color-background)]">
                 <tr className="border-t-2 border-[var(--foreground)]/[0.1]">
-                  <td className="px-5 py-3.5 sticky start-0 z-30 bg-[var(--color-background)] border-e border-[var(--foreground)]/[0.15]">
-                    <span className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">{isAr ? 'الإجمالي' : 'Daily Total'}</span>
+                  <td className="px-2 py-1.5 sticky start-0 z-30 bg-[var(--color-background)] border-e border-[var(--foreground)]/[0.15]">
+                    <span className="text-[10px] font-bold text-[var(--foreground)]/60 uppercase">{isAr ? 'الإجمالي' : 'Total'}</span>
                   </td>
                   {pageDates.map(d => {
                     const isFuture = d > today;
@@ -3745,7 +3817,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                     const dayRate = dayTotal > 0 && !isFuture ? Math.round((dayDone / dayTotal) * 100) : 0;
                     const isToday = d === today;
                     return (
-                      <td key={d} className={cn('px-1 py-3.5 text-center', isToday && 'bg-[var(--color-primary)]/[0.08]')}>
+                      <td key={d} className={cn('px-0 py-1 text-center border-e border-[var(--foreground)]/[0.06]', isToday && 'bg-[var(--color-primary)]/[0.1]')}>
                         {!isFuture && dayTotal > 0 ? (
                           <span className={cn(
                             'text-[10px] font-bold',
@@ -3759,17 +3831,15 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                       </td>
                     );
                   })}
-                  <td className="px-3 py-3.5 text-center border-s border-[var(--foreground)]/[0.15]">
-                    <span className="text-sm font-bold text-[var(--color-primary)]">
+                  <td className="px-1 py-1 text-center border-s border-[var(--foreground)]/[0.15]">
+                    <span className="text-[10px] font-bold text-[var(--color-primary)]">
                       {habits.reduce((sum, h) => sum + getTotalCompletionUnits(h, store.habitLogs), 0)}
                     </span>
                   </td>
-                  <td className="px-3 py-3.5 text-center border-s border-[var(--foreground)]/[0.15]">
+                  <td className="px-1 py-1 text-center border-s border-[var(--foreground)]/[0.15]">
                     <span className={cn(
-                      'text-sm font-bold',
-                      overallRate >= 80 ? 'text-emerald-500' :
-                      overallRate >= 50 ? 'text-amber-500' :
-                      'text-red-400'
+                      'text-[10px] font-bold',
+                      overallRate >= 80 ? 'text-emerald-500' : overallRate >= 50 ? 'text-amber-500' : 'text-red-400'
                     )}>{overallRate}%</span>
                   </td>
                 </tr>
@@ -3779,22 +3849,26 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
         )}
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-6 px-5 py-3 border-t border-[var(--foreground)]/[0.1] shrink-0">
+        <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 py-2.5 border-t border-[var(--foreground)]/[0.1] shrink-0 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-emerald-500/15 flex items-center justify-center"><CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" /></div>
-            <span className="text-[10px] text-[var(--foreground)] font-medium">{isAr ? 'مكتمل' : 'Done'}</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="text-[10px] text-[var(--foreground)]/70 font-semibold">{isAr ? 'في الوقت' : 'On time'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-red-500/10 flex items-center justify-center"><X className="h-2.5 w-2.5 text-red-400/60" /></div>
-            <span className="text-[10px] text-[var(--foreground)] font-medium">{isAr ? 'فائت' : 'Missed'}</span>
+            <span className="inline-block h-3 w-3 rounded-full bg-amber-500/20 border border-amber-500/40" />
+            <span className="text-[10px] text-[var(--foreground)]/70 font-semibold">{isAr ? 'متأخر' : 'Late'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-amber-500/15 flex items-center justify-center"><Clock className="h-2.5 w-2.5 text-amber-500" /></div>
-            <span className="text-[10px] text-[var(--foreground)] font-medium">{isAr ? 'مكتمل خارج الوقت' : 'Done late'}</span>
+            <span className="inline-block h-3 w-3 rounded-full bg-red-500/20 border border-red-400/30" />
+            <span className="text-[10px] text-[var(--foreground)]/70 font-semibold">{isAr ? 'فائت' : 'Missed'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded bg-[var(--foreground)]/[0.03]" />
-            <span className="text-[10px] text-[var(--foreground)] font-medium">{isAr ? 'غير مطبق' : 'N/A'}</span>
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#9ca3af' }} />
+            <span className="text-[10px] text-[var(--foreground)]/70 font-semibold">{isAr ? 'قادم' : 'Upcoming'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <X className="h-2.5 w-2.5 text-red-300/40" />
+            <span className="text-[10px] text-[var(--foreground)]/70 font-semibold">{isAr ? 'غير مجدول' : 'Not scheduled'}</span>
           </div>
         </div>
       </motion.div>
@@ -4483,26 +4557,41 @@ function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate
           </div>
           </div>
 
-          {/* First & Last Done */}
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-3 rounded-xl p-1.5 sm:p-2" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
+          {/* First Done + Last Done + End Date */}
+          <div className={cn('grid gap-1.5 sm:gap-2 mb-3 rounded-xl p-1.5 sm:p-2', habit.endDate ? 'grid-cols-3' : 'grid-cols-2')} style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
             <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: '#8b5cf608', border: '1px solid #8b5cf615' }}>
               <CalendarDays className="h-3 w-3 text-violet-500 shrink-0" />
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm font-bold text-[var(--foreground)]">{isAr ? 'أول إنجاز' : 'First Done'}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'أول إنجاز' : 'First Done'}</p>
                 {firstDone
-                  ? <p className="text-[10px] sm:text-sm font-black text-violet-600 tabular-nums truncate">{parseLocalDate(firstDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                  : <p className="text-[10px] italic text-[var(--foreground)]">{isAr ? 'لم يُنجز بعد' : 'Not yet'}</p>}
+                  ? <p className="text-[10px] sm:text-[11px] font-black text-violet-600 tabular-nums truncate">{parseLocalDate(firstDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
+                  : <p className="text-[10px] italic text-[var(--foreground)]/40">{isAr ? 'لم يُنجز' : 'Not yet'}</p>}
               </div>
             </div>
             <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: '#06b6d408', border: '1px solid #06b6d415' }}>
-              <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-500 shrink-0" />
+              <CalendarDays className="h-3 w-3 text-cyan-500 shrink-0" />
               <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm font-bold text-[var(--foreground)]">{isAr ? 'آخر إنجاز' : 'Last Done'}</p>
+                <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'آخر إنجاز' : 'Last Done'}</p>
                 {lastDone
-                  ? <p className="text-[10px] sm:text-sm font-black text-cyan-600 tabular-nums truncate">{parseLocalDate(lastDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                  : <p className="text-[10px] italic text-[var(--foreground)]">{isAr ? 'لم يُنجز بعد' : 'Not yet'}</p>}
+                  ? <p className="text-[10px] sm:text-[11px] font-black text-cyan-600 tabular-nums truncate">{parseLocalDate(lastDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
+                  : <p className="text-[10px] italic text-[var(--foreground)]/40">{isAr ? 'لم يُنجز' : 'Not yet'}</p>}
               </div>
             </div>
+            {habit.endDate && (() => {
+              const diff = Math.ceil((new Date(habit.endDate).getTime() - Date.now()) / 86400000);
+              return (
+                <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: diff > 0 ? '#10b98108' : '#ef444408', border: `1px solid ${diff > 0 ? '#10b98115' : '#ef444415'}` }}>
+                  <Target className={cn('h-3 w-3 shrink-0', diff > 0 ? 'text-emerald-500' : 'text-red-500')} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'ينتهي في' : 'Ends on'}</p>
+                    <p className={cn('text-[10px] sm:text-[11px] font-black tabular-nums truncate', diff > 0 ? 'text-emerald-600' : 'text-red-500')}>
+                      {parseLocalDate(habit.endDate).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}
+                      <span className="text-[8px] font-bold opacity-60 ms-1">({diff > 0 ? `${diff}${isAr ? 'ي' : 'd'}` : diff === 0 ? (isAr ? 'اليوم!' : 'today!') : `${Math.abs(diff)}${isAr ? 'ي' : 'd'} ${isAr ? 'فات' : 'ago'}`})</span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Context tags */}
