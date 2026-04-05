@@ -1709,6 +1709,47 @@ export default function HabitsPage() {
                   </div>
                 )}
 
+                {/* Monthly — day of month picker (1-31 grid) */}
+                {formData.frequency === 'monthly' && (
+                  <div>
+                    <label className="text-xs font-medium text-[var(--foreground)] mb-2 block">
+                      {isAr ? 'اختر أيام الشهر' : 'Pick days of the month'}
+                    </label>
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setFormData(f => ({
+                            ...f,
+                            customMonthDays: f.customMonthDays.includes(d)
+                              ? f.customMonthDays.filter(x => x !== d)
+                              : [...f.customMonthDays, d].sort((a, b) => a - b)
+                          }))}
+                          className={cn(
+                            'app-toggle py-1.5 rounded-lg text-xs font-medium',
+                            formData.customMonthDays.includes(d)
+                              ? 'app-toggle-active'
+                              : 'text-[var(--foreground)]'
+                          )}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                    {formData.customMonthDays.length > 0 && (
+                      <p className="text-[10px] text-[var(--foreground)]/50 mt-1.5">
+                        {isAr ? 'المحدد: ' : 'Selected: '}{formData.customMonthDays.join(', ')}
+                      </p>
+                    )}
+                    {formData.customMonthDays.length === 0 && (
+                      <p className="text-[10px] text-amber-500 mt-1.5">
+                        {isAr ? 'لم تحدد أي يوم — ستظهر في اليوم الأول من كل شهر' : 'No days selected — defaults to 1st of each month'}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Custom frequency options */}
                 {formData.frequency === 'custom' && (
                   <div className="space-y-3">
