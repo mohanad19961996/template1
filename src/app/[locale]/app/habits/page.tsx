@@ -1107,7 +1107,7 @@ export default function HabitsPage() {
       ...rest,
       customScheduleType: isCustom ? formData.customScheduleType : undefined,
       customDays: isCustom && formData.customScheduleType === 'weekdays' ? formData.customDays : (formData.frequency === 'weekly' ? formData.customDays : undefined),
-      customMonthDays: isCustom && formData.customScheduleType === 'monthdays' ? formData.customMonthDays : undefined,
+      customMonthDays: formData.frequency === 'monthly' ? (formData.customMonthDays.length > 0 ? formData.customMonthDays : undefined) : (isCustom && formData.customScheduleType === 'monthdays' ? formData.customMonthDays : undefined),
       customYearDays: isCustom && formData.customScheduleType === 'yeardays' ? formData.customYearDays : undefined,
       checklistItems: formData.checklistItems.length > 0 ? formData.checklistItems : undefined,
       targetValue: formData.trackingType === 'count' ? formData.targetValue : formData.trackingType === 'duration' ? formData.targetValue : undefined,
