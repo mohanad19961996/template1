@@ -494,7 +494,7 @@ function SortableCategoryTile({ id, label, count, isSelected, isEditMode, canDel
             <GripVertical className="h-3 w-3" />
           </span>
         )}
-        <span className="truncate text-[11px] font-bold">
+        <span className="whitespace-nowrap text-[11px] font-bold">
           {label}
           {isEditMode && <Edit3 className="inline h-2.5 w-2.5 ms-1 opacity-40" />}
         </span>
@@ -636,10 +636,7 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
         <div className="p-2 sm:p-2.5">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={orderedCategories} strategy={rectSortingStrategy}>
-              <div
-                className="grid gap-1.5 sm:gap-2"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))' }}
-              >
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {/* "All" chip — not draggable, always first */}
                 {!isEditMode && (
                   <button
