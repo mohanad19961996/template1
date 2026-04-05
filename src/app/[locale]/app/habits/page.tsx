@@ -1238,19 +1238,12 @@ export default function HabitsPage() {
         const completionRate = todayScheduledCount > 0 ? Math.round((completedTodayCount / todayScheduledCount) * 100) : 0;
         const dailyHabits = store.habits.filter(h => !h.archived && h.frequency === 'daily').length;
         const nonDailyHabits = store.habits.filter(h => !h.archived && h.frequency !== 'daily').length;
-        const todayTimeSecs = store.habitLogs
-          .filter(l => l.date === today && l.duration)
-          .reduce((sum, l) => sum + (l.duration ?? 0), 0);
-        const todayTimeLabel = todayTimeSecs >= 3600
-          ? `${Math.floor(todayTimeSecs / 3600)}h ${Math.floor((todayTimeSecs % 3600) / 60)}m`
-          : todayTimeSecs >= 60 ? `${Math.floor(todayTimeSecs / 60)}m` : `${todayTimeSecs}s`;
-
         return (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.4 }}
-            className="mb-3 grid grid-cols-2 sm:grid-cols-5 gap-2"
+            className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2"
           >
             {/* Today's Progress */}
             <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
@@ -1287,17 +1280,6 @@ export default function HabitsPage() {
               <div className="min-w-0">
                 <p className="text-base font-bold tabular-nums">{nonDailyHabits}</p>
                 <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'أسبوعية / شهرية / مخصصة' : 'Weekly / Monthly / Custom'}</p>
-              </div>
-            </div>
-
-            {/* Today's Time */}
-            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-blue-500/10">
-                <Timer className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-base font-bold tabular-nums">{todayTimeSecs > 0 ? todayTimeLabel : '0m'}</p>
-                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'وقت اليوم' : "Today's time"}</p>
               </div>
             </div>
 
