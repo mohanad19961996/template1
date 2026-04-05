@@ -39,23 +39,36 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** PATCH — update timer state */
+/** PATCH — update timer state (rejects stale updates from offline queue) */
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Fetch current timer data and merge
-    const { data: existing } = await supabase
+    // Fetch current timer data
+    const { data: existing, error: fetchErr } = await supabase
       .from('active_timer')
       .select('data')
       .eq('user_id', USER_ID)
       .single();
 
-    const merged = { ...(existing?.data || {}), ...body, updatedAt: new Date().toISOString() };
+    // Timer was already deleted (completed on another device) — ignore stale update
+    if (fetchErr || !existing) {
+      return NextResponse.json({ success: true, skipped: 'no_timer' });
+    }
+
+    // Reject stale updates: if incoming updatedAt is older than DB, skip
+    const dbUpdatedAt = existing.data?.updatedAt;
+    const incomingUpdatedAt = body.updatedAt;
+    if (dbUpdatedAt && incomingUpdatedAt && incomingUpdatedAt < dbUpdatedAt) {
+      return NextResponse.json({ success: true, skipped: 'stale' });
+    }
+
+    const now = new Date().toISOString();
+    const merged = { ...existing.data, ...body, updatedAt: now };
 
     const { error } = await supabase
       .from('active_timer')
-      .update({ data: merged, updated_at: new Date().toISOString() })
+      .update({ data: merged, updated_at: now })
       .eq('user_id', USER_ID);
 
     if (error) throw error;

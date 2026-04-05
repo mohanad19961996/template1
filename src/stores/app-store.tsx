@@ -179,11 +179,29 @@ function flushPendingSync() {
   const pending = getPendingSync();
   if (pending.length === 0) return;
   savePendingSync([]); // clear immediately to avoid double-flush
-  pending.forEach(call => {
+
+  // Drop stale timer PATCHes if a DELETE for the same timer exists later in the queue
+  const hasTimerDelete = pending.some(c => c.method === 'DELETE' && c.url.includes('/api/timer'));
+  const cleaned = pending.filter(call => {
+    // If timer was deleted (completed), skip any older timer PATCHes
+    if (hasTimerDelete && call.method === 'PATCH' && call.url.includes('/api/timer')) return false;
+    // Drop very old entries (> 24 hours) — they're definitely stale
+    if (Date.now() - call.ts > 86400000) return false;
+    return true;
+  });
+
+  cleaned.forEach(call => {
     const opts: RequestInit = { method: call.method, headers: call.body ? { 'Content-Type': 'application/json' } : undefined };
     if (call.body) opts.body = JSON.stringify(call.body);
     fetch(call.url, opts).catch(() => addPendingSync(call)); // re-queue if still failing
   });
+}
+
+// Clear all timer-related entries from the pending queue (called when timer completes/cancels)
+function clearTimerFromQueue() {
+  const pending = getPendingSync();
+  const cleaned = pending.filter(c => !c.url.includes('/api/timer'));
+  savePendingSync(cleaned);
 }
 
 function apiPost(url: string, body: unknown) {
@@ -906,7 +924,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         pausedAt: nowISO,
       } : sess);
 
-      apiPatch('/api/timer', paused);
+      apiPatch('/api/timer', { ...paused, updatedAt: nowISO });
       return { ...s, activeTimer: paused, timerSessions: updatedSessions };
     });
   }, [update]);
@@ -920,11 +938,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
       let resumed: ActiveTimer;
       if (t.mode === 'stopwatch') {
-        // Shift startedAt forward so elapsed = now - startedAt stays correct
         const newStartedAt = new Date(now - (t.elapsedMs ?? 0)).toISOString();
         resumed = { ...t, state: 'running', startedAt: newStartedAt, pausedAt: undefined, elapsedMs: undefined };
       } else {
-        // Set new absolute end time from remaining
         const endsAt = new Date(now + (t.remainingMs ?? 0)).toISOString();
         resumed = { ...t, state: 'running', startedAt: nowISO, endsAt, pausedAt: undefined, remainingMs: undefined };
       }
@@ -938,7 +954,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           : sess.totalPausedTime,
       } : sess);
 
-      apiPatch('/api/timer', resumed);
+      apiPatch('/api/timer', { ...resumed, updatedAt: nowISO });
       return { ...s, activeTimer: resumed, timerSessions: updatedSessions };
     });
   }, [update]);
@@ -959,6 +975,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         activeTimer: null,
       };
     });
+    clearTimerFromQueue(); // drop stale pause/resume from queue
     apiDelete('/api/timer');
   }, [update]);
 
@@ -979,6 +996,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         activeTimer: null,
       };
     });
+    clearTimerFromQueue(); // drop stale pause/resume from queue
     apiDelete('/api/timer');
   }, [update]);
 
