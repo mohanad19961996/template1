@@ -169,11 +169,7 @@ function savePendingSync(calls: PendingCall[]) {
   try { localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(calls)); } catch {}
 }
 
-function addPendingSync(call: PendingCall) {
-  const pending = getPendingSync();
-  pending.push(call);
-  savePendingSync(pending);
-}
+// addPendingSync removed — merge-on-load handles offline data instead of retry queue
 
 function flushPendingSync() {
   const pending = getPendingSync();
@@ -183,17 +179,16 @@ function flushPendingSync() {
   // Drop stale timer PATCHes if a DELETE for the same timer exists later in the queue
   const hasTimerDelete = pending.some(c => c.method === 'DELETE' && c.url.includes('/api/timer'));
   const cleaned = pending.filter(call => {
-    // If timer was deleted (completed), skip any older timer PATCHes
     if (hasTimerDelete && call.method === 'PATCH' && call.url.includes('/api/timer')) return false;
-    // Drop very old entries (> 24 hours) — they're definitely stale
     if (Date.now() - call.ts > 86400000) return false;
     return true;
   });
 
+  // Process one at a time — do NOT re-queue on failure (prevents infinite loop)
   cleaned.forEach(call => {
     const opts: RequestInit = { method: call.method, headers: call.body ? { 'Content-Type': 'application/json' } : undefined };
     if (call.body) opts.body = JSON.stringify(call.body);
-    fetch(call.url, opts).catch(() => addPendingSync(call)); // re-queue if still failing
+    fetch(call.url, opts).catch(() => { /* drop silently — will be caught by next merge on load */ });
   });
 }
 
@@ -206,17 +201,17 @@ function clearTimerFromQueue() {
 
 function apiPost(url: string, body: unknown) {
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .catch(() => addPendingSync({ method: 'POST', url, body, ts: Date.now() }));
+    .catch(() => { /* offline — data is in localStorage, will merge on next load */ });
 }
 
 function apiPatch(url: string, body: unknown) {
   fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .catch(() => addPendingSync({ method: 'PATCH', url, body, ts: Date.now() }));
+    .catch(() => { /* offline — localStorage is source of truth */ });
 }
 
 function apiDelete(url: string) {
   fetch(url, { method: 'DELETE' })
-    .catch(() => addPendingSync({ method: 'DELETE', url, ts: Date.now() }));
+    .catch(() => { /* offline — will be handled on next load */ });
 }
 
 // Record a habit change in the history collection
