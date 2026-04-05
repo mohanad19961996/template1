@@ -1236,12 +1236,8 @@ export default function HabitsPage() {
       {/* ═══ Stats Section ═══ */}
       {(() => {
         const completionRate = todayScheduledCount > 0 ? Math.round((completedTodayCount / todayScheduledCount) * 100) : 0;
-        const bestStreak = store.habits.filter(h => !h.archived).reduce((max, h) => {
-          const s = store.getHabitStreak(h.id);
-          return s.best > max ? s.best : max;
-        }, 0);
-        const currentStreaks = store.habits.filter(h => !h.archived).map(h => store.getHabitStreak(h.id).current).filter(c => c > 0);
-        const activeStreaks = currentStreaks.length;
+        const dailyHabits = store.habits.filter(h => !h.archived && h.frequency === 'daily').length;
+        const nonDailyHabits = store.habits.filter(h => !h.archived && h.frequency !== 'daily').length;
         const todayTimeSecs = store.habitLogs
           .filter(l => l.date === today && l.duration)
           .reduce((sum, l) => sum + (l.duration ?? 0), 0);
@@ -1272,25 +1268,25 @@ export default function HabitsPage() {
               </div>
             </div>
 
-            {/* Active Streaks */}
+            {/* Daily Habits */}
             <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-orange-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-orange-500/10 transition-colors duration-200 group-hover:bg-orange-500/15">
-                <Flame className="h-5 w-5 text-orange-500" />
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-orange-500/10">
+                <Repeat className="h-5 w-5 text-orange-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold tabular-nums">{activeStreaks}</p>
-                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'سلاسل نشطة' : 'Active streaks'}</p>
+                <p className="text-base font-bold tabular-nums">{dailyHabits}</p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'عادة يومية' : 'Daily habits'}</p>
               </div>
             </div>
 
-            {/* Best Streak */}
+            {/* Non-Daily Habits */}
             <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-purple-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
               <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-purple-500/10">
-                <Award className="h-5 w-5 text-purple-500" />
+                <CalendarDays className="h-5 w-5 text-purple-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold tabular-nums">{bestStreak} <span className="text-[10px] font-semibold text-[var(--foreground)]/25">{isAr ? 'يوم' : 'days'}</span></p>
-                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'أفضل سلسلة' : 'Best streak'}</p>
+                <p className="text-base font-bold tabular-nums">{nonDailyHabits}</p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'أسبوعية / شهرية / مخصصة' : 'Weekly / Monthly / Custom'}</p>
               </div>
             </div>
 
