@@ -152,19 +152,53 @@ async function fetchTasksFromAPI(): Promise<Task[] | null> {
   }
 }
 
-// Fire-and-forget API calls for mutations (optimistic local updates)
+// ── Offline-safe API calls with retry queue ──────────────
+// Failed calls are queued in localStorage and retried on next load or when online.
+
+const PENDING_SYNC_KEY = 'habits-app-pending-sync';
+
+interface PendingCall { method: 'POST' | 'PATCH' | 'DELETE'; url: string; body?: unknown; ts: number }
+
+function getPendingSync(): PendingCall[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || '[]'); } catch { return []; }
+}
+
+function savePendingSync(calls: PendingCall[]) {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(calls)); } catch {}
+}
+
+function addPendingSync(call: PendingCall) {
+  const pending = getPendingSync();
+  pending.push(call);
+  savePendingSync(pending);
+}
+
+function flushPendingSync() {
+  const pending = getPendingSync();
+  if (pending.length === 0) return;
+  savePendingSync([]); // clear immediately to avoid double-flush
+  pending.forEach(call => {
+    const opts: RequestInit = { method: call.method, headers: call.body ? { 'Content-Type': 'application/json' } : undefined };
+    if (call.body) opts.body = JSON.stringify(call.body);
+    fetch(call.url, opts).catch(() => addPendingSync(call)); // re-queue if still failing
+  });
+}
+
 function apiPost(url: string, body: unknown) {
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .catch(() => { /* network error — localStorage has the data */ });
+    .catch(() => addPendingSync({ method: 'POST', url, body, ts: Date.now() }));
 }
 
 function apiPatch(url: string, body: unknown) {
   fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .catch(() => {});
+    .catch(() => addPendingSync({ method: 'PATCH', url, body, ts: Date.now() }));
 }
 
 function apiDelete(url: string) {
-  fetch(url, { method: 'DELETE' }).catch(() => {});
+  fetch(url, { method: 'DELETE' })
+    .catch(() => addPendingSync({ method: 'DELETE', url, ts: Date.now() }));
 }
 
 // Record a habit change in the history collection
@@ -204,44 +238,49 @@ function recoverTimer(state: AppState): AppState {
     const session = state.timerSessions.find(s => s.id === t.sessionId);
     const endedAt = new Date().toISOString();
 
+    // Determine when the timer actually ended (endsAt time, not now)
+    const actualEndTime = new Date(t.endsAt);
+    const endDate = `${actualEndTime.getFullYear()}-${String(actualEndTime.getMonth() + 1).padStart(2, '0')}-${String(actualEndTime.getDate()).padStart(2, '0')}`;
+    const endTime = actualEndTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
     // Auto-log habit session time and check cumulative completion
     let habitLogs = state.habitLogs;
     const linkedHabitId = t.habitId ?? session?.habitId;
     if (linkedHabitId && t.targetDuration) {
-      const today = todayString();
       const habit = state.habits.find(h => h.id === linkedHabitId);
       const maxReps = habit?.maxDailyReps || Infinity;
       const habitTarget = habit?.expectedDuration || 0;
-      // Per-rep cumulative: check if this session crosses a new completion threshold
       const prevTotal = habitLogs
-        .filter(l => l.habitId === linkedHabitId && l.date === today)
+        .filter(l => l.habitId === linkedHabitId && l.date === endDate)
         .reduce((sum, l) => sum + (l.duration ?? 0), 0);
       const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
       const newReps = habitTarget > 0 ? Math.floor((prevTotal + t.targetDuration) / habitTarget) : 0;
       const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
-      const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-      habitLogs = [...habitLogs, {
-        id: generateId(),
+      const logId = generateId();
+      const newLog = {
+        id: logId,
         habitId: linkedHabitId,
-        date: today,
-        time: nowTime,
+        date: endDate,
+        time: endTime,
         duration: t.targetDuration,
         note: '',
         reminderUsed: false,
         perceivedDifficulty: 'medium' as const,
         completed: isCompleted,
         source: 'timer' as const,
-      }];
+      };
+      habitLogs = [...habitLogs, newLog];
+      // Sync recovered log to DB (this is the critical fix — ensures cross-device persistence)
+      apiPost(`/api/habits/${linkedHabitId}/logs`, { ...newLog, upsert: false });
     }
+
+    // Clear active timer from DB
+    apiDelete('/api/timer');
 
     return {
       ...state,
       habitLogs,
-      activeTimer: {
-        ...t, state: 'completed',
-        elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0,
-        remainingMs: 0, endsAt: undefined, pausedAt: undefined,
-      },
+      activeTimer: null, // fully clear — recovery is done
       timerSessions: state.timerSessions.map(s =>
         s.id === t.sessionId ? { ...s, completed: true, endedAt, duration: t.targetDuration! } : s
       ),
@@ -384,14 +423,36 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       });
     }).catch(() => { /* use local state */ });
 
+    // Flush any pending API calls that failed while offline
+    flushPendingSync();
+
     // Then load habits, logs & tasks from API for latest data
     Promise.all([fetchHabitsFromAPI(), fetchLogsFromAPI(), fetchTasksFromAPI()]).then(([habits, logs, tasks]) => {
       if ((habits && habits.length > 0) || (logs && logs.length > 0) || (tasks && tasks.length > 0)) {
         setState(prev => {
+          // Merge habit logs: combine local + DB, keeping unique entries by id (local wins on conflict)
+          let mergedLogs = prev.habitLogs;
+          if (logs && logs.length > 0) {
+            const localLogIds = new Set(prev.habitLogs.map(l => l.id));
+            const dbLogIds = new Set(logs.map(l => l.id));
+            // Keep all local logs + any DB logs not in local
+            const dbOnly = logs.filter(l => !localLogIds.has(l.id));
+            mergedLogs = [...prev.habitLogs, ...dbOnly];
+            // Sync any local-only logs back to DB (they were created offline)
+            const localOnly = prev.habitLogs.filter(l => !dbLogIds.has(l.id));
+            if (localOnly.length > 0) {
+              fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ habitLogs: localOnly }),
+              }).catch(() => {});
+            }
+          }
+
           const updated = {
             ...prev,
             ...(habits && habits.length > 0 ? { habits } : {}),
-            ...(logs && logs.length > 0 ? { habitLogs: logs } : {}),
+            habitLogs: mergedLogs,
             ...(tasks && tasks.length > 0 ? { tasks } : {}),
           };
           const normalized = normalizeState(updated);
