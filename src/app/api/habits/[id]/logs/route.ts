@@ -111,13 +111,13 @@ export async function POST(
         });
       }
     } else {
-      const { error } = await supabase.from('habit_logs').insert({
+      const { error } = await supabase.from('habit_logs').upsert({
         id: logId,
         user_id: userId,
         habit_id: habitId,
         date,
         data: log,
-      });
+      }, { onConflict: 'id' });
       if (error) throw error;
     }
 

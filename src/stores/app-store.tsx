@@ -242,12 +242,24 @@ function diffHabit(old: Habit, updates: Partial<Habit>): Record<string, { from: 
 // On page load: check if a running countdown/pomodoro timer has already ended.
 // No need to "recover" elapsed — it's always computed from absolute timestamps.
 
-function recoverTimer(state: AppState): AppState {
+function getTimerRecoveryKey(t: ActiveTimer | null): string | null {
+  if (!t || t.state !== 'running' || !t.endsAt) return null;
+  return [t.sessionId, t.mode, t.habitId ?? '', t.startedAt, t.endsAt, t.targetDuration ?? ''].join('|');
+}
+
+function recoverTimer(state: AppState, recoveredTimerKeys?: Set<string>): AppState {
   const t = state.activeTimer;
   if (!t || t.state !== 'running') return state;
 
   // For countdown/pomodoro: check if endsAt has passed
   if (t.endsAt && new Date(t.endsAt).getTime() <= Date.now()) {
+    const recoveryKey = getTimerRecoveryKey(t);
+    if (recoveryKey && recoveredTimerKeys?.has(recoveryKey)) {
+      apiDelete('/api/timer');
+      return { ...state, activeTimer: null };
+    }
+    if (recoveryKey) recoveredTimerKeys?.add(recoveryKey);
+
     const session = state.timerSessions.find(s => s.id === t.sessionId);
     const endedAt = new Date().toISOString();
 
@@ -410,12 +422,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_APP_STATE);
   const [mounted, setMounted] = useState(false);
   const stateRef = useRef(state);
+  const recoveredTimerKeysRef = useRef<Set<string>>(new Set());
   stateRef.current = state;
 
   useEffect(() => {
     // Load localStorage immediately for fast first paint
     const local = loadState();
-    const recovered = recoverTimer(local);
+    const recovered = recoverTimer(local, recoveredTimerKeysRef.current);
     setState(recovered);
     setMounted(true);
 
@@ -425,7 +438,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         if (res.data) {
           // DB has an active timer — use it as source of truth
           const withDbTimer = { ...prev, activeTimer: res.data };
-          return recoverTimer(withDbTimer);
+          return recoverTimer(withDbTimer, recoveredTimerKeysRef.current);
         } else {
           // DB has no active timer — clear any stale local timer
           if (prev.activeTimer && prev.activeTimer.state !== 'completed') {
