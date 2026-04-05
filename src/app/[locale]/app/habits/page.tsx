@@ -1245,19 +1245,19 @@ export default function HabitsPage() {
             transition={{ delay: 0.15, duration: 0.4 }}
             className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2"
           >
-            {/* Today's Progress */}
-            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
-              <div className="relative h-11 w-11 shrink-0">
-                <svg className="h-11 w-11 -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[var(--foreground)]/[0.06]" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--color-primary)" strokeWidth="2.5"
-                    strokeDasharray={`${completionRate * 0.88} 88`} strokeLinecap="round" className="transition-all duration-700" />
+            {/* Today's Progress — larger */}
+            <div className="rounded-2xl border px-5 py-4 flex items-center gap-4 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.15)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }}>
+              <div className="relative h-14 w-14 shrink-0">
+                <svg className="h-14 w-14 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--foreground)]/[0.06]" />
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-primary)" strokeWidth="2.5"
+                    strokeDasharray={`${completionRate * 0.94} 94`} strokeLinecap="round" className="transition-all duration-700" />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black" style={{ color: 'var(--color-primary)' }}>{completionRate}%</span>
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-black" style={{ color: 'var(--color-primary)' }}>{completionRate}%</span>
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold tabular-nums">{completedTodayCount}<span className="text-[var(--foreground)]/25 text-sm">/{todayScheduledCount}</span></p>
-                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
+                <p className="text-xl font-black tabular-nums">{completedTodayCount}<span className="text-[var(--foreground)]/20 text-base">/{todayScheduledCount}</span></p>
+                <p className="text-[11px] font-semibold text-[var(--foreground)]/45">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
               </div>
             </div>
 
@@ -1289,8 +1289,8 @@ export default function HabitsPage() {
                 <Target className="h-5 w-5 text-emerald-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold tabular-nums">{activeHabitsCount}</p>
-                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'عادة نشطة' : 'Active habits'}</p>
+                <p className="text-base font-bold tabular-nums">{activeHabitsCount} <span className="text-[10px] text-[var(--foreground)]/25">{isAr ? 'إجمالي' : 'total'}</span></p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? `${dailyHabits} يومية + ${nonDailyHabits} أخرى` : `${dailyHabits} daily + ${nonDailyHabits} other`}</p>
               </div>
             </div>
           </motion.div>
