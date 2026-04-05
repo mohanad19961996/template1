@@ -1257,62 +1257,62 @@ export default function HabitsPage() {
             className="mb-3 grid grid-cols-2 sm:grid-cols-5 gap-2"
           >
             {/* Today's Progress */}
-            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
-              <div className="relative h-9 w-9 shrink-0">
-                <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-[var(--foreground)]/[0.06]" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--color-primary)" strokeWidth="3"
-                    strokeDasharray={`${completionRate * 0.88} 88`} strokeLinecap="round" />
+            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'rgba(var(--color-primary-rgb) / 0.03)' }}>
+              <div className="relative h-11 w-11 shrink-0">
+                <svg className="h-11 w-11 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[var(--foreground)]/[0.06]" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--color-primary)" strokeWidth="2.5"
+                    strokeDasharray={`${completionRate * 0.88} 88`} strokeLinecap="round" className="transition-all duration-700" />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black" style={{ color: 'var(--color-primary)' }}>{completionRate}%</span>
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black" style={{ color: 'var(--color-primary)' }}>{completionRate}%</span>
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold tabular-nums">{completedTodayCount}<span className="text-[var(--foreground)]/30">/{todayScheduledCount}</span></p>
-                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
+                <p className="text-base font-bold tabular-nums">{completedTodayCount}<span className="text-[var(--foreground)]/25 text-sm">/{todayScheduledCount}</span></p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
               </div>
             </div>
 
             {/* Active Streaks */}
-            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-orange-500/10">
-                <Flame className="h-4.5 w-4.5 text-orange-500" />
+            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-orange-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-orange-500/10 transition-colors duration-200 group-hover:bg-orange-500/15">
+                <Flame className="h-5 w-5 text-orange-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold tabular-nums">{activeStreaks}</p>
-                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'سلاسل نشطة' : 'Active streaks'}</p>
+                <p className="text-base font-bold tabular-nums">{activeStreaks}</p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'سلاسل نشطة' : 'Active streaks'}</p>
               </div>
             </div>
 
             {/* Best Streak */}
-            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-purple-500/10">
-                <Award className="h-4.5 w-4.5 text-purple-500" />
+            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-purple-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-purple-500/10">
+                <Award className="h-5 w-5 text-purple-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold tabular-nums">{bestStreak} <span className="text-[9px] font-semibold text-[var(--foreground)]/30">{isAr ? 'يوم' : 'days'}</span></p>
-                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'أفضل سلسلة' : 'Best streak'}</p>
+                <p className="text-base font-bold tabular-nums">{bestStreak} <span className="text-[10px] font-semibold text-[var(--foreground)]/25">{isAr ? 'يوم' : 'days'}</span></p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'أفضل سلسلة' : 'Best streak'}</p>
               </div>
             </div>
 
             {/* Today's Time */}
-            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10">
-                <Timer className="h-4.5 w-4.5 text-blue-500" />
+            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-blue-500/10">
+                <Timer className="h-5 w-5 text-blue-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold tabular-nums">{todayTimeSecs > 0 ? todayTimeLabel : '0m'}</p>
-                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'وقت اليوم' : "Today's time"}</p>
+                <p className="text-base font-bold tabular-nums">{todayTimeSecs > 0 ? todayTimeLabel : '0m'}</p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'وقت اليوم' : "Today's time"}</p>
               </div>
             </div>
 
             {/* Total Habits */}
-            <div className="rounded-xl border px-3 py-2.5 flex items-center gap-2.5 col-span-2 sm:col-span-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center bg-emerald-500/10">
-                <Target className="h-4.5 w-4.5 text-emerald-500" />
+            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-400/25 col-span-2 sm:col-span-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-emerald-500/10">
+                <Target className="h-5 w-5 text-emerald-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold tabular-nums">{activeHabitsCount}</p>
-                <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'عادة نشطة' : 'Active habits'}</p>
+                <p className="text-base font-bold tabular-nums">{activeHabitsCount}</p>
+                <p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'عادة نشطة' : 'Active habits'}</p>
               </div>
             </div>
           </motion.div>
