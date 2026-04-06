@@ -1,27 +1,18 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useLocale } from 'next-intl';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
 import {
-  Habit, HabitLog, HabitFrequency, WeekDay, todayString, parseLocalDate, formatLocalDate, resolveHabitColor,
+  Habit, HabitLog, HabitFrequency, WeekDay, todayString, formatLocalDate, resolveHabitColor,
 } from '@/types/app';
 import {
-  Search, X, ChevronLeft, ChevronRight, Flame, Target, Clock, Eye,
+  Search, X, ChevronLeft, ChevronRight, Eye,
   CalendarDays, Repeat, Filter, Calendar as CalendarIcon, ListChecks, Archive,
-  Activity, Heart, Brain, BookOpen, Dumbbell, Moon, Sun, Coffee, Droplets,
-  Star, Zap, PenTool, Music, Camera, Code, Headphones, Smile, TreePine, Wind, Shield,
 } from 'lucide-react';
-
-// ── Icon map ──
-const ICON_MAP: Record<string, React.ElementType> = {
-  Activity, Heart, Brain, BookOpen, Dumbbell, Moon, Sun, Coffee, Droplets,
-  Flame, Target, Zap, Star, Clock, PenTool, Music, Camera, Code,
-  Headphones, Smile, TreePine, Wind, Eye, Shield,
-};
+import { HabitDetail } from '../page';
 
 const FREQ_LABELS: Record<string, { en: string; ar: string }> = {
   daily: { en: 'Daily', ar: 'يومي' },
@@ -96,33 +87,25 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
   const lang = isAr ? 'ar' : 'en';
   const today = todayString();
 
-  // Build daily completion data for the year
   const dailyData = useMemo(() => {
     const data: Record<string, { total: number; completed: number }> = {};
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31);
-
-    // Initialize all days
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const key = formatLocalDate(d);
       data[key] = { total: 0, completed: 0 };
     }
-
-    // For each habit, figure out which days it was scheduled and whether completed
     for (const habit of habits) {
       if (habit.archived) continue;
       const createdDate = habit.createdAt ? habit.createdAt.slice(0, 10) : '';
-
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const key = formatLocalDate(d);
         if (key > today) continue;
         if (createdDate && key < createdDate) continue;
-
         const dow = d.getDay() as WeekDay;
         const dayOfMonth = d.getDate();
         const month = d.getMonth();
         let scheduled = false;
-
         if (habit.frequency === 'daily') scheduled = true;
         else if (habit.frequency === 'weekly') scheduled = habit.customDays?.includes(dow) ?? false;
         else if (habit.frequency === 'monthly') scheduled = habit.customMonthDays?.includes(dayOfMonth) ?? false;
@@ -131,7 +114,6 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
           else if (habit.customScheduleType === 'monthdays') scheduled = habit.customMonthDays?.includes(dayOfMonth) ?? false;
           else if (habit.customScheduleType === 'yeardays') scheduled = habit.customYearDays?.some(yd => yd.month === month && yd.day === dayOfMonth) ?? false;
         }
-
         if (scheduled) {
           data[key].total++;
           const hasLog = logs.some(l => l.habitId === habit.id && l.date === key && l.completed);
@@ -142,27 +124,22 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
     return data;
   }, [habits, logs, year, today]);
 
-  // Build week grid (columns = weeks, rows = days)
   const weeks = useMemo(() => {
     const result: { date: string; rate: number; total: number; completed: number; inYear: boolean; isFuture: boolean }[][] = [];
     const jan1 = new Date(year, 0, 1);
-    const startDow = jan1.getDay(); // 0=Sun
-    // Start from the Sunday of the week containing Jan 1
+    const startDow = jan1.getDay();
     const start = new Date(jan1);
     start.setDate(start.getDate() - startDow);
-
     let currentWeek: typeof result[0] = [];
-    const endLimit = new Date(year + 1, 0, 7); // go a bit past Dec 31
-
+    const endLimit = new Date(year + 1, 0, 7);
     for (let d = new Date(start); d < endLimit; d.setDate(d.getDate() + 1)) {
       const key = formatLocalDate(d);
       const inYear = d.getFullYear() === year;
       const isFuture = key > today;
       const dd = dailyData[key];
-      const rate = dd && dd.total > 0 ? dd.completed / dd.total : -1; // -1 = no habits scheduled
+      const rate = dd && dd.total > 0 ? dd.completed / dd.total : -1;
       currentWeek.push({ date: key, rate, total: dd?.total ?? 0, completed: dd?.completed ?? 0, inYear, isFuture });
       if (currentWeek.length === 7) {
-        // Only include weeks that have at least one day in the year
         if (currentWeek.some(c => c.inYear)) result.push(currentWeek);
         currentWeek = [];
       }
@@ -174,7 +151,6 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
     return result;
   }, [year, dailyData, today]);
 
-  // Month label positions
   const monthPositions = useMemo(() => {
     const positions: { month: number; weekIndex: number }[] = [];
     let lastMonth = -1;
@@ -182,10 +158,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
       for (const cell of week) {
         if (!cell.inYear || !cell.date) continue;
         const m = parseInt(cell.date.split('-')[1], 10) - 1;
-        if (m !== lastMonth) {
-          positions.push({ month: m, weekIndex: wi });
-          lastMonth = m;
-        }
+        if (m !== lastMonth) { positions.push({ month: m, weekIndex: wi }); lastMonth = m; }
         break;
       }
     });
@@ -194,37 +167,28 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
 
   const getCellColor = (rate: number, inYear: boolean, isFuture: boolean) => {
     if (!inYear || isFuture) return 'bg-[var(--foreground)]/[0.03]';
-    if (rate < 0) return 'bg-[var(--foreground)]/[0.05]'; // no habits scheduled
+    if (rate < 0) return 'bg-[var(--foreground)]/[0.05]';
     if (rate === 0) return 'bg-red-500/20';
     if (rate < 0.5) return 'bg-orange-500/40';
     if (rate < 1) return 'bg-emerald-500/50';
     return 'bg-emerald-500/80';
   };
 
-  // Stats
   const stats = useMemo(() => {
     let totalScheduled = 0, totalCompleted = 0, perfectDays = 0, zeroDays = 0;
     Object.entries(dailyData).forEach(([key, d]) => {
       if (key > today || d.total === 0) return;
-      totalScheduled += d.total;
-      totalCompleted += d.completed;
+      totalScheduled += d.total; totalCompleted += d.completed;
       if (d.completed === d.total) perfectDays++;
       if (d.completed === 0) zeroDays++;
     });
-    return {
-      rate: totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0,
-      totalCompleted,
-      totalScheduled,
-      perfectDays,
-      zeroDays,
-    };
+    return { rate: totalScheduled > 0 ? Math.round((totalCompleted / totalScheduled) * 100) : 0, totalCompleted, totalScheduled, perfectDays, zeroDays };
   }, [dailyData, today]);
 
   const [hoveredCell, setHoveredCell] = useState<{ date: string; rate: number; total: number; completed: number } | null>(null);
 
   return (
     <div className="space-y-4">
-      {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: isAr ? 'معدل الإنجاز' : 'Completion Rate', value: `${stats.rate}%`, color: 'text-emerald-500' },
@@ -238,10 +202,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
           </div>
         ))}
       </div>
-
-      {/* Heatmap */}
       <div className="overflow-x-auto rounded-xl border border-[var(--foreground)]/[0.15] p-4 bg-[var(--foreground)]/[0.02]">
-        {/* Month labels */}
         <div className="flex gap-[2px] mb-1 ms-6">
           {monthPositions.map((mp, i) => {
             const nextPos = monthPositions[i + 1]?.weekIndex ?? weeks.length;
@@ -253,10 +214,7 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
             );
           })}
         </div>
-
-        {/* Day labels + grid */}
         <div className="flex gap-0">
-          {/* Day of week labels */}
           <div className="flex flex-col gap-[2px] me-1 pt-0">
             {[0, 1, 2, 3, 4, 5, 6].map(d => (
               <div key={d} className="h-[13px] flex items-center text-[9px] font-medium text-[var(--foreground)]/40" style={{ width: 20 }}>
@@ -264,19 +222,12 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
               </div>
             ))}
           </div>
-
-          {/* Grid */}
           <div className="flex gap-[2px]">
             {weeks.map((week, wi) => (
               <div key={wi} className="flex flex-col gap-[2px]">
                 {week.map((cell, di) => (
-                  <div
-                    key={di}
-                    className={cn(
-                      'h-[13px] w-[13px] rounded-[3px] transition-all duration-150',
-                      getCellColor(cell.rate, cell.inYear, cell.isFuture),
-                      cell.inYear && !cell.isFuture && 'hover:ring-2 hover:ring-[var(--color-primary)]/40 cursor-pointer',
-                    )}
+                  <div key={di}
+                    className={cn('h-[13px] w-[13px] rounded-[3px] transition-all duration-150', getCellColor(cell.rate, cell.inYear, cell.isFuture), cell.inYear && !cell.isFuture && 'hover:ring-2 hover:ring-[var(--color-primary)]/40 cursor-pointer')}
                     onMouseEnter={() => cell.inYear && !cell.isFuture ? setHoveredCell(cell) : setHoveredCell(null)}
                     onMouseLeave={() => setHoveredCell(null)}
                   />
@@ -285,8 +236,6 @@ function YearlyHeatmap({ habits, logs, year, isAr }: { habits: Habit[]; logs: Ha
             ))}
           </div>
         </div>
-
-        {/* Legend + tooltip */}
         <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-1.5 text-[10px] text-[var(--foreground)]/50">
             <span>{isAr ? 'أقل' : 'Less'}</span>
@@ -321,6 +270,7 @@ export default function AllHabitsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [yearView, setYearView] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
 
   const allHabits = useMemo(() => {
     return store.habits.filter(h => {
@@ -340,9 +290,11 @@ export default function AllHabitsPage() {
   }, [allHabits]);
 
   const frequencyOrder: HabitFrequency[] = ['daily', 'weekly', 'monthly', 'custom'];
-
   const totalActive = store.habits.filter(h => !h.archived).length;
   const totalArchived = store.habits.filter(h => h.archived).length;
+
+  // All non-archived habits for the detail modal navigation strip
+  const detailAllHabits = useMemo(() => store.habits.filter(h => !h.archived).sort((a, b) => a.order - b.order), [store.habits]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
@@ -353,75 +305,48 @@ export default function AllHabitsPage() {
           <p className="text-sm text-[var(--foreground)]/60 mt-1">
             {isAr
               ? `${totalActive} عادة نشطة${totalArchived > 0 ? ` · ${totalArchived} مؤرشفة` : ''}`
-              : `${totalActive} active habit${totalActive !== 1 ? 's' : ''}${totalArchived > 0 ? ` · ${totalArchived} archived` : ''}`
-            }
+              : `${totalActive} active habit${totalActive !== 1 ? 's' : ''}${totalArchived > 0 ? ` · ${totalArchived} archived` : ''}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Search */}
           <div className="relative">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--foreground)]/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder={isAr ? 'بحث...' : 'Search...'}
-              className="h-9 w-44 rounded-xl bg-[var(--foreground)]/[0.05] ps-9 pe-3 text-sm border border-[var(--foreground)]/[0.18] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-            />
+              className="h-9 w-44 rounded-xl bg-[var(--foreground)]/[0.05] ps-9 pe-3 text-sm border border-[var(--foreground)]/[0.18] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30" />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute end-2 top-1/2 -translate-y-1/2">
                 <X className="h-3.5 w-3.5 text-[var(--foreground)]/40" />
               </button>
             )}
           </div>
-
-          {/* Archived toggle */}
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className={cn(
-              'h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
-              showArchived
-                ? 'text-white border-transparent shadow-md'
-                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]',
-            )}
-            style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
-          >
+          <button onClick={() => setShowArchived(!showArchived)}
+            className={cn('h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
+              showArchived ? 'text-white border-transparent shadow-md' : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]')}
+            style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
             <Archive className="h-3.5 w-3.5" />
             {isAr ? 'المؤرشفة' : 'Archived'}
           </button>
-
-          {/* Year view toggle */}
-          <button
-            onClick={() => setYearView(!yearView)}
-            className={cn(
-              'h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
-              yearView
-                ? 'text-white border-transparent shadow-md'
-                : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]',
-            )}
-            style={yearView ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
-          >
+          <button onClick={() => setYearView(!yearView)}
+            className={cn('h-9 px-3 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5',
+              yearView ? 'text-white border-transparent shadow-md' : 'text-[var(--foreground)]/70 border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]')}
+            style={yearView ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
             <CalendarDays className="h-3.5 w-3.5" />
             {isAr ? 'عرض السنة' : 'Year View'}
           </button>
         </div>
       </div>
 
-      {/* Year heatmap section */}
       {yearView && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-          {/* Year selector */}
           <div className="flex items-center justify-center gap-3">
             <button onClick={() => setSelectedYear(y => y - 1)} className="h-8 w-8 rounded-lg bg-[var(--foreground)]/[0.05] hover:bg-[var(--foreground)]/[0.1] flex items-center justify-center transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="text-lg font-bold min-w-[60px] text-center">{selectedYear}</span>
-            <button
-              onClick={() => setSelectedYear(y => y + 1)}
-              disabled={selectedYear >= new Date().getFullYear()}
+            <button onClick={() => setSelectedYear(y => y + 1)} disabled={selectedYear >= new Date().getFullYear()}
               className={cn('h-8 w-8 rounded-lg bg-[var(--foreground)]/[0.05] flex items-center justify-center transition-colors',
-                selectedYear >= new Date().getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.1]')}
-            >
+                selectedYear >= new Date().getFullYear() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--foreground)]/[0.1]')}>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -429,7 +354,6 @@ export default function AllHabitsPage() {
         </motion.div>
       )}
 
-      {/* Grouped habits */}
       <div className="space-y-6">
         {frequencyOrder.map((freq) => {
           const habits = grouped[freq];
@@ -445,14 +369,11 @@ export default function AllHabitsPage() {
                   {freq === 'custom' && <Filter className="h-3.5 w-3.5 text-white" />}
                 </div>
                 <h2 className="text-base font-bold">{freqLabel}</h2>
-                <span className="text-xs text-[var(--foreground)]/50 font-medium">
-                  ({habits.length})
-                </span>
+                <span className="text-xs text-[var(--foreground)]/50 font-medium">({habits.length})</span>
               </div>
-
-              <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {habits.map((habit, i) => (
-                  <HabitCard key={habit.id} habit={habit} index={i} isAr={isAr} store={store} today={today} />
+                  <HabitCard key={habit.id} habit={habit} index={i} isAr={isAr} onDetail={setDetailHabit} />
                 ))}
               </div>
             </motion.div>
@@ -470,99 +391,79 @@ export default function AllHabitsPage() {
               ? (isAr ? 'لا توجد عادات مؤرشفة' : 'No archived habits')
               : searchQuery
                 ? (isAr ? 'لا توجد نتائج' : 'No results found')
-                : (isAr ? 'لا توجد عادات بعد' : 'No habits yet')
-            }
+                : (isAr ? 'لا توجد عادات بعد' : 'No habits yet')}
           </p>
         </div>
       )}
+
+      {/* ── Detail Modal — exact same wrapper + component as habits page ── */}
+      <AnimatePresence>
+        {detailHabit && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setDetailHabit(null)}
+              className="fixed inset-0 z-[var(--z-overlay)] bg-black/60"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-x-0 sm:inset-x-2 md:inset-x-4 top-0 sm:top-[2%] md:top-[3%] z-[var(--z-modal)] md:w-[min(960px,calc(100vw-2rem))] lg:w-[1100px] md:inset-x-0 md:mx-auto max-h-[100vh] sm:max-h-[96vh] md:max-h-[95vh] overflow-y-auto rounded-none sm:rounded-2xl md:rounded-3xl bg-[var(--color-background)] border-0 sm:border border-[var(--foreground)]/[0.18] shadow-2xl"
+            >
+              <HabitDetail
+                habit={detailHabit}
+                onClose={() => setDetailHabit(null)}
+                onEdit={() => {}}
+                onViewFull={() => {}}
+                allHabits={detailAllHabits}
+                onNavigate={(h) => setDetailHabit(h)}
+                onArchive={() => { store.toggleHabitArchive(detailHabit.id); setDetailHabit(null); }}
+                onDelete={() => { store.deleteHabit(detailHabit.id); setDetailHabit(null); }}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// ── Habit Card ──
-function HabitCard({ habit, index, isAr, store, today }: { habit: Habit; index: number; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string }) {
+// ── Habit Card (compact) ──
+function HabitCard({ habit, index, isAr, onDetail }: { habit: Habit; index: number; isAr: boolean; onDetail: (h: Habit) => void }) {
   const color = resolveHabitColor(habit.color);
-  const IconComp = ICON_MAP[habit.icon] || Activity;
-  const streak = store.getHabitStreak(habit.id);
-  const stats = store.getHabitStats(habit.id);
-  const schedule = getScheduleDescription(habit, isAr);
-  const catLabel = isAr ? (CATEGORY_LABELS[habit.category]?.ar ?? habit.category) : (CATEGORY_LABELS[habit.category]?.en ?? habit.category);
-  const isDoneToday = store.habitLogs.some(l => l.habitId === habit.id && l.date === today && l.completed);
+  const freqLabel = isAr ? FREQ_LABELS[habit.frequency].ar : FREQ_LABELS[habit.frequency].en;
+  const name = isAr ? habit.nameAr : habit.nameEn;
 
   return (
     <motion.div variants={fadeUp} custom={index}>
-      <Link href={`/app/habits?openHabit=${habit.id}`} className="block group">
-        <div
-          className={cn(
-            'rounded-2xl border border-[var(--foreground)]/[0.15] p-4 transition-all duration-200',
-            'hover:shadow-lg hover:border-[var(--foreground)]/[0.18] hover:-translate-y-0.5',
-            'bg-[var(--color-background)]',
-            habit.archived && 'opacity-60',
-          )}
-        >
-          {/* Top row: icon + name + today status */}
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm" style={{ background: `${color}15`, color }}>
-              <IconComp className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold truncate">{isAr ? habit.nameAr : habit.nameEn}</h3>
-                {isDoneToday && (
-                  <div className="shrink-0 h-5 w-5 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  </div>
-                )}
-              </div>
-              <p className="text-[11px] text-[var(--foreground)]/50 font-medium mt-0.5">{catLabel}</p>
-            </div>
-          </div>
-
-          {/* Schedule */}
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--foreground)]/60">
-            <Clock className="h-3 w-3" />
-            <span className="font-medium">{schedule}</span>
-            {habit.windowStart && habit.windowEnd && (
-              <span className="text-[var(--foreground)]/40 ms-1">
-                {habit.windowStart} - {habit.windowEnd}
-              </span>
-            )}
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-3 flex items-center gap-3 text-[11px]">
-            {streak.current > 0 && (
-              <div className="flex items-center gap-1 text-orange-500 font-bold">
-                <Flame className="h-3 w-3" />
-                {streak.current}
-              </div>
-            )}
-            <div className="flex items-center gap-1 text-[var(--foreground)]/50 font-medium">
-              <Target className="h-3 w-3" />
-              {stats.completionRate}%
-            </div>
-            <div className="flex items-center gap-1 text-[var(--foreground)]/50 font-medium">
-              <ListChecks className="h-3 w-3" />
-              {stats.totalCompletions}
-            </div>
-          </div>
-
-          {/* Mini frequency badge */}
-          <div className="mt-3 flex items-center gap-1.5">
-            <span
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold"
-              style={{ background: `${color}12`, color }}
-            >
-              {isAr ? FREQ_LABELS[habit.frequency].ar : FREQ_LABELS[habit.frequency].en}
-            </span>
-            {habit.priority === 'high' && (
-              <span className="inline-flex items-center gap-0.5 rounded-lg px-1.5 py-0.5 text-[10px] font-bold text-red-500 bg-red-500/10">
-                {isAr ? 'عالي' : 'High'}
-              </span>
-            )}
-          </div>
+      <div
+        className={cn(
+          'rounded-xl border p-2.5 transition-all duration-150 bg-[var(--color-background)]',
+          'hover:shadow-md hover:-translate-y-0.5',
+          habit.archived && 'opacity-60',
+        )}
+        style={{ borderColor: `${color}30`, borderInlineStartWidth: 3, borderInlineStartColor: color }}
+      >
+        <p className="text-[12px] font-bold leading-tight truncate" title={name}>{name}</p>
+        <div className="mt-1.5 flex items-center justify-between gap-1">
+          <span className="text-[10px] font-semibold rounded px-1.5 py-px" style={{ background: `${color}12`, color }}>
+            {freqLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() => onDetail(habit)}
+            className="shrink-0 flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold transition-all"
+            style={{ background: `${color}10`, color, border: `1px solid ${color}18` }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = color; e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = `${color}10`; e.currentTarget.style.color = color; }}
+          >
+            <Eye className="h-2.5 w-2.5" />
+            {isAr ? 'التفاصيل' : 'Details'}
+          </button>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }

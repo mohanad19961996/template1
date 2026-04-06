@@ -3876,7 +3876,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
   );
 }
 
-function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate, onArchive, onDelete }: { habit: Habit; onClose: () => void; onEdit: () => void; onViewFull: () => void; allHabits: Habit[]; onNavigate: (h: Habit) => void; onArchive?: () => void; onDelete?: () => void }) {
+export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate, onArchive, onDelete }: { habit: Habit; onClose: () => void; onEdit: () => void; onViewFull: () => void; allHabits: Habit[]; onNavigate: (h: Habit) => void; onArchive?: () => void; onDelete?: () => void }) {
   const locale = useLocale();
   const isAr = locale === 'ar';
   const store = useAppStore();
