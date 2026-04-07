@@ -199,11 +199,11 @@ export default function HabitDetailPage() {
   const viewingDateLogs = logsByDate[viewingDate] || [];
   const viewingDateHistory = historyByDate[viewingDate] || [];
 
-  // Sync daily note when viewingDate changes
+  const noteSeedForViewingDate = viewingDateLog?.note ?? '';
+  // Sync daily note when the date or the stored note for that date changes (avoid effect on every new habitLogs[] reference)
   useEffect(() => {
-    const log = habitLogs.find(l => l.date === viewingDate);
-    setDailyNote(log?.note || '');
-  }, [viewingDate, habitLogs]);
+    setDailyNote(noteSeedForViewingDate);
+  }, [viewingDate, noteSeedForViewingDate]);
 
   const navigateDay = (dir: -1 | 1) => {
     const d = new Date(viewingDate + 'T00:00:00');

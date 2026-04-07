@@ -9,63 +9,129 @@ import { GlobalTimerBanner } from '@/components/app/global-timer-banner';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
-import { computeTimerRemaining, formatLocalDate, generateId, todayString, computeTimerElapsed } from '@/types/app';
+import { formatLocalDate, todayString, DEFAULT_POMODORO } from '@/types/app';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Global timer checker — polls every second to detect when a countdown reaches zero.
-// Logs the session duration and checks cumulative daily total for habit completion.
+// Pomodoro: advances work → break → work … and only completes after the long break; work segments log habit time.
+// Countdown: logs once and completes. Guards each expiry with a key so we never process the same endsAt twice.
 function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
   const store = useAppStore();
   const storeRef = useRef(store);
   storeRef.current = store;
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const lastHandledExpiryRef = useRef<string | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
       const s = storeRef.current;
       const t = s.activeTimer;
-      if (!t || t.state !== 'running' || !t.endsAt) return;
+      if (!t || t.state !== 'running' || !t.endsAt) {
+        lastHandledExpiryRef.current = null;
+        return;
+      }
 
-      if (new Date(t.endsAt).getTime() <= Date.now()) {
-        const session = t.sessionId ? s.timerSessions.find(ts => ts.id === t.sessionId) : null;
-        const linkedHabitId = t.habitId ?? session?.habitId;
-        const habit = linkedHabitId ? s.habits.find(h => h.id === linkedHabitId) : null;
-        const label = habit ? (habit.nameEn || habit.nameAr) : (t.labelEn || t.labelAr || 'Timer');
-        const elapsed = t.targetDuration || 0;
+      if (new Date(t.endsAt).getTime() > Date.now()) {
+        lastHandledExpiryRef.current = null;
+        return;
+      }
 
-        // Log this session's time and check cumulative completion
-        if (linkedHabitId && elapsed > 0 && habit && !habit.archived) {
-          const today = todayString();
-          const habitTarget = habit.expectedDuration || 0;
-          const maxReps = habit.maxDailyReps || Infinity;
-          // Per-rep cumulative: check if this session crosses a new completion threshold
-          const prevTotal = s.habitLogs
-            .filter(l => l.habitId === linkedHabitId && l.date === today)
-            .reduce((sum, l) => sum + (l.duration ?? 0), 0);
-          const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
-          const newReps = habitTarget > 0 ? Math.floor((prevTotal + elapsed) / habitTarget) : 0;
-          const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
-          s.logHabit({
-            habitId: linkedHabitId,
-            date: today,
-            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-            duration: elapsed,
-            note: '', reminderUsed: false, perceivedDifficulty: 'medium',
-            completed: isCompleted,
-            source: 'timer',
+      const expiryKey = `${t.sessionId}|${t.endsAt}`;
+      if (lastHandledExpiryRef.current === expiryKey) return;
+      lastHandledExpiryRef.current = expiryKey;
+
+      const session = t.sessionId ? s.timerSessions.find(ts => ts.id === t.sessionId) : null;
+      const linkedHabitId = t.habitId ?? session?.habitId;
+      const habit = linkedHabitId ? s.habits.find(h => h.id === linkedHabitId) : null;
+      const label = habit ? (habit.nameEn || habit.nameAr) : (t.labelEn || t.labelAr || 'Timer');
+
+      const logWorkSegmentForHabit = (elapsed: number) => {
+        if (!linkedHabitId || elapsed <= 0 || !habit || habit.archived) return;
+        const today = todayString();
+        const habitTarget = habit.expectedDuration || 0;
+        const maxReps = habit.maxDailyReps || Infinity;
+        const prevTotal = s.habitLogs
+          .filter(l => l.habitId === linkedHabitId && l.date === today)
+          .reduce((sum, l) => sum + (l.duration ?? 0), 0);
+        const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
+        const newReps = habitTarget > 0 ? Math.floor((prevTotal + elapsed) / habitTarget) : 0;
+        const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
+        s.logHabit({
+          habitId: linkedHabitId,
+          date: today,
+          time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+          duration: elapsed,
+          note: '', reminderUsed: false, perceivedDifficulty: 'medium',
+          completed: isCompleted,
+          source: 'timer',
+        });
+      };
+
+      if (t.mode === 'pomodoro') {
+        const pomodoroConfig = session?.pomodoroConfig ?? DEFAULT_POMODORO;
+        const phase = t.pomodoroPhase ?? 'work';
+        const round = t.pomodoroRound ?? 1;
+        const now = Date.now();
+        const nowISO = new Date(now).toISOString();
+
+        if (phase === 'work') {
+          logWorkSegmentForHabit(t.targetDuration || 0);
+          const nextDuration = round >= pomodoroConfig.roundsBeforeLongBreak
+            ? pomodoroConfig.longBreakMinutes * 60
+            : pomodoroConfig.shortBreakMinutes * 60;
+          const nextPhase = round >= pomodoroConfig.roundsBeforeLongBreak ? 'long-break' : 'short-break';
+          s.updateActiveTimer({
+            pomodoroPhase: nextPhase,
+            targetDuration: nextDuration,
+            startedAt: nowISO,
+            endsAt: new Date(now + nextDuration * 1000).toISOString(),
+            remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
           });
+          return;
         }
-
-        // Complete the timer session
+        if (phase === 'short-break') {
+          const nextDuration = pomodoroConfig.workMinutes * 60;
+          s.updateActiveTimer({
+            pomodoroPhase: 'work',
+            pomodoroRound: round + 1,
+            targetDuration: nextDuration,
+            startedAt: nowISO,
+            endsAt: new Date(now + nextDuration * 1000).toISOString(),
+            remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
+          });
+          return;
+        }
         if (session) {
           s.completeTimer(session.id);
         } else {
-          s.updateActiveTimer({ state: 'completed', remainingMs: 0, elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0, endsAt: undefined });
+          s.updateActiveTimer({
+            state: 'completed',
+            remainingMs: 0,
+            elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0,
+            endsAt: undefined,
+          });
         }
         onCompleteRef.current(label);
+        return;
       }
+
+      const elapsed = t.targetDuration || 0;
+      if (linkedHabitId && elapsed > 0 && habit && !habit.archived) {
+        logWorkSegmentForHabit(elapsed);
+      }
+      if (session) {
+        s.completeTimer(session.id);
+      } else {
+        s.updateActiveTimer({
+          state: 'completed',
+          remainingMs: 0,
+          elapsedMs: t.targetDuration ? t.targetDuration * 1000 : 0,
+          endsAt: undefined,
+        });
+      }
+      onCompleteRef.current(label);
     }, 1000);
     return () => clearInterval(id);
   }, []);

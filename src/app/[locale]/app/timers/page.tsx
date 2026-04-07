@@ -78,20 +78,8 @@ export default function TimersPage() {
     return () => clearInterval(cid);
   }, []);
 
-  // Watch for completion — the global layout also checks, but this handles
-  // pomodoro phase transitions and showing the completion modal on the timers page.
+  // Pomodoro phase advances run in app layout (global interval) so they stay correct on any /app page.
   const prevStateRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!active || active.state !== 'running') return;
-    if (active.endsAt && new Date(active.endsAt).getTime() <= Date.now()) {
-      if (active.mode === 'pomodoro') {
-        handlePomodoroPhaseComplete();
-      } else {
-        // Don't set completed here — let the global layout handler do it
-        // so the alarm overlay fires. Just show the local completion modal.
-      }
-    }
-  }, [timer.now, active?.state, active?.mode]);
 
   // Show completion modal when timer state becomes 'completed'
   useEffect(() => {
@@ -100,41 +88,6 @@ export default function TimersPage() {
     }
     prevStateRef.current = active?.state ?? null;
   }, [active?.state]);
-
-  const handlePomodoroPhaseComplete = useCallback(() => {
-    if (!store.activeTimer) return;
-    const phase = store.activeTimer.pomodoroPhase;
-    const round = store.activeTimer.pomodoroRound ?? 1;
-    const now = Date.now();
-    const nowISO = new Date(now).toISOString();
-
-    if (phase === 'work') {
-      const nextDuration = round >= pomodoroConfig.roundsBeforeLongBreak
-        ? pomodoroConfig.longBreakMinutes * 60
-        : pomodoroConfig.shortBreakMinutes * 60;
-      const nextPhase = round >= pomodoroConfig.roundsBeforeLongBreak ? 'long-break' : 'short-break';
-      store.updateActiveTimer({
-        pomodoroPhase: nextPhase,
-        targetDuration: nextDuration,
-        startedAt: nowISO,
-        endsAt: new Date(now + nextDuration * 1000).toISOString(),
-        remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
-      });
-    } else if (phase === 'short-break') {
-      const nextDuration = pomodoroConfig.workMinutes * 60;
-      store.updateActiveTimer({
-        pomodoroPhase: 'work',
-        pomodoroRound: round + 1,
-        targetDuration: nextDuration,
-        startedAt: nowISO,
-        endsAt: new Date(now + nextDuration * 1000).toISOString(),
-        remainingMs: undefined, elapsedMs: undefined, pausedAt: undefined,
-      });
-    } else {
-      setShowComplete(true);
-      store.updateActiveTimer({ state: 'completed', remainingMs: 0, endsAt: undefined });
-    }
-  }, [store, pomodoroConfig]);
 
   const selectedHabit = linkedHabitId ? store.habits.find(h => h.id === linkedHabitId) : null;
 

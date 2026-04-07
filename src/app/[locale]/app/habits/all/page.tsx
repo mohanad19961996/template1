@@ -12,7 +12,7 @@ import {
   Search, X, ChevronLeft, ChevronRight, Eye,
   CalendarDays, Repeat, Filter, Calendar as CalendarIcon, ListChecks, Archive,
 } from 'lucide-react';
-import { HabitDetail } from '../page';
+import { HabitDetail } from '@/components/habits/habit-detail';
 
 const FREQ_LABELS: Record<string, { en: string; ar: string }> = {
   daily: { en: 'Daily', ar: 'يومي' },
