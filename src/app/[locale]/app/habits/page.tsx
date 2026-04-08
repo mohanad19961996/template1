@@ -79,11 +79,12 @@ export default function HabitsPage() {
   // Merge default categories + store custom categories + categories from existing habits
   const allCategories = useMemo(() => {
     const defaults = [...DEFAULT_HABIT_CATEGORIES];
-    const fromHabits = store.habits.map(h => h.category).filter(c => c);
+    const fromHabits = store.habits.filter(h => !h.archived).map(h => h.category).filter(c => c);
     const fromStore = store.customCategories ?? [];
+    const deleted = new Set(store.deletedCategories ?? []);
     const all = new Set([...defaults, ...fromStore, ...fromHabits]);
-    return Array.from(all);
-  }, [store.habits, store.customCategories]);
+    return Array.from(all).filter(c => !deleted.has(c));
+  }, [store.habits, store.customCategories, store.deletedCategories]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
@@ -118,8 +119,14 @@ export default function HabitsPage() {
     monthly: true,
     custom: true,
   });
-  const toggleScheduleSection = useCallback((f: HabitFrequency) => {
-    setOpenScheduleSections((p) => ({ ...p, [f]: !p[f] }));
+  const toggleScheduleSection = useCallback((f: HabitFrequency, el?: HTMLElement | null) => {
+    setOpenScheduleSections((p) => {
+      const willOpen = !p[f];
+      if (willOpen && el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      }
+      return { ...p, [f]: willOpen };
+    });
   }, []);
 
   /** Category filter rail — collapsible (same scroll-safe pattern as schedule groups) */
@@ -477,44 +484,51 @@ export default function HabitsPage() {
 
       {/* Toolbar */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="mb-4 flex items-center gap-1.5 sm:gap-2 relative z-[100]">
-        <div className="relative flex-1 min-w-0 group/search rounded-xl transition-shadow duration-300 motion-safe:group-hover/search:shadow-md motion-safe:group-focus-within/search:shadow-md">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 z-[1] transition-all duration-300 group-focus-within/search:text-[var(--color-primary)] motion-safe:group-hover/search:scale-110 motion-safe:group-hover/search:text-[var(--color-primary)]/90" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
-          {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute end-2.5 top-1/2 -translate-y-1/2 z-[1] h-6 w-6 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] text-[var(--foreground)]/50 transition-all duration-200 motion-safe:hover:scale-110 motion-safe:active:scale-90 motion-safe:hover:bg-[var(--color-primary)]/15 motion-safe:hover:text-[var(--color-primary)]"><X className="h-3 w-3" /></button>}
+        {/* Search */}
+        <div className="relative flex-1 min-w-0 group/search rounded-xl">
+          <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 z-[1] transition-colors duration-200 text-[var(--color-primary)]/40 group-focus-within/search:text-[var(--color-primary)] group-hover/search:text-[var(--color-primary)]" />
+          {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute end-2 top-1/2 -translate-y-1/2 z-[1] h-5 w-5 rounded-full flex items-center justify-center bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all duration-200"><X className="h-2.5 w-2.5" /></button>}
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={isAr ? 'بحث...' : 'Search...'}
-            className="w-full rounded-xl border ps-9 pe-9 py-2 text-[13px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-300 bg-transparent motion-safe:hover:border-[var(--color-primary)]/22"
-            style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08)'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; }} />
+            className="w-full rounded-xl border-2 border-[var(--color-primary)]/25 ps-8 pe-8 py-1.5 text-[12px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-200 bg-transparent hover:border-[var(--color-primary)]/50 focus:border-[var(--color-primary)] focus:shadow-[0_0_0_3px_rgba(var(--color-primary-rgb)_/_0.1)]" />
         </div>
-        <motion.button
-          whileHover={{ scale: 1.04, boxShadow: '0 10px 28px rgba(var(--color-primary-rgb) / 0.32)' }}
-          whileTap={{ scale: 0.96 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="group/newhabit shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 sm:px-5 py-2 text-[13px] font-bold text-white transition-[filter] duration-200 motion-safe:hover:brightness-110"
+        {/* New Habit */}
+        <button type="button" onClick={() => { resetForm(); setShowForm(true); }}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-1.5 text-[12px] font-bold text-white transition-all duration-200 hover:brightness-110 hover:shadow-lg active:scale-95"
           style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.2)' }}>
-          <Plus className="h-4 w-4 transition-transform duration-300 ease-out motion-safe:group-hover/newhabit:rotate-90" /><span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
-        </motion.button>
+          <Plus className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
+        </button>
+        {/* Archive */}
         <button type="button" onClick={() => setShowArchived(!showArchived)}
-          className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:translate-y-0 motion-safe:active:scale-[0.97] motion-safe:hover:[&_svg]:scale-110', showArchived ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35')}
-          style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+          className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border-2 px-2.5 py-1.5 text-[12px] font-bold cursor-pointer transition-all duration-200 active:scale-95',
+            showArchived
+              ? 'border-[var(--color-primary)] text-white'
+              : 'border-[var(--color-primary)]/25 text-[var(--foreground)]/60 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md')}
+          style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
           <Archive className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'الأرشيف' : 'Archive'}</span>
-          {store.habits.filter(h => h.archived).length > 0 && <span className={cn('rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', showArchived ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600')}>{store.habits.filter(h => h.archived).length}</span>}
+          {store.habits.filter(h => h.archived).length > 0 && <span className={cn('rounded-full px-1.5 py-px text-[9px] font-black tabular-nums', showArchived ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600')}>{store.habits.filter(h => h.archived).length}</span>}
         </button>
-        <button type="button" onClick={() => setShowFullTable(true)} className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35 motion-safe:hover:[&_svg]:scale-110" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          <Table2 className="h-3.5 w-3.5 transition-transform duration-200" /><span className="hidden lg:inline">{isAr ? 'الالتزام الشهري' : 'Monthly Compliance'}</span>
+        {/* Compliance */}
+        <button type="button" onClick={() => setShowFullTable(true)}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-2.5 py-1.5 text-[12px] font-bold text-[var(--foreground)]/60 cursor-pointer transition-all duration-200 active:scale-95 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md">
+          <Table2 className="h-3.5 w-3.5" /><span className="hidden lg:inline">{isAr ? 'الالتزام الشهري' : 'Monthly Compliance'}</span>
         </button>
-        <Link href="/app/habits/log" className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35 motion-safe:hover:[&_svg]:scale-110" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          <CalendarIcon className="h-3.5 w-3.5 transition-transform duration-200" /><span className="hidden lg:inline">{isAr ? 'السجل' : 'Log'}</span>
+        {/* Log */}
+        <Link href="/app/habits/log"
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-2.5 py-1.5 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 active:scale-95 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md">
+          <CalendarIcon className="h-3.5 w-3.5" /><span className="hidden lg:inline">{isAr ? 'السجل' : 'Log'}</span>
         </Link>
+        {/* Filters */}
         {(() => {
           const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
           return (
             <button type="button" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] motion-safe:hover:[&_svg]:scale-110', showAdvancedFilters || activeFilterCount > 0 ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35')}
-              style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+              className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border-2 px-2.5 py-1.5 text-[12px] font-bold cursor-pointer transition-all duration-200 active:scale-95',
+                showAdvancedFilters || activeFilterCount > 0
+                  ? 'border-[var(--color-primary)] text-white'
+                  : 'border-[var(--color-primary)]/25 text-[var(--foreground)]/60 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md')}
+              style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
               <SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'فلاتر' : 'Filters'}</span>
-              {activeFilterCount > 0 && <span className="text-[10px] font-black bg-white/25 text-white h-4 min-w-[16px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
+              {activeFilterCount > 0 && <span className="text-[9px] font-black bg-white/25 text-white h-4 min-w-[16px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
             </button>
           );
         })()}
@@ -524,7 +538,7 @@ export default function HabitsPage() {
       <AnimatePresence>
         {showAdvancedFilters && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-            <div className="rounded-2xl border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.02] p-5 transition-all duration-300 motion-safe:hover:border-[var(--foreground)]/16 motion-safe:hover:shadow-md motion-safe:hover:bg-[var(--foreground)]/[0.025]">
+            <div className="rounded-2xl border border-[var(--color-primary)]/20 bg-[var(--color-background)] p-5 transition-all duration-300 hover:border-[var(--color-primary)]/35">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-bold">{isAr ? 'فلاتر متقدمة' : 'Advanced Filters'}</span>
                 {(filterType !== 'all' || filterPriority !== 'all' || filterTracking !== 'all' || filterStatus !== 'all') && (
@@ -563,59 +577,54 @@ export default function HabitsPage() {
       {/* Categories — collapsible (same pattern as schedule groups) */}
       <div
         className={cn(
-          'habits-schedule-section relative z-[90] mb-3 sm:mb-4 rounded-xl border overflow-hidden transition-[border-color,background-color] duration-200',
+          'habits-schedule-section relative z-[90] mb-3 sm:mb-4 rounded-xl overflow-hidden transition-[border-color,background-color,box-shadow] duration-200',
           categoriesOpen
-            ? 'border-[var(--color-primary)]/22 bg-[var(--color-background)]'
-            : 'border-[var(--foreground)]/[0.09] bg-[var(--color-background)]',
+            ? 'border border-[var(--color-primary)]/40 bg-[var(--color-background)]'
+            : 'border border-[var(--color-primary)]/30 bg-[var(--color-background)]',
         )}
       >
         <button
           type="button"
-          onClick={() => setCategoriesOpen((o) => !o)}
+          onClick={(e) => { const el = e.currentTarget.closest('.habits-schedule-section'); setCategoriesOpen((o) => { if (!o && el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); return !o; }); }}
           aria-expanded={categoriesOpen}
           className={cn(
             'group/acc relative w-full grid items-center gap-x-2 sm:gap-x-4 gap-y-2',
             'grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
             'px-3 py-3 sm:px-4 sm:py-3.5',
             'border-0 bg-transparent text-start transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-            categoriesOpen && 'border-b border-[var(--foreground)]/[0.08]',
-            'hover:bg-[var(--foreground)]/[0.03] motion-safe:hover:bg-[var(--foreground)]/[0.045]',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/25',
+            categoriesOpen && 'border-b-2 border-[var(--color-primary)]/20',
+            'hover:bg-[var(--color-primary)]/[0.08]',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/40',
           )}
         >
-          <span
-            className={cn(
-              'pointer-events-none absolute inset-y-2.5 start-0 z-[1] w-0.5 rounded-full bg-[var(--color-primary)] transition-opacity duration-200',
-              categoriesOpen ? 'opacity-100' : 'opacity-0 group-hover/acc:opacity-100',
-            )}
-            aria-hidden
-          />
           <div className="relative z-[1] col-start-1 row-start-1 flex items-center gap-2 justify-self-start min-w-0 ps-1 sm:col-auto sm:row-auto">
             <div
               className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.03] transition-all duration-200 ease-out',
-                'text-[var(--color-primary)] group-hover/acc:border-[var(--color-primary)]/25 group-hover/acc:bg-[var(--color-primary)]/[0.06]',
-                'motion-safe:group-hover/acc:scale-105 motion-safe:group-hover/acc:shadow-sm',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out',
+                categoriesOpen
+                  ? 'bg-[var(--color-primary)] text-white shadow-md'
+                  : 'border-2 border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.08] text-[var(--color-primary)] group-hover/acc:bg-[var(--color-primary)] group-hover/acc:text-white group-hover/acc:border-transparent group-hover/acc:shadow-md',
               )}
             >
-              <Filter className="h-[18px] w-[18px] sm:h-5 sm:w-5 transition-transform duration-200 motion-safe:group-hover/acc:rotate-12" strokeWidth={2} aria-hidden />
+              <Filter className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} aria-hidden />
             </div>
             <span
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/45 transition-all duration-200',
-                'group-hover/acc:border-[var(--color-primary)]/22 group-hover/acc:text-[var(--color-primary)]',
-                categoriesOpen && 'border-[var(--color-primary)]/25 text-[var(--color-primary)]',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all duration-200',
+                categoriesOpen
+                  ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                  : 'text-[var(--foreground)]/40 group-hover/acc:text-[var(--color-primary)] group-hover/acc:bg-[var(--color-primary)]/10',
                 categoriesOpen ? 'rotate-0' : '-rotate-90',
               )}
             >
-              <ChevronDown className="h-4 w-4" strokeWidth={2} aria-hidden />
+              <ChevronDown className="h-4 w-4" strokeWidth={2.5} aria-hidden />
             </span>
           </div>
           <div className="relative z-[1] col-span-2 row-start-2 flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:max-w-md sm:justify-self-center">
-            <span className="text-center text-[15px] font-bold leading-snug tracking-tight text-[var(--foreground)] line-clamp-2 sm:text-base">
+            <span className={cn('text-center text-[15px] font-bold leading-snug tracking-tight line-clamp-2 sm:text-base transition-colors duration-200', categoriesOpen ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)] group-hover/acc:text-[var(--color-primary)]')}>
               {isAr ? 'الفئات' : 'Categories'}
             </span>
-            <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px]">
+            <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px] group-hover/acc:text-[var(--color-primary)]/60 transition-colors duration-200">
               {filterCategory === 'all'
                 ? (isAr ? 'تصفية حسب الفئة' : 'Filter by category')
                 : getCategoryLabel(filterCategory, isAr, store.deletedCategories)}
@@ -624,22 +633,24 @@ export default function HabitsPage() {
           <div className="relative z-[1] col-start-2 row-start-1 flex flex-wrap items-center justify-end gap-2 justify-self-end min-w-0 sm:col-auto sm:row-auto">
             <span
               className={cn(
-                'shrink-0 rounded-md border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.06] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--foreground)]/80 sm:text-xs',
-                'transition-transform duration-200 motion-safe:group-hover/acc:scale-105',
+                'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums sm:text-xs transition-all duration-200',
+                categoriesOpen
+                  ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                  : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70 group-hover/acc:bg-[var(--color-primary)]/15 group-hover/acc:text-[var(--color-primary)]',
               )}
             >
               {allCategories.length}
             </span>
             <span
               className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 sm:px-3 sm:text-[11px]',
-                'border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/55',
-                'group-hover/acc:border-[var(--color-primary)]/28 group-hover/acc:text-[var(--color-primary)]',
-                categoriesOpen && 'border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.06] text-[var(--color-primary)]',
+                'inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 sm:px-3 sm:text-[11px]',
+                categoriesOpen
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                  : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 group-hover/acc:bg-[var(--color-primary)] group-hover/acc:text-white group-hover/acc:shadow-sm',
               )}
             >
               {categoriesOpen ? (isAr ? 'طيّ' : 'Collapse') : (isAr ? 'توسيع' : 'Expand')}
-              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', categoriesOpen && 'rotate-180')} strokeWidth={2} aria-hidden />
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', categoriesOpen && 'rotate-180')} strokeWidth={2.5} aria-hidden />
             </span>
           </div>
         </button>
@@ -691,15 +702,15 @@ export default function HabitsPage() {
             <div
               key={section.key}
               className={cn(
-                'habits-schedule-section mb-3 sm:mb-4 rounded-xl border overflow-hidden transition-[border-color,background-color] duration-200',
+                'habits-schedule-section mb-3 sm:mb-4 rounded-xl overflow-hidden transition-[border-color,background-color,box-shadow] duration-200',
                 open
-                  ? 'border-[var(--color-primary)]/22 bg-[var(--color-background)]'
-                  : 'border-[var(--foreground)]/[0.09] bg-[var(--color-background)]',
+                  ? 'border border-[var(--color-primary)]/40 bg-[var(--color-background)]'
+                  : 'border border-[var(--color-primary)]/30 bg-[var(--color-background)]',
               )}
             >
               <button
                 type="button"
-                onClick={() => toggleScheduleSection(section.key)}
+                onClick={(e) => toggleScheduleSection(section.key, e.currentTarget.closest('.habits-schedule-section') as HTMLElement)}
                 aria-expanded={open}
                 className={cn(
                   'group/acc relative w-full grid items-center gap-x-2 sm:gap-x-4 gap-y-2',
@@ -707,45 +718,40 @@ export default function HabitsPage() {
                   'px-3 py-3 sm:px-4 sm:py-3.5',
                   'border-0 bg-transparent text-start',
                   'transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-                  open && 'border-b border-[var(--foreground)]/[0.08]',
-                  'hover:bg-[var(--foreground)]/[0.03] motion-safe:hover:bg-[var(--foreground)]/[0.045]',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/25',
+                  open && 'border-b-2 border-[var(--color-primary)]/20',
+                  'hover:bg-[var(--color-primary)]/[0.08]',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/40',
                 )}
               >
-                <span
-                  className={cn(
-                    'pointer-events-none absolute inset-y-2.5 start-0 z-[1] w-0.5 rounded-full bg-[var(--color-primary)] transition-opacity duration-200',
-                    open ? 'opacity-100' : 'opacity-0 group-hover/acc:opacity-100',
-                  )}
-                  aria-hidden
-                />
                 <div className="relative z-[1] col-start-1 row-start-1 flex items-center gap-2 justify-self-start min-w-0 ps-1 sm:col-auto sm:row-auto">
                   <div
                     className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.03] transition-all duration-200 ease-out',
-                      'text-[var(--color-primary)] group-hover/acc:border-[var(--color-primary)]/25 group-hover/acc:bg-[var(--color-primary)]/[0.06]',
-                      'motion-safe:group-hover/acc:scale-105 motion-safe:group-hover/acc:shadow-sm',
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out',
+                      open
+                        ? 'bg-[var(--color-primary)] text-white shadow-md'
+                        : 'border-2 border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.08] text-[var(--color-primary)] group-hover/acc:bg-[var(--color-primary)] group-hover/acc:text-white group-hover/acc:border-transparent group-hover/acc:shadow-md',
                     )}
                   >
-                    <SectionIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5 transition-transform duration-200 motion-safe:group-hover/acc:scale-110" strokeWidth={2} aria-hidden />
+                    <SectionIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} aria-hidden />
                   </div>
                   <span
                     className={cn(
-                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/45 transition-all duration-200',
-                      'group-hover/acc:border-[var(--color-primary)]/22 group-hover/acc:text-[var(--color-primary)]',
-                      open && 'border-[var(--color-primary)]/25 text-[var(--color-primary)]',
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all duration-200',
+                      open
+                        ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                        : 'text-[var(--foreground)]/40 group-hover/acc:text-[var(--color-primary)] group-hover/acc:bg-[var(--color-primary)]/10',
                       open ? 'rotate-0' : '-rotate-90',
                     )}
                   >
-                    <ChevronDown className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    <ChevronDown className="h-4 w-4" strokeWidth={2.5} aria-hidden />
                   </span>
                 </div>
 
                 <div className="relative z-[1] col-span-2 row-start-2 flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:max-w-md sm:justify-self-center">
-                  <span className="text-center text-[15px] font-bold leading-snug tracking-tight text-[var(--foreground)] line-clamp-2 sm:text-base">
+                  <span className={cn('text-center text-[15px] font-bold leading-snug tracking-tight line-clamp-2 sm:text-base transition-colors duration-200', open ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)] group-hover/acc:text-[var(--color-primary)]')}>
                     {title}
                   </span>
-                  <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px]">
+                  <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px] group-hover/acc:text-[var(--color-primary)]/60 transition-colors duration-200">
                     {open
                       ? (isAr ? 'إخفاء العادات' : 'Hide habits in this group')
                       : (isAr ? 'عرض العادات' : 'Show habits in this group')}
@@ -755,26 +761,26 @@ export default function HabitsPage() {
                 <div className="relative z-[1] col-start-2 row-start-1 flex flex-wrap items-center justify-end gap-2 justify-self-end min-w-0 sm:col-auto sm:row-auto">
                   <span
                     className={cn(
-                      'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold tabular-nums sm:text-xs',
-                      'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/80',
-                      'border border-[var(--foreground)]/[0.08]',
-                      'transition-transform duration-200 motion-safe:group-hover/acc:scale-105',
+                      'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums sm:text-xs transition-all duration-200',
+                      open
+                        ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                        : 'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/70 group-hover/acc:bg-[var(--color-primary)]/15 group-hover/acc:text-[var(--color-primary)]',
                     )}
                   >
                     {section.count}
                   </span>
                   <span
                     className={cn(
-                      'inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 sm:px-3 sm:text-[11px]',
-                      'border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/55',
-                      'group-hover/acc:border-[var(--color-primary)]/28 group-hover/acc:text-[var(--color-primary)]',
-                      open && 'border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.06] text-[var(--color-primary)]',
+                      'inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 sm:px-3 sm:text-[11px]',
+                      open
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                        : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 group-hover/acc:bg-[var(--color-primary)] group-hover/acc:text-white group-hover/acc:shadow-sm',
                     )}
                   >
                     {open ? (isAr ? 'طيّ' : 'Collapse') : (isAr ? 'توسيع' : 'Expand')}
                     <ChevronDown
                       className={cn('h-3.5 w-3.5 transition-transform duration-200', open && 'rotate-180')}
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                       aria-hidden
                     />
                   </span>
@@ -790,11 +796,11 @@ export default function HabitsPage() {
                   <div className="px-2 sm:px-3 pb-2.5 sm:pb-3 pt-0">
                     <div
                       className={cn(
-                        'rounded-lg border border-[var(--foreground)]/[0.08] bg-[var(--color-background)] p-2 sm:p-3',
-                        'transition-all duration-300 ease-out motion-safe:hover:border-[var(--foreground)]/14 motion-safe:hover:shadow-md',
+                        'rounded-lg border border-[var(--color-primary)]/20 bg-[var(--color-background)] p-2 sm:p-3',
+                        'transition-all duration-300 ease-out motion-safe:hover:border-[var(--color-primary)]/35 motion-safe:hover:shadow-md',
                       )}
                     >
-                      <p className="mb-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/40 text-center sm:text-start">
+                      <p className="mb-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-primary)]/50 text-center sm:text-start">
                         {isAr ? `${section.count} عادة في هذا القسم` : `${section.count} habit${section.count === 1 ? '' : 's'} in this section`}
                       </p>
                       <div key={themeTick} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">

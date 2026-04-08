@@ -9,7 +9,8 @@ import { Plus, X, Check, Edit3, GripVertical, Tag } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CATEGORY_LABELS, categoryTileBase } from '@/components/habits/habit-constants';
+import { CATEGORY_LABELS, categoryTileBase, isHabitScheduledForDate } from '@/components/habits/habit-constants';
+import { todayString } from '@/types/app';
 
 export function NewCategoryTile({ isAr, store, allCategories }: { isAr: boolean; store: ReturnType<typeof useAppStore>; allCategories: string[] }) {
   const [editing, setEditing] = useState(false);
@@ -200,9 +201,12 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
 }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const orderedCategories = useOrderedCategories(allCategories, store.categoryOrder);
+  const today = todayString();
   const habitPool = useMemo(
-    () => (showArchived ? store.habits.filter(h => h.archived) : store.habits.filter(h => !h.archived)),
-    [store.habits, showArchived],
+    () => showArchived
+      ? store.habits.filter(h => h.archived)
+      : store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, today)),
+    [store.habits, showArchived, today],
   );
   const totalAll = habitPool.length;
   const countFor = useCallback((cat: string) => habitPool.filter(h => h.category === cat).length, [habitPool]);

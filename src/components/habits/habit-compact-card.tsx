@@ -60,11 +60,13 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
         habit.archived ? 'opacity-75' : 'habit-card-animate',
       )}
       style={{
-        border: `2.5px solid ${habit.archived ? 'rgba(245,158,11,0.5)' : `${hc}45`}`,
-        borderInlineStartWidth: '5px',
+        border: `2px solid ${habit.archived ? 'rgba(245,158,11,0.35)' : `${hc}25`}`,
+        borderInlineStartWidth: '4px',
         borderInlineStartColor: habit.archived ? '#f59e0b' : hc,
-        background: habit.archived ? 'rgba(245,158,11,0.03)' : 'var(--color-background)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        background: habit.archived
+          ? 'rgba(245,158,11,0.03)'
+          : `linear-gradient(135deg, ${hc}08 0%, ${hc}03 100%)`,
+        boxShadow: `0 2px 8px ${hc}10, 0 1px 2px rgba(0,0,0,0.04)`,
       }}
     >
       {/* Row 1: Done toggle + Name + badges */}
