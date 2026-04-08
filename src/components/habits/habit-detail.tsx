@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import {
   Plus, CheckCircle2, Circle, Flame, X, Archive, Trash2, Edit3, Eye,
-  ChevronLeft, ChevronRight, Target, Clock, BarChart3, ListChecks, Hash,
-  Trophy, Activity, Sparkles, ArrowRight, Play, Pause, Square, Timer,
-  MapPin, Repeat, Gift, Lightbulb, Maximize2, Hourglass, AlertCircle,
+  ChevronLeft, ChevronRight, ChevronDown, Target, Clock, BarChart3, ListChecks, Hash,
+  Trophy, Activity, ArrowRight, Play, Pause, Square, Timer,
+  MapPin, Repeat, Gift, Lightbulb, Maximize2, Hourglass, AlertCircle, Bell,
   CalendarDays, Check, Calendar as CalendarIcon, Award, Minus,
 } from 'lucide-react';
 import {
-  getCategoryLabel, getCompletionColor, FREQ_LABELS, CATEGORY_LABELS, DAY_LABELS,
+  getCompletionColor, getCategoryLabel, FREQ_LABELS, CUSTOM_SCHEDULE_LABELS, CATEGORY_LABELS, DAY_LABELS,
   isWithinWindow, isWindowPassed, isBooleanOutsideWindow, formatCompletionWindow,
   isHabitScheduledForDate, isHabitDoneToday, normalizeDurationToSecs, getHabitTimeStats,
   formatSecs, to12h, CompletionColor, isItemDone, getItemTime, ChecklistStateValue,
@@ -46,8 +46,18 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
     ? store.habitLogs.filter(l => l.habitId === habit.id && l.date === today).reduce((s, l) => s + (l.value ?? (l.completed ? 1 : 0)), 0)
     : 0;
   const dCountProgress = isCountHabit && dCountTarget > 0 ? Math.min(1, dCountValue / dCountTarget) : 0;
-  const habitAge = Math.max(1, Math.floor((Date.now() - new Date(habit.createdAt).getTime()) / 86400000));
   const hc = resolveHabitColor(habit.color);
+
+  // Habit details — collapsible, click only (default closed)
+  const [habitDetailsOpen, setHabitDetailsOpen] = useState(false);
+  useEffect(() => {
+    setHabitDetailsOpen(false);
+  }, [habit.id]);
+
+  const [timerDetailsOpen, setTimerDetailsOpen] = useState(false);
+  useEffect(() => {
+    setTimerDetailsOpen(false);
+  }, [habit.id]);
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -214,13 +224,57 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
   const renderCompact = () => {
     const name = isAr ? habit.nameAr : habit.nameEn;
     const description = isAr ? habit.descriptionAr : habit.descriptionEn;
+    const hasLoop = (isAr ? habit.cueAr : habit.cueEn) || (isAr ? habit.routineAr : habit.routineEn) || (isAr ? habit.rewardAr : habit.rewardEn);
+    const hasContext = (isAr ? habit.placeAr : habit.placeEn) || habit.preferredTime || habit.expectedDuration || (habit.windowStart && habit.windowEnd);
+    const detailChip =
+      'group rounded-xl border px-2.5 py-1.5 min-w-0 transition-all duration-200 ease-out sm:hover:-translate-y-0.5 sm:hover:shadow-md sm:hover:brightness-[1.03] dark:sm:hover:brightness-[1.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]';
     const catLabel = getCategoryLabel(habit.category, isAr, store.deletedCategories, habit.archived);
-    const freqLabel = isAr ? FREQ_LABELS[habit.frequency]?.ar : FREQ_LABELS[habit.frequency]?.en;
+    const freqBase = isAr ? FREQ_LABELS[habit.frequency]?.ar : FREQ_LABELS[habit.frequency]?.en;
+    const freqLabel = freqBase ?? habit.frequency;
     const typeLabel = habit.type === 'positive' ? (isAr ? 'بناء' : 'Build') : (isAr ? 'تجنب' : 'Break');
     const priLabel = isAr ? (habit.priority === 'high' ? 'عالية' : habit.priority === 'medium' ? 'متوسطة' : 'منخفضة') : habit.priority;
     const diffLabel = isAr ? (habit.difficulty === 'hard' ? 'صعبة' : habit.difficulty === 'medium' ? 'متوسطة' : 'سهلة') : habit.difficulty;
-    const hasLoop = (isAr ? habit.cueAr : habit.cueEn) || (isAr ? habit.routineAr : habit.routineEn) || (isAr ? habit.rewardAr : habit.rewardEn);
-    const hasContext = (isAr ? habit.placeAr : habit.placeEn) || habit.preferredTime || habit.expectedDuration || (habit.windowStart && habit.windowEnd);
+    const tt = habit.trackingType ?? 'boolean';
+    const trackingTypeLabel = (isAr
+      ? { boolean: 'نعم / لا', count: 'عداد', timer: 'مؤقت', checklist: 'قائمة', duration: 'مدة يدوية' }
+      : { boolean: 'Yes / No', count: 'Counter', timer: 'Timer', checklist: 'Checklist', duration: 'Duration log' })[tt] ?? tt;
+    const trackingDetail = (() => {
+      if (tt === 'count' && habit.targetValue != null)
+        return `${habit.targetValue} ${habit.targetUnit ?? (isAr ? 'مرة' : 'times')}`;
+      if (tt === 'checklist' && (habit.checklistItems?.length ?? 0) > 0)
+        return `${habit.checklistItems!.length} ${isAr ? 'عناصر' : 'items'}`;
+      if ((tt === 'timer' || tt === 'duration' || tt === 'boolean') && habit.expectedDuration)
+        return formatDurationSecs(habit.expectedDuration);
+      return isAr ? 'بدون هدف رقمي إضافي' : 'No extra numeric target';
+    })();
+    const scheduleHint = (() => {
+      const parts: string[] = [];
+      if (habit.frequency === 'weekly' && habit.weeklyTarget != null && habit.weeklyTarget > 0)
+        parts.push(isAr ? `${habit.weeklyTarget} مرات بالأسبوع` : `${habit.weeklyTarget}× per week`);
+      if (habit.frequency === 'custom') {
+        if (habit.customScheduleType) {
+          const cs = isAr ? CUSTOM_SCHEDULE_LABELS[habit.customScheduleType]?.ar : CUSTOM_SCHEDULE_LABELS[habit.customScheduleType]?.en;
+          if (cs) parts.push(cs);
+        }
+        if (habit.customDays?.length) {
+          const labels = isAr ? DAY_LABELS.ar : DAY_LABELS.en;
+          parts.push(habit.customDays.map(d => labels[d]).join(isAr ? '، ' : ', '));
+        }
+        if (habit.customMonthDays?.length)
+          parts.push(isAr ? `أيام الشهر: ${habit.customMonthDays.join('، ')}` : `Month days: ${habit.customMonthDays.join(', ')}`);
+      }
+      return parts.length ? parts.join(' · ') : '';
+    })();
+    const reminderDaysLine = (() => {
+      if (!habit.reminderEnabled) return '';
+      if (!habit.reminderDays?.length) return isAr ? 'كل الأيام' : 'All days';
+      return habit.reminderDays.map(d => (isAr ? DAY_LABELS.ar : DAY_LABELS.en)[d]).join(isAr ? '، ' : ', ');
+    })();
+    const reminderTitle = (() => {
+      if (!habit.reminderEnabled) return '';
+      const time = habit.reminderTime ? to12h(habit.reminderTime) : '';
+      return [time || (isAr ? 'بدون وقت محدد' : 'No set time'), reminderDaysLine].join(' · ');
+    })();
 
     const ai = allHabits.findIndex(h => h.id === habit.id);
     const goPrev = () => ai > 0 && onNavigate(allHabits[ai - 1]);
@@ -298,8 +352,11 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
               <X className="h-4 w-4" />
             </button>
           </div>
-          {/* Action buttons row */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Actions + week strip — one row on sm+, stacked on narrow screens */}
+          <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:items-stretch sm:gap-2.5">
+            <div
+              className="flex flex-wrap items-center gap-1.5 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1.5 sm:shrink-0 sm:w-[8.75rem] md:w-[9.25rem] rounded-xl p-1 sm:p-1.5"
+              style={{ border: `1px solid ${hc}45`, background: `${hc}06` }}>
               <button onClick={() => {
                 const inW = isWithinWindow(habit);
                 const wExp = isWindowPassed(habit);
@@ -336,25 +393,25 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                 }
                 store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: true });
               }}
-                className={cn('group flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold border transition-all duration-200 active:scale-[0.95]',
+                className={cn('group flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold border transition-all duration-200 active:scale-[0.95] w-full sm:w-auto',
                   done ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)] border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.08]')}>
-                {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                {done ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <Circle className="h-3.5 w-3.5 shrink-0" />}
                 {done ? (isAr ? 'مكتمل' : 'Done') : (isAr ? 'لم يُنجز' : 'Not Done')}
               </button>
               <button onClick={onEdit}
-                className="group shrink-0 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm"
+                className="group flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-200 border text-[11px] sm:text-xs font-bold active:scale-[0.97] hover:shadow-sm w-full sm:w-auto"
                 style={{ borderColor: `${hc}30`, color: hc, background: `${hc}08` }}
                 title={isAr ? 'تعديل' : 'Edit'}>
-                <Edit3 className="h-3.5 w-3.5" />
+                <Edit3 className="h-3.5 w-3.5 shrink-0" />
                 {isAr ? 'تعديل' : 'Edit'}
               </button>
               {onArchive && (() => {
                 const archivedCount = store.habits.filter(h => h.archived).length;
                 return (
                   <button onClick={() => { onArchive(); onClose(); toast.notifySuccess(isAr ? (habit.archived ? 'تم استعادة العادة' : 'تم أرشفة العادة') : (habit.archived ? 'Habit restored' : 'Habit archived')); }}
-                    className="shrink-0 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm border-amber-500/25 text-amber-600 bg-amber-500/5 hover:bg-amber-500/10"
+                    className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-200 border text-[11px] sm:text-xs font-bold active:scale-[0.97] hover:shadow-sm border-amber-500/25 text-amber-600 bg-amber-500/5 hover:bg-amber-500/10 w-full sm:w-auto"
                     title={isAr ? (habit.archived ? 'استعادة' : 'أرشفة') : (habit.archived ? 'Restore' : 'Archive')}>
-                    <Archive className="h-3.5 w-3.5" />
+                    <Archive className="h-3.5 w-3.5 shrink-0" />
                     {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
                     {archivedCount > 0 && (
                       <span className="rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-black tabular-nums text-amber-600">{archivedCount}</span>
@@ -364,15 +421,69 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
               })()}
               {onDelete && (
                 <button onClick={() => setShowDeleteConfirm(true)}
-                  className="shrink-0 flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl transition-all duration-200 border text-xs sm:text-sm font-bold active:scale-[0.97] hover:shadow-sm border-red-500/25 text-red-500 bg-red-500/5 hover:bg-red-500/10"
+                  className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-200 border text-[11px] sm:text-xs font-bold active:scale-[0.97] hover:shadow-sm border-red-500/25 text-red-500 bg-red-500/5 hover:bg-red-500/10 w-full sm:w-auto"
                   title={isAr ? 'حذف نهائي' : 'Delete permanently'}>
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5 shrink-0" />
                   {isAr ? 'حذف' : 'Delete'}
                 </button>
               )}
             </div>
 
-            {/* Delete confirmation modal */}
+            {/* Week strip — shares row with actions on sm+ */}
+            <div className="rounded-xl p-1.5 sm:p-2 flex-1 min-w-0 flex flex-col justify-center" style={{ border: `1px solid ${hc}45`, background: `${hc}0a` }}>
+              <div className="flex items-center gap-0">
+                {weekDays.map((d, i) => {
+                  const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'narrow' });
+                  const isToday = d.date === today;
+                  const isPast = d.date < today;
+                  const isNotScheduled = d.color === 'not-scheduled';
+                  const dayRepCount = getDoneRepCountForDate(habit, store.habitLogs, d.date);
+                  return (
+                    <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-md py-0.5 transition-all relative min-w-0',
+                      isToday && 'bg-[var(--color-primary)]/[0.08]')}
+                      style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
+                      <span className={cn('text-[9px] sm:text-[11px] font-bold leading-none', isNotScheduled ? 'text-[var(--foreground)]/30' : isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
+                      <div className={cn('h-[22px] w-[22px] sm:h-6 sm:w-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black',
+                        isNotScheduled ? 'bg-red-500/8 text-red-400/50' :
+                        d.done && d.color === 'green' ? 'bg-emerald-500 text-white' :
+                        d.done && d.color === 'orange' ? 'bg-amber-500 text-white' :
+                        d.done ? 'bg-emerald-500 text-white' :
+                        isPast ? 'bg-red-500 text-white' :
+                        isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
+                        'bg-gray-300 dark:bg-gray-600 text-[var(--foreground)]/70',
+                        isToday && !isNotScheduled && 'ring-1 ring-offset-1 shadow-sm sm:ring-2')}
+                        style={isToday && !isNotScheduled ? { ['--tw-ring-color' as string]: hc } : undefined}>
+                        {d.done ? <Check className="h-2.5 w-2.5" /> : isNotScheduled ? '✕' : parseLocalDate(d.date).getDate()}
+                      </div>
+                      {dayRepCount > 1 && (
+                        <span className="absolute -top-0.5 end-0 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center shadow-sm">{dayRepCount}x</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-center gap-x-2 gap-y-0.5 mt-1 pt-1 flex-wrap border-t" style={{ borderColor: `${hc}30` }}>
+                {[
+                  { dot: 'bg-emerald-500', label: isAr ? 'مكتمل' : 'Done' },
+                  { dot: 'bg-amber-500', label: isAr ? 'متأخر' : 'Late' },
+                  { dot: 'bg-red-500', label: isAr ? 'فائت' : 'Missed' },
+                  { dot: 'bg-gray-300 dark:bg-gray-600', label: isAr ? 'قادم' : 'Upcoming' },
+                  ...(habit.frequency !== 'daily' ? [{ dot: '', label: isAr ? 'غير مجدول' : 'N/A', naMarker: true as const }] : []),
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-0.5">
+                    {'naMarker' in item && item.naMarker ? (
+                      <div className="h-2 w-2 rounded-full bg-red-500/8 text-red-400/50 text-[6px] font-black flex items-center justify-center">✕</div>
+                    ) : (
+                      <div className={cn('h-1.5 w-1.5 rounded-full shrink-0', item.dot)} />
+                    )}
+                    <span className="text-[8px] sm:text-[10px] text-[var(--foreground)] font-semibold leading-none">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+            {/* Delete confirmation — full width below actions + week */}
             <AnimatePresence>
               {showDeleteConfirm && onDelete && (
                 <motion.div
@@ -428,142 +539,173 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                 </motion.div>
               )}
             </AnimatePresence>
-
-          {/* Week strip — compact */}
-          <div className="rounded-xl p-1.5 sm:p-2.5 mt-2" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-          <div className="flex items-center gap-0">
-            {weekDays.map((d, i) => {
-              const dayLabel = parseLocalDate(d.date).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'narrow' });
-              const isToday = d.date === today;
-              const isPast = d.date < today;
-              const isNotScheduled = d.color === 'not-scheduled';
-              const dayRepCount = getDoneRepCountForDate(habit, store.habitLogs, d.date);
-              return (
-                <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-lg py-1 transition-all relative',
-                  isToday && 'bg-[var(--color-primary)]/[0.08]')}
-                  style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
-                  <span className={cn('text-[10px] sm:text-sm font-bold', isNotScheduled ? 'text-[var(--foreground)]/30' : isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
-                  <div className={cn('h-5 w-5 sm:h-7 sm:w-7 rounded-full flex items-center justify-center text-[10px] sm:text-sm font-black',
-                    isNotScheduled ? 'bg-red-500/8 text-red-400/50' :
-                    d.done && d.color === 'green' ? 'bg-emerald-500 text-white' :
-                    d.done && d.color === 'orange' ? 'bg-amber-500 text-white' :
-                    d.done ? 'bg-emerald-500 text-white' :
-                    isPast ? 'bg-red-500 text-white' :
-                    isToday ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]' :
-                    'bg-gray-300 dark:bg-gray-600 text-[var(--foreground)]/70',
-                    isToday && !isNotScheduled && 'ring-2 ring-offset-1 shadow-sm')}
-                    style={isToday && !isNotScheduled ? { ['--tw-ring-color' as string]: hc } : undefined}>
-                    {d.done ? <Check className="h-2.5 w-2.5" /> : isNotScheduled ? '✕' : parseLocalDate(d.date).getDate()}
-                  </div>
-                  {dayRepCount > 1 && (
-                    <span className="absolute -top-1 end-0 h-4 min-w-[16px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-black flex items-center justify-center shadow-sm">{dayRepCount}x</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {/* Week strip legend */}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-1.5 flex-wrap">
-            <div className="flex items-center gap-1">
-              <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-500" />
-              <span className="text-[10px] sm:text-sm text-[var(--foreground)] font-medium">{isAr ? 'مكتمل' : 'Done'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500" />
-              <span className="text-[10px] sm:text-sm text-[var(--foreground)] font-medium">{isAr ? 'متأخر' : 'Late'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-red-500" />
-              <span className="text-[10px] sm:text-sm text-[var(--foreground)] font-medium">{isAr ? 'فائت' : 'Missed'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-              <span className="text-[10px] sm:text-sm text-[var(--foreground)] font-medium">{isAr ? 'قادم' : 'Upcoming'}</span>
-            </div>
-            {habit.frequency !== 'daily' && (
-              <div className="flex items-center gap-1">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500/8 text-red-400/50 text-[7px] font-black flex items-center justify-center">✕</div>
-                <span className="text-sm text-[var(--foreground)] font-medium">{isAr ? 'غير مجدول' : 'N/A'}</span>
-              </div>
-            )}
-          </div>
-          </div>
-
-          {/* Badges row — compact inline */}
-          <div className="flex items-center gap-1 mt-2 sm:mt-2.5 flex-wrap">
-            {[catLabel, freqLabel, typeLabel, `${priLabel}`, `${diffLabel}`, ...(habit.expectedDuration ? [formatDurationSecs(habit.expectedDuration)] : []), habit.maxDailyReps ? `${isAr ? 'أقصى عدد جلسات: ' : 'Max sessions: '}${habit.maxDailyReps}${isAr ? '/يوم' : '/day'}` : (isAr ? 'أقصى عدد جلسات: غير محدود' : 'Max sessions: Unlimited'), `${habitAge}${isAr ? 'يوم' : 'd'}`].map((b, i) => (
-              <span key={i} className="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-md cursor-default" style={{ background: `${hc}10`, color: hc, border: `1px solid ${hc}15` }}>{b}</span>
-            ))}
-          </div>
         </div>
 
         {/* ── BODY: 3-column grid ── */}
         <div className="px-3 sm:px-5 pb-3 sm:pb-4 pt-2">
           {/* Action zone — compact */}
           <div className="rounded-xl p-3 mb-3" style={{ background: `${hc}05`, border: `1px solid ${hc}12` }} onClick={e => e.stopPropagation()}>
-            {hasDuration && !habit.archived && (
-              <div className="flex flex-col gap-2">
-                {/* Custom timer H:M:S input — only when timer not active */}
-                {!isTimerActive && (
-                  <div className="rounded-lg p-2" style={{ background: `${hc}08`, border: `1px solid ${hc}15` }}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">
-                        {isAr ? 'مدة المؤقت' : 'Timer Duration'}
-                      </span>
-                      {customTimerSecs !== (habit.expectedDuration || 0) && (
-                        <button onClick={() => setCustomTimerSecs(habit.expectedDuration || 0)}
-                          className="text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all"
-                          style={{ color: hc, background: `${hc}15` }}>
-                          {isAr ? 'إعادة تعيين' : 'Reset'}
-                        </button>
-                      )}
+            {hasDuration && !habit.archived && (() => {
+              const todayTimerSecs = store.habitLogs
+                .filter(l => l.habitId === habit.id && l.date === today)
+                .reduce((s, l) => s + (l.duration ?? 0), 0);
+              const exp = habit.expectedDuration || 0;
+              return (
+              <div
+                className="flex flex-col gap-2 rounded-xl border p-2 sm:p-2.5 transition-shadow duration-200 motion-safe:hover:shadow-md"
+                style={{ borderColor: `${hc}35`, background: `linear-gradient(180deg, ${hc}0c, ${hc}04)` }}>
+                <div className="flex items-center justify-between gap-2 border-b pb-1.5" style={{ borderColor: `${hc}22` }}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${hc}18`, border: `1px solid ${hc}30` }}>
+                      <Timer className="h-3.5 w-3.5" style={{ color: hc }} />
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <div className="text-center">
-                        <label className="text-[8px] font-medium text-[var(--foreground)]/40 block">{isAr ? 'ساعات' : 'H'}</label>
-                        <input type="number" min={0} max={23} value={customTimerH}
-                          onChange={e => setCustomHMS(Math.max(0, Math.min(23, Number(e.target.value) || 0)), customTimerM, customTimerS)}
-                          className="w-full rounded-lg app-input px-1 py-1.5 text-sm text-center font-mono font-bold" />
-                      </div>
-                      <div className="text-center">
-                        <label className="text-[8px] font-medium text-[var(--foreground)]/40 block">{isAr ? 'دقائق' : 'M'}</label>
-                        <input type="number" min={0} max={59} value={customTimerM}
-                          onChange={e => setCustomHMS(customTimerH, Math.max(0, Math.min(59, Number(e.target.value) || 0)), customTimerS)}
-                          className="w-full rounded-lg app-input px-1 py-1.5 text-sm text-center font-mono font-bold" />
-                      </div>
-                      <div className="text-center">
-                        <label className="text-[8px] font-medium text-[var(--foreground)]/40 block">{isAr ? 'ثواني' : 'S'}</label>
-                        <input type="number" min={0} max={59} value={customTimerS}
-                          onChange={e => setCustomHMS(customTimerH, customTimerM, Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
-                          className="w-full rounded-lg app-input px-1 py-1.5 text-sm text-center font-mono font-bold" />
-                      </div>
-                    </div>
-                    {/* Info: original target vs custom */}
-                    <div className="flex items-center justify-between mt-1.5 text-[9px] font-semibold">
-                      <span className="text-[var(--foreground)]/40">
-                        {isAr ? 'الهدف الأصلي:' : 'Original target:'} {formatDurationSecs(habit.expectedDuration!)}
-                      </span>
-                      {customTimerSecs !== (habit.expectedDuration || 0) && (
-                        <span style={{ color: hc }}>
-                          {isAr ? 'المؤقت:' : 'Timer:'} {formatDurationSecs(customTimerSecs)}
-                        </span>
-                      )}
-                    </div>
-                    {customTimerSecs > (habit.expectedDuration || 0) && (
-                      <p className="text-[8px] mt-1 text-emerald-600 font-medium">
-                        {isAr ? `✓ سيتم تسجيل الإنجاز عند ${formatDurationSecs(habit.expectedDuration!)} — المؤقت يستمر` : `✓ Done at ${formatDurationSecs(habit.expectedDuration!)} — timer continues`}
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-[var(--foreground)] leading-tight">{isAr ? 'مؤقت الجلسة' : 'Session timer'}</p>
+                      <p className="text-[11px] font-semibold text-[var(--foreground)]/50 truncate">
+                        {isAr ? 'الهدف' : 'Target'}: {formatDurationSecs(exp)}
+                        {habit.maxDailyReps != null && habit.maxDailyReps > 0 && (
+                          <span className="text-[var(--foreground)]/35"> · {isAr ? 'الحد' : 'Cap'} {habit.maxDailyReps}/{isAr ? 'يوم' : 'day'}</span>
+                        )}
                       </p>
-                    )}
-                    {customTimerSecs > 0 && customTimerSecs < (habit.expectedDuration || 0) && (
-                      <p className="text-[8px] mt-1 text-amber-600 font-medium">
-                        {isAr ? `⚠ المؤقت أقل من الهدف — لن يُسجل كمكتمل` : `⚠ Timer shorter than target — won't mark as done`}
-                      </p>
-                    )}
+                    </div>
                   </div>
-                )}
-                <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" customDurationSecs={customTimerSecs !== (habit.expectedDuration || 0) ? customTimerSecs : undefined} />
+                </div>
+
+                <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" dense customDurationSecs={customTimerSecs !== exp ? customTimerSecs : undefined} />
+
+                <div className="rounded-lg border overflow-hidden" style={{ borderColor: `${hc}28`, background: `${hc}06` }}>
+                  <button
+                    type="button"
+                    onClick={() => setTimerDetailsOpen(o => !o)}
+                    aria-expanded={timerDetailsOpen}
+                    className={cn(
+                      'group flex w-full items-center justify-between gap-2 px-2.5 py-2 text-start transition-all duration-200',
+                      'hover:bg-[var(--foreground)]/[0.05] motion-safe:active:scale-[0.998]',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/35',
+                      timerDetailsOpen && 'bg-[var(--foreground)]/[0.04]',
+                    )}>
+                    <span className="text-[11px] font-bold text-[var(--foreground)]">
+                      {isAr ? 'مدة مخصصة وتفاصيل إضافية' : 'Custom duration & details'}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-semibold text-[var(--foreground)]/40 group-hover:text-[var(--foreground)]/60">
+                        {timerDetailsOpen ? (isAr ? 'طي' : 'Hide') : (isAr ? 'عرض' : 'Show')}
+                      </span>
+                      <ChevronDown className={cn('h-4 w-4 text-[var(--foreground)]/40 transition-transform duration-200', timerDetailsOpen && 'rotate-180')} style={{ color: timerDetailsOpen ? hc : undefined }} />
+                    </div>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {timerDetailsOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden border-t"
+                        style={{ borderColor: `${hc}22` }}>
+                        <div className="max-h-[min(280px,48svh)] overflow-y-auto overscroll-contain space-y-2 p-2 sm:p-2.5">
+                          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                            <div className="rounded-md px-2 py-1.5 transition-colors duration-200 hover:bg-[var(--foreground)]/[0.04]" style={{ border: `1px solid ${hc}18` }} title={isAr ? 'يُحتسب مكتملًا عند بلوغ هذه المدة في الجلسة.' : 'A session counts complete when this much time is logged.'}>
+                              <p className="text-[8px] font-bold uppercase tracking-wide text-[var(--foreground)]/45">{isAr ? 'هدف الإكمال' : 'Completion target'}</p>
+                              <p className="text-xs font-black tabular-nums mt-0.5" style={{ color: hc }}>{formatDurationSecs(exp)}</p>
+                              <p className="text-[9px] text-[var(--foreground)]/50 mt-0.5 line-clamp-2 leading-snug">{isAr ? 'مكتمل عند بلوغ المدة في الجلسة.' : 'Complete when this duration is logged in a session.'}</p>
+                            </div>
+                            <div className="rounded-md px-2 py-1.5 transition-colors duration-200 hover:bg-[var(--foreground)]/[0.04]" style={{ border: `1px solid ${hc}18` }} title={isAr ? 'مجموع الجلسات المسجّلة لهذا اليوم.' : 'Total time logged for this habit today.'}>
+                              <p className="text-[8px] font-bold uppercase tracking-wide text-[var(--foreground)]/45">{isAr ? 'مدة اليوم' : 'Logged today'}</p>
+                              <p className="text-xs font-black tabular-nums mt-0.5 text-[var(--foreground)]">{formatDurationSecs(todayTimerSecs)}</p>
+                              <p className="text-[9px] text-[var(--foreground)]/50 mt-0.5 line-clamp-2 leading-snug">{isAr ? 'إجمالي الوقت المسجّل اليوم.' : 'Total logged today.'}</p>
+                            </div>
+                            {habit.windowStart && habit.windowEnd && (
+                              <div className="rounded-md px-2 py-1.5 sm:col-span-2 transition-colors duration-200 hover:bg-[var(--foreground)]/[0.04]" style={{ border: `1px solid ${hc}18` }}>
+                                <p className="text-[8px] font-bold uppercase tracking-wide text-[var(--foreground)]/45">{isAr ? 'نافذة المؤقت' : 'Timer window'}</p>
+                                <p className="text-[11px] font-bold mt-0.5">{to12h(habit.windowStart)} – {to12h(habit.windowEnd)}{habit.strictWindow ? (isAr ? ' (إجباري)' : ' (strict)') : ''}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {!isTimerActive && (
+                            <div className="rounded-lg p-2 transition-shadow duration-200 hover:shadow-sm" style={{ background: `${hc}0a`, border: `1px solid ${hc}20` }}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">
+                                  {isAr ? 'مدة العد التنازلي' : 'Countdown duration'}
+                                </span>
+                                {customTimerSecs !== exp && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setCustomTimerSecs(exp)}
+                                    className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-200 hover:brightness-110 motion-safe:hover:scale-[1.02] motion-safe:active:scale-[0.98]"
+                                    style={{ color: hc, background: `${hc}18`, border: `1px solid ${hc}30` }}>
+                                    {isAr ? 'إعادة تعيين' : 'Reset'}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <div className="text-center">
+                                  <label className="text-[8px] font-semibold text-[var(--foreground)]/45 block mb-0.5">{isAr ? 'ساعات' : 'Hours'}</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={23}
+                                    value={customTimerH}
+                                    onChange={e => setCustomHMS(Math.max(0, Math.min(23, Number(e.target.value) || 0)), customTimerM, customTimerS)}
+                                    className="w-full rounded-md app-input px-1 py-1.5 text-xs text-center font-mono font-bold transition-all duration-200 hover:border-[var(--foreground)]/25 focus:border-[var(--color-primary)]/50" />
+                                </div>
+                                <div className="text-center">
+                                  <label className="text-[8px] font-semibold text-[var(--foreground)]/45 block mb-0.5">{isAr ? 'دقائق' : 'Minutes'}</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    value={customTimerM}
+                                    onChange={e => setCustomHMS(customTimerH, Math.max(0, Math.min(59, Number(e.target.value) || 0)), customTimerS)}
+                                    className="w-full rounded-md app-input px-1 py-1.5 text-xs text-center font-mono font-bold transition-all duration-200 hover:border-[var(--foreground)]/25 focus:border-[var(--color-primary)]/50" />
+                                </div>
+                                <div className="text-center">
+                                  <label className="text-[8px] font-semibold text-[var(--foreground)]/45 block mb-0.5">{isAr ? 'ثواني' : 'Seconds'}</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    value={customTimerS}
+                                    onChange={e => setCustomHMS(customTimerH, customTimerM, Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+                                    className="w-full rounded-md app-input px-1 py-1.5 text-xs text-center font-mono font-bold transition-all duration-200 hover:border-[var(--foreground)]/25 focus:border-[var(--color-primary)]/50" />
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-between gap-1.5 mt-1.5 text-[9px] font-semibold">
+                                <span className="text-[var(--foreground)]/45">
+                                  {isAr ? 'الهدف الأصلي:' : 'Original:'}{' '}
+                                  <span className="text-[var(--foreground)]">{formatDurationSecs(exp)}</span>
+                                </span>
+                                {customTimerSecs !== exp && (
+                                  <span style={{ color: hc }}>{isAr ? 'العد التنازلي:' : 'Countdown:'} {formatDurationSecs(customTimerSecs)}</span>
+                                )}
+                              </div>
+                              {customTimerSecs > exp && (
+                                <p className="text-[9px] mt-1.5 text-emerald-600 font-semibold leading-snug">
+                                  {isAr ? `✓ إنجاز عند ${formatDurationSecs(exp)} — يمكن إطالة العدّ.` : `✓ Completes at ${formatDurationSecs(exp)} — can run longer.`}
+                                </p>
+                              )}
+                              {customTimerSecs > 0 && customTimerSecs < exp && (
+                                <p className="text-[9px] mt-1.5 text-amber-600 font-semibold leading-snug">
+                                  {isAr ? '⚠ أقل من هدف الإكمال.' : '⚠ Below completion target.'}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {isTimerActive && (
+                            <p className="text-[10px] font-medium text-[var(--foreground)]/50 px-0.5">
+                              {isAr ? 'أوقف المؤقت لضبط مدة العد التنازلي.' : 'Stop the timer to adjust countdown duration.'}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-            )}
+              );
+            })()}
             {isCountHabit && !habit.archived && (
               <div className="flex items-center gap-3">
                 <button onClick={() => { if (dCountValue <= 0) return; store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: Math.max(0, dCountValue - 1) >= dCountTarget, value: Math.max(0, dCountValue - 1), source: 'manual' }); }}
@@ -704,89 +846,387 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
             )}
           </div>
 
-          {/* Stats + Context row */}
-          <div className="rounded-xl p-2 mb-3" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-1.5">
-            {[
-              { label: isAr ? 'سلسلة' : 'Streak', value: streak.current, suffix: isAr ? 'ي' : 'd', color: '#f97316' },
-              { label: isAr ? 'أفضل' : 'Best', value: streak.best, suffix: isAr ? 'ي' : 'd', color: '#eab308' },
-              { label: isAr ? 'مجمل' : 'Total', value: stats.totalCompletions, suffix: '', color: '#22c55e' },
-              { label: isAr ? 'نسبة' : 'Rate', value: stats.completionRate, suffix: '%', color: '#3b82f6' },
-            ].map((s, i) => (
-              <div key={i} className="text-center rounded-xl py-1.5 sm:py-2 px-1 cursor-default" style={{ background: `${s.color}08`, border: `1px solid ${s.color}15` }}>
-                <p className="text-base sm:text-lg font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}<span className="text-[10px] sm:text-xs opacity-50">{s.suffix}</span></p>
-                <p className="text-[10px] sm:text-sm font-bold text-[var(--foreground)] mt-0.5 sm:mt-1">{s.label}</p>
-              </div>
-            ))}
-          </div>
-          </div>
-
-          {/* First Done + Last Done + End Date */}
-          <div className={cn('grid gap-1.5 sm:gap-2 mb-3 rounded-xl p-1.5 sm:p-2', habit.endDate ? 'grid-cols-3' : 'grid-cols-2')} style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-            <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: '#8b5cf608', border: '1px solid #8b5cf615' }}>
-              <CalendarDays className="h-3 w-3 text-violet-500 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'أول إنجاز' : 'First Done'}</p>
-                {firstDone
-                  ? <p className="text-[10px] sm:text-[11px] font-black text-violet-600 tabular-nums truncate">{parseLocalDate(firstDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
-                  : <p className="text-[10px] italic text-[var(--foreground)]/40">{isAr ? 'لم يُنجز' : 'Not yet'}</p>}
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: '#06b6d408', border: '1px solid #06b6d415' }}>
-              <CalendarDays className="h-3 w-3 text-cyan-500 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'آخر إنجاز' : 'Last Done'}</p>
-                {lastDone
-                  ? <p className="text-[10px] sm:text-[11px] font-black text-cyan-600 tabular-nums truncate">{parseLocalDate(lastDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
-                  : <p className="text-[10px] italic text-[var(--foreground)]/40">{isAr ? 'لم يُنجز' : 'Not yet'}</p>}
-              </div>
-            </div>
-            {habit.endDate && (() => {
-              const diff = Math.ceil((new Date(habit.endDate).getTime() - Date.now()) / 86400000);
-              return (
-                <div className="flex items-center gap-1.5 rounded-xl py-1.5 sm:py-2 px-2 sm:px-3 cursor-default" style={{ background: diff > 0 ? '#10b98108' : '#ef444408', border: `1px solid ${diff > 0 ? '#10b98115' : '#ef444415'}` }}>
-                  <Target className={cn('h-3 w-3 shrink-0', diff > 0 ? 'text-emerald-500' : 'text-red-500')} />
-                  <div className="min-w-0">
-                    <p className="text-[10px] sm:text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'ينتهي في' : 'Ends on'}</p>
-                    <p className={cn('text-[10px] sm:text-[11px] font-black tabular-nums truncate', diff > 0 ? 'text-emerald-600' : 'text-red-500')}>
-                      {parseLocalDate(habit.endDate).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}
-                      <span className="text-[8px] font-bold opacity-60 ms-1">({diff > 0 ? `${diff}${isAr ? 'ي' : 'd'}` : diff === 0 ? (isAr ? 'اليوم!' : 'today!') : `${Math.abs(diff)}${isAr ? 'ي' : 'd'} ${isAr ? 'فات' : 'ago'}`})</span>
+          {/* Stats + milestone dates — side by side md+, compact type, hover polish */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3 items-stretch">
+            <div
+              className="rounded-xl p-1.5 h-full"
+              style={{ border: `1px solid ${hc}40`, background: `${hc}08` }}>
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { label: isAr ? 'سلسلة' : 'Streak', value: streak.current, suffix: isAr ? 'ي' : 'd', color: '#f97316' },
+                  { label: isAr ? 'أفضل' : 'Best', value: streak.best, suffix: isAr ? 'ي' : 'd', color: '#eab308' },
+                  { label: isAr ? 'مجمل' : 'Total', value: stats.totalCompletions, suffix: '', color: '#22c55e' },
+                  { label: isAr ? 'نسبة' : 'Rate', value: stats.completionRate, suffix: '%', color: '#3b82f6' },
+                ].map((s, i) => (
+                  <div
+                    key={i}
+                    className="text-center rounded-lg py-1 px-0.5 min-w-0 transition-all duration-200 ease-out cursor-default hover:-translate-y-px hover:shadow-sm hover:brightness-[1.02] dark:hover:brightness-[1.06]"
+                    style={{ background: `${s.color}0d`, border: `1px solid ${s.color}22` }}>
+                    <p className="text-[9px] font-semibold text-[var(--foreground)]/65 uppercase tracking-wide leading-none">{s.label}</p>
+                    <p className="text-sm font-black tabular-nums leading-tight mt-0.5" style={{ color: s.color }}>
+                      {s.value}<span className="text-[9px] font-bold opacity-60">{s.suffix}</span>
                     </p>
                   </div>
-                </div>
-              );
-            })()}
+                ))}
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                'rounded-xl p-1.5 h-full grid gap-1 min-w-0',
+                habit.endDate ? 'grid-cols-3' : 'grid-cols-2',
+              )}
+              style={{ border: `1px solid ${hc}40`, background: `${hc}08` }}>
+              <div
+                className="flex flex-col items-center justify-center text-center rounded-lg py-1 px-1 min-w-0 transition-all duration-200 ease-out cursor-default hover:-translate-y-px hover:shadow-sm hover:brightness-[1.02] dark:hover:brightness-[1.06]"
+                style={{ background: '#8b5cf60c', border: '1px solid #8b5cf624' }}>
+                <CalendarDays className="h-2.5 w-2.5 text-violet-500 shrink-0 mb-0.5 opacity-90" />
+                <p className="text-[8px] font-semibold text-[var(--foreground)]/60 uppercase tracking-wide leading-none">{isAr ? 'أول إنجاز' : 'First'}</p>
+                {firstDone
+                  ? <p className="text-xs font-bold text-violet-600 tabular-nums leading-tight mt-0.5 truncate max-w-full">{parseLocalDate(firstDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
+                  : <p className="text-[10px] text-[var(--foreground)]/40 mt-0.5 tabular-nums">—</p>}
+              </div>
+              <div
+                className="flex flex-col items-center justify-center text-center rounded-lg py-1 px-1 min-w-0 transition-all duration-200 ease-out cursor-default hover:-translate-y-px hover:shadow-sm hover:brightness-[1.02] dark:hover:brightness-[1.06]"
+                style={{ background: '#06b6d40c', border: '1px solid #06b6d424' }}>
+                <CalendarDays className="h-2.5 w-2.5 text-cyan-500 shrink-0 mb-0.5 opacity-90" />
+                <p className="text-[8px] font-semibold text-[var(--foreground)]/60 uppercase tracking-wide leading-none">{isAr ? 'آخر إنجاز' : 'Last'}</p>
+                {lastDone
+                  ? <p className="text-xs font-bold text-cyan-600 tabular-nums leading-tight mt-0.5 truncate max-w-full">{parseLocalDate(lastDone).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}</p>
+                  : <p className="text-[10px] text-[var(--foreground)]/40 mt-0.5 tabular-nums">—</p>}
+              </div>
+              {habit.endDate && (() => {
+                const diff = Math.ceil((new Date(habit.endDate).getTime() - Date.now()) / 86400000);
+                return (
+                  <div
+                    className="flex flex-col items-center justify-center text-center rounded-lg py-1 px-1 min-w-0 transition-all duration-200 ease-out cursor-default hover:-translate-y-px hover:shadow-sm hover:brightness-[1.02] dark:hover:brightness-[1.06]"
+                    style={{ background: diff > 0 ? '#10b9810c' : '#ef44440c', border: `1px solid ${diff > 0 ? '#10b98124' : '#ef444424'}` }}>
+                    <Target className={cn('h-2.5 w-2.5 shrink-0 mb-0.5 opacity-90', diff > 0 ? 'text-emerald-500' : 'text-red-500')} />
+                    <p className="text-[8px] font-semibold text-[var(--foreground)]/60 uppercase tracking-wide leading-none">{isAr ? 'النهاية' : 'Ends'}</p>
+                    <p className={cn('text-xs font-bold tabular-nums leading-tight mt-0.5 truncate max-w-full', diff > 0 ? 'text-emerald-600' : 'text-red-500')}>
+                      {parseLocalDate(habit.endDate).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { day: 'numeric', month: 'short' })}
+                    </p>
+                    <p className="text-[8px] font-semibold text-[var(--foreground)]/50 leading-none mt-px">
+                      {diff > 0
+                        ? `${diff}${isAr ? 'ي' : 'd'}`
+                        : diff === 0
+                          ? (isAr ? 'اليوم' : 'Today')
+                          : `${Math.abs(diff)}${isAr ? 'ي' : 'd'} ${isAr ? 'فات' : 'ago'}`}
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
-          {/* Context tags */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-3 rounded-xl p-2.5" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-            {hasContext ? (
-              <>
-                {(isAr ? habit.placeAr : habit.placeEn) && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-violet-500/8 text-violet-600 border border-violet-500/12"><MapPin className="h-3.5 w-3.5" /> {isAr ? 'المكان:' : 'Place:'} {isAr ? habit.placeAr : habit.placeEn}</span>
+          {/* Habit details — compact centered control */}
+          <div className="mb-3">
+            <div className="flex justify-center">
+              <button
+                type="button"
+                id="habit-details-trigger"
+                aria-expanded={habitDetailsOpen}
+                aria-controls="habit-details-panel"
+                aria-label={habitDetailsOpen
+                  ? (isAr ? 'طي تفاصيل العادة' : 'Collapse habit details')
+                  : (isAr ? 'عرض تفاصيل العادة' : 'Expand habit details')}
+                onClick={() => setHabitDetailsOpen(o => !o)}
+                className={cn(
+                  'group relative isolate inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 overflow-hidden rounded-xl border px-3.5 py-2 sm:gap-x-2.5 sm:px-4 sm:py-2.5',
+                  'transition-[border-color,box-shadow,transform] duration-200 ease-out',
+                  'motion-safe:hover:shadow-md motion-safe:active:scale-[0.98]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]',
+                  habitDetailsOpen && 'shadow-sm',
                 )}
-                {habit.preferredTime && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-sky-500/8 text-sky-600 border border-sky-500/12"><Clock className="h-3.5 w-3.5" /> {isAr ? 'الوقت المفضل:' : 'Preferred:'} {to12h(habit.preferredTime!)}</span>
-                )}
-                {habit.expectedDuration && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-emerald-500/8 text-emerald-600 border border-emerald-500/12"><Hourglass className="h-3.5 w-3.5" /> {isAr ? 'المدة المتوقعة:' : 'Duration:'} {formatDurationSecs(habit.expectedDuration!)}</span>
-                )}
-                {habit.windowStart && habit.windowEnd && (
-                  <span className={cn('inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg border', habit.strictWindow ? 'bg-red-500/8 text-red-600 border-red-500/15' : 'bg-indigo-500/8 text-indigo-600 border-indigo-500/12')}>
-                    <Target className="h-3.5 w-3.5" /> {habit.strictWindow ? (isAr ? 'الوقت المحدد (إجباري):' : 'Required time:') : (isAr ? 'الوقت المحدد:' : 'Scheduled time:')} {to12h(habit.windowStart!)}–{to12h(habit.windowEnd!)}
-                  </span>
-                )}
-                {habit.strictWindow && habit.windowStart && habit.windowEnd && (
-                  <span className="inline-flex items-center gap-1.5 w-full text-xs font-bold px-2.5 py-1.5 rounded-lg bg-red-500/8 text-red-500 border border-red-500/12">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {isAr ? 'يجب إنجاز هذه العادة خلال الوقت المحدد، وإلا تُحسب فائتة تلقائيًا' : 'This habit must be completed within the scheduled time, otherwise it automatically counts as missed'}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-[10px] italic text-[var(--foreground)] px-1 py-0.5">
-                <MapPin className="h-2.5 w-2.5" /> {isAr ? 'لم يتم تحديد السياق — المكان، الوقت، المدة' : 'No context set — place, time, duration'}
-              </span>
-            )}
+                style={{
+                  borderColor: habitDetailsOpen ? `${hc}55` : `${hc}40`,
+                  backgroundColor: habitDetailsOpen ? `${hc}12` : `${hc}08`,
+                  boxShadow: habitDetailsOpen ? `0 2px 12px -4px ${hc}35` : undefined,
+                }}>
+                <span
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  style={{ background: `linear-gradient(135deg, ${hc}28, ${hc}0c)` }}
+                  aria-hidden
+                />
+                <ListChecks className="relative z-[1] h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ color: hc }} strokeWidth={2.25} />
+                <span className="relative z-[1] text-sm font-bold tracking-tight text-[var(--foreground)]">
+                  {isAr ? 'تفاصيل العادة' : 'Habit details'}
+                </span>
+                <span
+                  className="relative z-[1] max-w-[10rem] truncate text-[10px] font-medium text-[var(--foreground)]/45 sm:max-w-[14rem] sm:text-[11px]"
+                  title={`${catLabel} · ${freqLabel} · ${typeLabel}`}>
+                  {catLabel}
+                </span>
+                <span className="relative z-[1] shrink-0 text-[10px] font-semibold text-[var(--foreground)]/38 sm:text-[11px]">
+                  {habitDetailsOpen
+                    ? (isAr ? 'انقر للطي' : 'Click to hide')
+                    : (isAr ? 'انقر للتفاصيل' : 'Click for details')}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'relative z-[1] h-4 w-4 shrink-0 transition-transform duration-200 ease-out',
+                    !habitDetailsOpen && 'text-[var(--foreground)]/40 group-hover:text-[var(--foreground)]/70',
+                    habitDetailsOpen && 'rotate-180',
+                  )}
+                  style={habitDetailsOpen ? { color: hc } : undefined}
+                  aria-hidden
+                />
+              </button>
+            </div>
+            <AnimatePresence initial={false}>
+              {habitDetailsOpen && (
+                <motion.div
+                  id="habit-details-panel"
+                  role="region"
+                  aria-labelledby="habit-details-trigger"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                  className="mt-2 overflow-hidden rounded-xl border"
+                  style={{ borderColor: `${hc}38`, background: `${hc}06` }}>
+                  <div className="px-2 py-2 sm:px-2.5 sm:py-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[min(58vh,520px)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] pe-1">
+              <div
+                className={cn(detailChip, 'bg-[var(--foreground)]/[0.03] border-[var(--foreground)]/[0.12]')}
+                title={catLabel}>
+                <div className="flex items-start gap-1.5">
+                  <BarChart3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--foreground)]/50 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'التصنيف' : 'Category'}</p>
+                    <p className="text-xs font-bold text-[var(--foreground)] leading-snug mt-0.5 break-words">{catLabel}</p>
+                  </div>
+                </div>
+              </div>
+              <div
+                className={cn(detailChip, 'bg-slate-500/6 border-slate-500/15')}
+                title={scheduleHint ? `${freqLabel} — ${scheduleHint}` : freqLabel}>
+                <div className="flex items-start gap-1.5">
+                  <CalendarIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'التكرار' : 'Frequency'}</p>
+                    <p className="text-xs font-bold text-[var(--foreground)] leading-snug mt-0.5">{freqLabel}</p>
+                    {scheduleHint ? <p className="text-[10px] text-[var(--foreground)]/55 leading-tight mt-0.5 line-clamp-2">{scheduleHint}</p> : null}
+                  </div>
+                </div>
+              </div>
+              <div className={cn(detailChip, 'bg-violet-500/8 border-violet-500/18')} title={typeLabel}>
+                <div className="flex items-start gap-1.5">
+                  <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-500 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'النوع' : 'Type'}</p>
+                    <p className="text-xs font-bold text-violet-700 dark:text-violet-300 leading-snug mt-0.5">{typeLabel}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={cn(detailChip, 'bg-amber-500/8 border-amber-500/18')} title={priLabel}>
+                <div className="flex items-start gap-1.5">
+                  <Flame className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'الأولوية' : 'Priority'}</p>
+                    <p className="text-xs font-bold text-amber-800 dark:text-amber-200 leading-snug mt-0.5">{priLabel}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={cn(detailChip, 'bg-teal-500/8 border-teal-500/18')} title={diffLabel}>
+                <div className="flex items-start gap-1.5">
+                  <Activity className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-500 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'الصعوبة' : 'Difficulty'}</p>
+                    <p className="text-xs font-bold text-teal-800 dark:text-teal-200 leading-snug mt-0.5">{diffLabel}</p>
+                  </div>
+                </div>
+              </div>
+              <div
+                className={cn(detailChip, 'bg-blue-500/8 border-blue-500/18')}
+                title={`${trackingTypeLabel} — ${trackingDetail}`}>
+                <div className="flex items-start gap-1.5">
+                  <ListChecks className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500 transition-transform duration-200 group-hover:scale-110" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'طريقة التتبع' : 'Tracking'}</p>
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300 leading-snug mt-0.5">{trackingTypeLabel}</p>
+                    <p className="text-[10px] text-[var(--foreground)]/55 leading-tight mt-0.5 line-clamp-2">{trackingDetail}</p>
+                  </div>
+                </div>
+              </div>
+              {habit.maxDailyReps != null && habit.maxDailyReps > 0 && (
+                <div
+                  className={cn(detailChip, 'bg-orange-500/8 border-orange-500/18')}
+                  title={isAr ? `حتى ${habit.maxDailyReps} جلسة في اليوم` : `Up to ${habit.maxDailyReps} sessions per day`}>
+                  <div className="flex items-start gap-1.5">
+                    <Hash className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'جلسات / يوم' : 'Sessions / day'}</p>
+                      <p className="text-xs font-bold text-orange-700 dark:text-orange-300 leading-snug mt-0.5">{habit.maxDailyReps}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.reminderEnabled && (
+                <div
+                  className={cn(detailChip, 'bg-cyan-500/8 border-cyan-500/18')}
+                  title={reminderTitle}>
+                  <div className="flex items-start gap-1.5">
+                    <Bell className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'التذكير' : 'Reminder'}</p>
+                      <p className="text-xs font-bold text-cyan-800 dark:text-cyan-200 leading-snug mt-0.5">
+                        {habit.reminderTime ? to12h(habit.reminderTime) : (isAr ? 'مفعّل' : 'On')}
+                      </p>
+                      <p className="text-[10px] text-[var(--foreground)]/55 leading-tight mt-0.5 line-clamp-2">{reminderDaysLine}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(habit.goalReps != null && habit.goalReps > 0) && (
+                <div className={cn(detailChip, 'bg-emerald-500/8 border-emerald-500/18')} title={isAr ? `هدف ${habit.goalReps} تكرار` : `Goal: ${habit.goalReps} reps`}>
+                  <div className="flex items-start gap-1.5">
+                    <Trophy className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'هدف التكرارات' : 'Reps goal'}</p>
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 leading-snug mt-0.5">{habit.goalReps}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(habit.goalHours != null && habit.goalHours > 0) && (
+                <div className={cn(detailChip, 'bg-purple-500/8 border-purple-500/18')} title={isAr ? `هدف ${habit.goalHours} ساعة` : `Goal: ${habit.goalHours} hrs`}>
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'هدف الساعات' : 'Hours goal'}</p>
+                      <p className="text-xs font-bold text-purple-700 dark:text-purple-300 leading-snug mt-0.5">{habit.goalHours}{isAr ? ' س' : ' h'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(habit.allowPartial || habit.allowSkip) && (
+                <div
+                  className={cn(detailChip, 'bg-[var(--foreground)]/[0.04] border-[var(--foreground)]/[0.12]')}
+                  title={[
+                    habit.allowPartial && (isAr ? 'يسمح بإنجاز جزئي' : 'Partial completion allowed'),
+                    habit.allowSkip && (isAr ? 'يسمح بالتخطي مع عذر' : 'Skip with excuse allowed'),
+                  ].filter(Boolean).join(' · ')}>
+                  <div className="flex items-start gap-1.5">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--foreground)]/45 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'سلوك التسجيل' : 'Logging rules'}</p>
+                      <p className="text-xs font-bold leading-snug mt-0.5 text-[var(--foreground)]">
+                        {[habit.allowPartial && (isAr ? 'جزئي' : 'Partial'), habit.allowSkip && (isAr ? 'تخطٍ' : 'Skip')].filter(Boolean).join(isAr ? ' · ' : ' · ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(isAr ? habit.placeAr : habit.placeEn) && (
+                <div
+                  className={cn(detailChip, 'bg-violet-500/8 border-violet-500/18')}
+                  title={isAr ? (habit.placeAr ?? '') : (habit.placeEn ?? '')}>
+                  <div className="flex items-start gap-1.5">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'المكان' : 'Place'}</p>
+                      <p className="text-xs font-bold text-violet-700 dark:text-violet-300 leading-snug mt-0.5 break-words">{isAr ? habit.placeAr : habit.placeEn}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.preferredTime && (
+                <div className={cn(detailChip, 'bg-sky-500/8 border-sky-500/18')} title={to12h(habit.preferredTime)}>
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'الوقت المفضل' : 'Preferred time'}</p>
+                      <p className="text-xs font-bold text-sky-700 dark:text-sky-300 leading-snug mt-0.5">{to12h(habit.preferredTime)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.expectedDuration != null && habit.expectedDuration > 0 && (
+                <div className={cn(detailChip, 'bg-emerald-500/8 border-emerald-500/18')} title={formatDurationSecs(habit.expectedDuration)}>
+                  <div className="flex items-start gap-1.5">
+                    <Hourglass className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'المدة المتوقعة' : 'Expected duration'}</p>
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 leading-snug mt-0.5">{formatDurationSecs(habit.expectedDuration)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.windowStart && habit.windowEnd && (
+                <div
+                  className={cn(
+                    detailChip,
+                    habit.strictWindow ? 'bg-red-500/8 border-red-500/20' : 'bg-indigo-500/8 border-indigo-500/18',
+                  )}
+                  title={`${to12h(habit.windowStart)}–${to12h(habit.windowEnd)}${habit.strictWindow ? (isAr ? ' (إجباري)' : ' (strict)') : ''}`}>
+                  <div className="flex items-start gap-1.5">
+                    <Target className={cn('mt-0.5 h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110', habit.strictWindow ? 'text-red-500' : 'text-indigo-500')} />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">
+                        {habit.strictWindow ? (isAr ? 'نافذة إجبارية' : 'Strict window') : (isAr ? 'نافذة النشاط' : 'Activity window')}
+                      </p>
+                      <p className={cn('text-xs font-bold leading-snug mt-0.5', habit.strictWindow ? 'text-red-700 dark:text-red-300' : 'text-indigo-700 dark:text-indigo-300')}>
+                        {to12h(habit.windowStart)}–{to12h(habit.windowEnd)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.completionWindowStart && habit.completionWindowEnd && (
+                <div
+                  className={cn(detailChip, 'bg-fuchsia-500/8 border-fuchsia-500/18')}
+                  title={isAr ? `يمكنك تسجيل الإنجاز بين ${to12h(habit.completionWindowStart)} و ${to12h(habit.completionWindowEnd)}` : `Mark done between ${to12h(habit.completionWindowStart)} and ${to12h(habit.completionWindowEnd)}`}>
+                  <div className="flex items-start gap-1.5">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'نافذة التسجيل' : 'Mark-done window'}</p>
+                      <p className="text-xs font-bold text-fuchsia-700 dark:text-fuchsia-300 leading-snug mt-0.5">
+                        {to12h(habit.completionWindowStart)}–{to12h(habit.completionWindowEnd)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.strictWindow && habit.windowStart && habit.windowEnd && (
+                <div
+                  className={cn(detailChip, 'sm:col-span-2 lg:col-span-3 bg-red-500/8 border-red-500/20')}
+                  title={isAr ? 'خارج النافذة يُحسب فائتًا' : 'Outside window counts as missed'}>
+                  <div className="flex items-start gap-1.5">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-red-600/80 leading-none">{isAr ? 'تنبيه' : 'Notice'}</p>
+                      <p className="text-xs font-bold text-red-700 dark:text-red-300 leading-snug mt-0.5">
+                        {isAr ? 'يجب إنجاز العادة داخل النافذة — وإلا تُحسب فائتة تلقائيًا.' : 'Must complete inside the window — otherwise it counts as missed automatically.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {habit.notes && habit.notes.trim() && (
+                <div
+                  className={cn(detailChip, 'sm:col-span-2 lg:col-span-3 bg-[var(--foreground)]/[0.03] border-[var(--foreground)]/[0.12]')}
+                  title={habit.notes.trim()}>
+                  <div className="flex items-start gap-1.5">
+                    <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500 transition-transform duration-200 group-hover:scale-110" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-[var(--foreground)]/50 leading-none">{isAr ? 'ملاحظات' : 'Notes'}</p>
+                      <p className="text-xs font-semibold text-[var(--foreground)] leading-snug mt-0.5 line-clamp-3 whitespace-pre-wrap break-words">{habit.notes.trim()}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!hasContext && !habit.reminderEnabled && !(habit.goalReps && habit.goalReps > 0) && !(habit.goalHours && habit.goalHours > 0) && !habit.allowPartial && !habit.allowSkip && !habit.notes?.trim() && (
+                <div className="sm:col-span-2 lg:col-span-3 text-[10px] text-[var(--foreground)]/45 flex items-center gap-1.5 py-1">
+                  <MapPin className="h-3 w-3 shrink-0 opacity-50" />
+                  {isAr ? 'أضف مكانًا أو وقتًا مفضلًا أو مدة من تعديل العادة لظهورها هنا.' : 'Add place, preferred time, or duration from Edit to show context chips here.'}
+                </div>
+              )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Habit Loop + Streak — side by side, always shown */}
@@ -957,50 +1397,50 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
               </div>
             </div>
 
-            {/* Right: Analytics — stacked compact */}
-            <div className="space-y-2.5">
+            {/* Right: Analytics — dense stack */}
+            <div className="space-y-1.5">
               {/* Repetitions */}
-              <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-                <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
-                  <Hash className="h-3 w-3" style={{ color: hc }} />
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'التكرارات' : 'Reps'}</span>
+              <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${hc}45`, background: `${hc}0a` }}>
+                <div className="px-2 py-0.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}35` }}>
+                  <Hash className="h-2.5 w-2.5 shrink-0" style={{ color: hc }} />
+                  <span className="text-[10px] font-bold text-[var(--foreground)] leading-tight">{isAr ? 'التكرارات' : 'Reps'}</span>
                 </div>
-                <div className="p-2 grid grid-cols-4 gap-1">
+                <div className="px-1 py-1 grid grid-cols-4 gap-0.5">
                   {[
                     { l: isAr ? 'أسبوع' : 'Week', v: timeStats.reps.week },
                     { l: isAr ? 'شهر' : 'Month', v: timeStats.reps.month },
                     { l: isAr ? 'سنة' : 'Year', v: timeStats.reps.year },
                     { l: isAr ? 'مجمل' : 'Total', v: timeStats.reps.total },
                   ].map((r, i) => (
-                    <div key={i} className="text-center rounded-lg py-2 cursor-default" style={{ background: `${hc}08`, border: `1px solid ${hc}20` }}>
-                      <p className="text-base font-black tabular-nums" style={{ color: hc }}>{r.v}</p>
-                      <p className="text-sm text-[var(--foreground)] font-bold">{r.l}</p>
+                    <div key={i} className="text-center rounded-md py-1 px-0.5 cursor-default min-w-0" style={{ background: `${hc}08`, border: `1px solid ${hc}18` }}>
+                      <p className="text-sm font-black tabular-nums leading-none" style={{ color: hc }}>{r.v}</p>
+                      <p className="text-[9px] text-[var(--foreground)] font-bold leading-tight mt-0.5 truncate">{r.l}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Time spent */}
-              <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-                <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
-                  <Clock className="h-3 w-3" style={{ color: hc }} />
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الوقت' : 'Time'}</span>
+              <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${hc}45`, background: `${hc}0a` }}>
+                <div className="px-2 py-0.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}35` }}>
+                  <Clock className="h-2.5 w-2.5 shrink-0" style={{ color: hc }} />
+                  <span className="text-[10px] font-bold text-[var(--foreground)] leading-tight">{isAr ? 'الوقت' : 'Time'}</span>
                 </div>
                 {!habit.expectedDuration && habit.trackingType !== 'duration' ? (
-                  <div className="p-3 text-center">
-                    <p className="text-xs font-semibold opacity-50">{isAr ? 'هذه العادة لا تتضمن وقتاً' : 'This habit does not track time'}</p>
+                  <div className="px-2 py-1.5 text-center">
+                    <p className="text-[10px] font-semibold opacity-50 leading-tight">{isAr ? 'هذه العادة لا تتضمن وقتاً' : 'This habit does not track time'}</p>
                   </div>
                 ) : (
-                <div className="p-2 grid grid-cols-4 gap-1">
+                <div className="px-1 py-1 grid grid-cols-4 gap-0.5">
                   {[
                     { l: isAr ? 'اليوم' : 'Today', v: formatSecs(timeStats.secs.today) },
                     { l: isAr ? 'أسبوع' : 'Week', v: formatSecs(timeStats.secs.week) },
                     { l: isAr ? 'شهر' : 'Month', v: formatSecs(timeStats.secs.month) },
                     { l: isAr ? 'سنة' : 'Year', v: formatSecs(timeStats.secs.year) },
                   ].map((r, i) => (
-                    <div key={i} className="text-center rounded-lg py-2 cursor-default" style={{ background: `${hc}08`, border: `1px solid ${hc}20` }}>
-                      <p className="text-sm font-black" style={{ color: hc }}>{r.v}</p>
-                      <p className="text-sm text-[var(--foreground)] font-bold">{r.l}</p>
+                    <div key={i} className="text-center rounded-md py-1 px-0.5 cursor-default min-w-0" style={{ background: `${hc}08`, border: `1px solid ${hc}18` }}>
+                      <p className="text-[10px] sm:text-[11px] font-black leading-tight break-words hyphens-auto" style={{ color: hc }}>{r.v}</p>
+                      <p className="text-[9px] text-[var(--foreground)] font-bold leading-tight mt-0.5 truncate">{r.l}</p>
                     </div>
                   ))}
                 </div>
@@ -1015,15 +1455,15 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                 const hasAnyGoal = hasRepsGoal || hasHoursGoal;
 
                 if (!hasAnyGoal) return (
-                  <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-                    <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
-                      <Target className="h-3 w-3" style={{ color: hc }} />
-                      <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                  <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${hc}45`, background: `${hc}0a` }}>
+                    <div className="px-2 py-0.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}35` }}>
+                      <Target className="h-2.5 w-2.5 shrink-0" style={{ color: hc }} />
+                      <span className="text-[10px] font-bold text-[var(--foreground)] leading-tight">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
                     </div>
-                    <div className="p-4 flex flex-col items-center justify-center gap-1">
-                      <Target className="h-4 w-4 text-[var(--foreground)]" />
-                      <p className="text-[10px] italic text-[var(--foreground)] text-center">{isAr ? 'لم يتم تحديد هدف كلي' : 'No overall goal set'}</p>
-                      <p className="text-[9px] text-[var(--foreground)] text-center">{isAr ? 'حدد هدف تكرارات أو ساعات من التعديل' : 'Set a reps or hours goal from Edit'}</p>
+                    <div className="px-2 py-2 flex flex-col items-center justify-center gap-0.5">
+                      <Target className="h-3 w-3 text-[var(--foreground)] opacity-60" />
+                      <p className="text-[9px] italic text-[var(--foreground)] text-center leading-tight">{isAr ? 'لم يتم تحديد هدف كلي' : 'No overall goal set'}</p>
+                      <p className="text-[8px] text-[var(--foreground)]/70 text-center leading-tight">{isAr ? 'حدد هدف تكرارات أو ساعات من التعديل' : 'Set a reps or hours goal from Edit'}</p>
                     </div>
                   </div>
                 );
@@ -1040,31 +1480,31 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                 const hoursDone = hoursTarget > 0 && hoursCurrentVal >= hoursTarget;
 
                 return (
-                  <div className="rounded-xl overflow-hidden" style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-                    <div className="px-2.5 py-1.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}40` }}>
-                      <Target className="h-3 w-3" style={{ color: hc }} />
-                      <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                  <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${hc}45`, background: `${hc}0a` }}>
+                    <div className="px-2 py-0.5 flex items-center gap-1" style={{ borderBottom: `1px solid ${hc}35` }}>
+                      <Target className="h-2.5 w-2.5 shrink-0" style={{ color: hc }} />
+                      <span className="text-[10px] font-bold text-[var(--foreground)] leading-tight">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
                     </div>
-                    <div className="p-3 space-y-3">
+                    <div className="p-2 space-y-2">
                       {/* Reps goal */}
                       {hasRepsGoal && (
                         <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: `${repsDone ? '#22c55e' : hc}15` }}>
-                                <Hash className="h-3 w-3" style={{ color: repsDone ? '#22c55e' : hc }} />
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <div className="h-4 w-4 rounded flex items-center justify-center shrink-0" style={{ background: `${repsDone ? '#22c55e' : hc}15` }}>
+                                <Hash className="h-2.5 w-2.5" style={{ color: repsDone ? '#22c55e' : hc }} />
                               </div>
-                              <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'التكرارات' : 'Repetitions'}</span>
+                              <span className="text-[10px] font-bold text-[var(--foreground)] truncate">{isAr ? 'التكرارات' : 'Repetitions'}</span>
                             </div>
-                            {repsDone && <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">{isAr ? 'تحقق ✓' : 'Done ✓'}</span>}
+                            {repsDone && <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-1 py-px rounded shrink-0" title={isAr ? 'تحقق' : 'Done'}>✓</span>}
                           </div>
-                          <div className="flex items-baseline gap-1.5 mb-1.5">
-                            <span className="text-xl font-black tabular-nums" style={{ color: repsDone ? '#22c55e' : hc }}>{repsCurrentVal}</span>
-                            <span className="text-xs font-bold text-[var(--foreground)]">/ {repsTarget}</span>
-                            <span className="text-xs text-[var(--foreground)]">{isAr ? 'تكرار' : 'reps'}</span>
-                            <span className="text-xs font-black tabular-nums ml-auto" style={{ color: repsDone ? '#22c55e' : hc }}>{repsPct}%</span>
+                          <div className="flex items-baseline flex-wrap gap-x-1 gap-y-0 mb-1">
+                            <span className="text-sm font-black tabular-nums" style={{ color: repsDone ? '#22c55e' : hc }}>{repsCurrentVal}</span>
+                            <span className="text-[10px] font-bold text-[var(--foreground)]">/ {repsTarget}</span>
+                            <span className="text-[10px] text-[var(--foreground)]">{isAr ? 'تكرار' : 'reps'}</span>
+                            <span className="text-[10px] font-black tabular-nums ms-auto" style={{ color: repsDone ? '#22c55e' : hc }}>{repsPct}%</span>
                           </div>
-                          <div className="h-3 rounded-full overflow-hidden" style={{ background: `${repsDone ? '#22c55e' : hc}12` }}>
+                          <div className="h-2 rounded-full overflow-hidden" style={{ background: `${repsDone ? '#22c55e' : hc}12` }}>
                             <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${repsPct}%`, background: repsDone ? 'linear-gradient(90deg, #22c55e, #16a34a)' : `linear-gradient(90deg, ${hc}, ${hc}cc)` }} />
                           </div>
                         </div>
@@ -1072,23 +1512,23 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                       {/* Hours goal */}
                       {hasHoursGoal && (
                         <div>
-                          {hasRepsGoal && <div className="border-t border-[var(--foreground)]/[0.15] my-1" />}
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}15` }}>
-                                <Clock className="h-3 w-3" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }} />
+                          {hasRepsGoal && <div className="border-t border-[var(--foreground)]/[0.12] pt-2 mt-0.5" />}
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <div className="h-4 w-4 rounded flex items-center justify-center shrink-0" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}15` }}>
+                                <Clock className="h-2.5 w-2.5" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }} />
                               </div>
-                              <span className="text-[11px] font-bold text-[var(--foreground)]">{isAr ? 'الساعات' : 'Hours'}</span>
+                              <span className="text-[10px] font-bold text-[var(--foreground)] truncate">{isAr ? 'الساعات' : 'Hours'}</span>
                             </div>
-                            {hoursDone && <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">{isAr ? 'تحقق ✓' : 'Done ✓'}</span>}
+                            {hoursDone && <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-1 py-px rounded shrink-0" title={isAr ? 'تحقق' : 'Done'}>✓</span>}
                           </div>
-                          <div className="flex items-baseline gap-1.5 mb-1.5">
-                            <span className="text-xl font-black tabular-nums" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursCurrentVal}</span>
-                            <span className="text-xs font-bold text-[var(--foreground)]">/ {hoursTarget}</span>
-                            <span className="text-xs text-[var(--foreground)]">{isAr ? 'ساعة' : 'hrs'}</span>
-                            <span className="text-xs font-black tabular-nums ml-auto" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursPct}%</span>
+                          <div className="flex items-baseline flex-wrap gap-x-1 gap-y-0 mb-1">
+                            <span className="text-sm font-black tabular-nums" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursCurrentVal}</span>
+                            <span className="text-[10px] font-bold text-[var(--foreground)]">/ {hoursTarget}</span>
+                            <span className="text-[10px] text-[var(--foreground)]">{isAr ? 'ساعة' : 'hrs'}</span>
+                            <span className="text-[10px] font-black tabular-nums ms-auto" style={{ color: hoursDone ? '#22c55e' : '#8b5cf6' }}>{hoursPct}%</span>
                           </div>
-                          <div className="h-3 rounded-full overflow-hidden" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}12` }}>
+                          <div className="h-2 rounded-full overflow-hidden" style={{ background: `${hoursDone ? '#22c55e' : '#8b5cf6'}12` }}>
                             <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${hoursPct}%`, background: hoursDone ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #8b5cf6, #7c3aed)' }} />
                           </div>
                         </div>
@@ -1097,20 +1537,6 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                   </div>
                 );
               })()}
-            </div>
-          </div>
-
-          {/* Best day insight — compact */}
-          <div className="rounded-xl p-3 flex items-center gap-2.5"
-            style={{ border: `1.5px solid ${hc}50`, background: `${hc}0a` }}>
-            <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${hc}12` }}>
-              <Sparkles className="h-4 w-4" style={{ color: hc }} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-[var(--foreground)]">
-                {isAr ? `أفضل يوم: ${stats.bestDay} — أضعف: ${stats.worstDay}` : `Best: ${stats.bestDay} — Weakest: ${stats.worstDay}`}
-              </p>
-              {habit.notes && <p className="text-xs text-[var(--foreground)] truncate">{habit.notes}</p>}
             </div>
           </div>
         </div>

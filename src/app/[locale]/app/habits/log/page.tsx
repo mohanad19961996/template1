@@ -6,370 +6,296 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { useAppStore } from '@/stores/app-store';
-import { Habit, HabitLog, todayString, resolveHabitColor, formatLocalDate, parseLocalDate } from '@/types/app';
+import { Habit, HabitLog, todayString, resolveHabitColor, formatLocalDate, parseLocalDate, formatDurationSecs } from '@/types/app';
+import { isHabitScheduledForDate, isHabitDoneToday, CATEGORY_LABELS, FREQ_LABELS } from '@/components/habits/habit-constants';
+import { getDoneRepCountForDate, sumLoggedDurationSecsOnDate } from '@/lib/habit-completion';
 import {
-  ChevronLeft, CheckCircle2, Circle, Clock, Flame, ArrowRight,
-  Timer, Calendar as CalendarIcon, X, Play, Pause, Square, Sparkles,
-  Target, TrendingUp, BarChart3, ChevronDown, Filter,
+  ChevronLeft, ChevronRight, CheckCircle2, Circle, Clock, ArrowRight,
+  Timer, Calendar as CalendarIcon, Target, Filter, ChevronDown,
 } from 'lucide-react';
 
-const DAY_NAMES_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DAY_NAMES_AR = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
-
-function fmtDate(date: string) {
-  const [y, m, d] = date.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function fmtDateShort(date: string) {
-  const [y, m, d] = date.split('-');
-  return `${d}/${m}`;
-}
+const DAY_NAMES = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  ar: ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'],
+};
+const MONTH_NAMES = {
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+};
 
 export default function HabitsLogPage() {
   const locale = useLocale();
   const isAr = locale === 'ar';
   const store = useAppStore();
   const today = todayString();
-  const [filterHabitId, setFilterHabitId] = useState<string>('all');
-  const [daysBack, setDaysBack] = useState(30);
+  const lang = isAr ? 'ar' : 'en';
 
-  const allHabits = store.habits;
+  // Selected date — defaults to today
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
 
-  // Build date range
-  const dates = useMemo(() => {
-    const result: string[] = [];
-    for (let i = 0; i < daysBack; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      result.push(formatLocalDate(d));
+  const isToday = selectedDate === today;
+  const isFuture = selectedDate > today;
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  // Calendar grid
+  const calDays = useMemo(() => {
+    const { year, month } = calMonth;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: { day: number; date: string; inMonth: boolean }[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push({ day: 0, date: '', inMonth: false });
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, date: `${year}-${pad(month + 1)}-${pad(d)}`, inMonth: true });
     }
-    return result;
-  }, [daysBack]);
+    return cells;
+  }, [calMonth]);
 
-  // Group all events by date
-  const dayData = useMemo(() => {
-    return dates.map(date => {
-      const habits = filterHabitId === 'all' ? allHabits : allHabits.filter(h => h.id === filterHabitId);
-      const logs: { habit: Habit; log: HabitLog }[] = [];
-      habits.forEach(habit => {
-        store.habitLogs.filter(l => l.habitId === habit.id && l.date === date).forEach(log => {
-          logs.push({ habit, log });
-        });
-      });
-      const sessions = store.timerSessions.filter(s => {
-        if (s.type !== 'habit-linked') return false;
-        if (filterHabitId !== 'all' && s.habitId !== filterHabitId) return false;
-        return s.startedAt.split('T')[0] === date;
-      });
-      return { date, logs, sessions };
-    }).filter(d => d.logs.length > 0 || d.sessions.length > 0);
-  }, [dates, store.habitLogs, store.timerSessions, allHabits, filterHabitId]);
+  const prevMonth = () => setCalMonth(p => p.month === 0 ? { year: p.year - 1, month: 11 } : { ...p, month: p.month - 1 });
+  const nextMonth = () => setCalMonth(p => p.month === 11 ? { year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 });
+  const goToday = () => { const d = new Date(); setCalMonth({ year: d.getFullYear(), month: d.getMonth() }); setSelectedDate(today); };
 
-  const totalCompletions = dayData.reduce((s, d) => s + d.logs.filter(l => l.log.completed).length, 0);
-  const totalSessions = dayData.reduce((s, d) => s + d.sessions.length, 0);
-
-  const formatTime = (iso: string) => {
-    const d = new Date(iso);
-    const h = d.getHours();
-    const m = String(d.getMinutes()).padStart(2, '0');
-    const period = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${m} ${period}`;
-  };
-  const formatDur = (secs: number) => { const m = Math.floor(secs / 60); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
-
-  const getDayName = (date: string) => {
-    const d = parseLocalDate(date);
-    return isAr ? DAY_NAMES_AR[d.getDay()] : DAY_NAMES_EN[d.getDay()];
+  // Count completions per day for calendar dots
+  const completionCountForDay = (dateStr: string) => {
+    if (!dateStr || dateStr > today) return { done: 0, total: 0 };
+    const scheduled = store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, dateStr) && h.createdAt.split('T')[0] <= dateStr);
+    const done = scheduled.filter(h => isHabitDoneToday(h, store.habitLogs, dateStr)).length;
+    return { done, total: scheduled.length };
   };
 
-  const getYesterday = () => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return formatLocalDate(d);
-  };
-  const yesterday = getYesterday();
+  // All habits scheduled for the selected date
+  const scheduledHabits = useMemo(() => {
+    return store.habits
+      .filter(h => !h.archived && isHabitScheduledForDate(h, selectedDate) && h.createdAt.split('T')[0] <= selectedDate)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  }, [store.habits, selectedDate]);
 
-  const getDateLabel = (date: string) => {
-    if (date === today) return isAr ? 'اليوم' : 'Today';
-    if (date === yesterday) return isAr ? 'أمس' : 'Yesterday';
-    return getDayName(date);
-  };
+  const doneHabits = useMemo(() => scheduledHabits.filter(h => isHabitDoneToday(h, store.habitLogs, selectedDate)), [scheduledHabits, store.habitLogs, selectedDate]);
+  const notDoneHabits = useMemo(() => scheduledHabits.filter(h => !isHabitDoneToday(h, store.habitLogs, selectedDate)), [scheduledHabits, store.habitLogs, selectedDate]);
+  const completionRate = scheduledHabits.length > 0 ? Math.round((doneHabits.length / scheduledHabits.length) * 100) : 0;
+
+  // Format selected date label
+  const selectedDateLabel = (() => {
+    if (selectedDate === today) return isAr ? 'اليوم' : 'Today';
+    const d = parseLocalDate(selectedDate);
+    return d.toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { weekday: 'long', day: 'numeric', month: 'long' });
+  })();
 
   return (
-    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1000px] mx-auto">
+    <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-20 max-w-[1100px] mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <Link href="/app/habits" className="inline-flex items-center gap-1.5 text-sm font-bold mb-4 transition-all duration-300 hover:gap-2.5 group" style={{ color: 'var(--color-primary)' }}>
+      <div className="mb-6">
+        <Link href="/app/habits" className="inline-flex items-center gap-1.5 text-sm font-bold mb-3 transition-all duration-300 hover:gap-2.5 group" style={{ color: 'var(--color-primary)' }}>
           <ChevronLeft className={cn('h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5', isAr && 'rotate-180 group-hover:translate-x-0.5')} />
           {isAr ? 'العادات' : 'Habits'}
         </Link>
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.6))', boxShadow: '0 8px 24px rgba(var(--color-primary-rgb) / 0.25)' }}>
-            <CalendarIcon className="h-7 w-7 text-white" />
+          <div className="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.6))' }}>
+            <CalendarIcon className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight"
-              style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.5))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              {isAr ? 'سجل العادات' : 'History'}
-            </h1>
-            <p className="text-sm font-medium text-[var(--foreground)]/50">{isAr ? 'سجل إنجازاتك اليومية' : 'Your daily accomplishments log'}</p>
+            <h1 className="text-2xl font-black tracking-tight">{isAr ? 'سجل العادات' : 'Habits Log'}</h1>
+            <p className="text-xs font-medium text-[var(--foreground)]/50">{isAr ? 'اختر يوماً لعرض تفاصيل عاداتك' : 'Select a day to view your habit details'}</p>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {/* Habit filter dropdown */}
-        <div className="relative group/hf">
-          <button className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all duration-300 cursor-pointer group-hover/hf:shadow-[0_4px_16px_rgba(var(--color-primary-rgb)/0.1)]"
-            style={{ borderColor: filterHabitId !== 'all' ? 'rgba(var(--color-primary-rgb) / 0.3)' : 'rgba(var(--color-primary-rgb) / 0.12)', background: filterHabitId !== 'all' ? 'rgba(var(--color-primary-rgb) / 0.06)' : 'transparent', color: filterHabitId !== 'all' ? 'var(--color-primary)' : 'var(--foreground)' }}>
-            <Filter className="h-4 w-4" style={{ color: 'var(--color-primary)' }} />
-            {filterHabitId === 'all' ? (isAr ? 'كل العادات' : 'All Habits') : (isAr ? (allHabits.find(h => h.id === filterHabitId)?.nameAr ?? '') : (allHabits.find(h => h.id === filterHabitId)?.nameEn ?? ''))}
-            <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover/hf:rotate-180" style={{ color: 'rgba(var(--color-primary-rgb) / 0.5)' }} />
-          </button>
-          <div className="absolute top-full pt-1.5 start-0 z-50 w-60 max-h-[360px] opacity-0 invisible group-hover/hf:opacity-100 group-hover/hf:visible transition-all duration-200 translate-y-1 group-hover/hf:translate-y-0">
-            <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: 'var(--color-background)', border: '1px solid rgba(var(--color-primary-rgb) / 0.12)' }}>
-              <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary), transparent)' }} />
-              <div className="py-1.5 max-h-[340px] overflow-y-auto">
-                <button onClick={() => setFilterHabitId('all')}
-                  className={cn('w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all duration-200', filterHabitId === 'all' ? 'text-white' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
-                  style={filterHabitId === 'all' ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
-                  {isAr ? 'كل العادات' : 'All Habits'}
-                  {filterHabitId === 'all' && <CheckCircle2 className="h-3.5 w-3.5 ms-auto" />}
-                </button>
-                {allHabits.map(h => {
-                  const hc = resolveHabitColor(h.color);
-                  return (
-                    <button key={h.id} onClick={() => setFilterHabitId(h.id)}
-                      className={cn('w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-all duration-200', filterHabitId === h.id ? 'text-white' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
-                      style={filterHabitId === h.id ? { background: `linear-gradient(135deg, ${hc}, ${hc}cc)` } : undefined}>
-                      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: filterHabitId === h.id ? 'white' : hc }} />
-                      <span className="truncate">{isAr ? h.nameAr : h.nameEn}</span>
-                      {h.archived && <span className="text-[10px] opacity-50 shrink-0">({isAr ? 'مؤرشفة' : 'archived'})</span>}
-                      {filterHabitId === h.id && <CheckCircle2 className="h-3.5 w-3.5 ms-auto shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Main layout: calendar + day details */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
 
-        {/* Days range */}
-        <div className="flex items-center gap-1 rounded-xl border p-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          {[7, 30, 90, 365].map(d => (
-            <button key={d} onClick={() => setDaysBack(d)}
-              className={cn('px-3.5 py-1.5 rounded-lg text-xs font-black transition-all duration-300 cursor-pointer',
-                daysBack === d ? 'text-white shadow-sm' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
-              style={daysBack === d ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
-              {d === 365 ? (isAr ? 'سنة' : '1Y') : d === 90 ? '3M' : `${d}D`}
+        {/* ═══ CALENDAR ═══ */}
+        <div className="rounded-2xl border border-[var(--color-primary)]/20 overflow-hidden">
+          {/* Month header */}
+          <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(var(--color-primary-rgb) / 0.04)' }}>
+            <button onClick={prevMonth} className="rounded-lg p-1.5 hover:bg-[var(--color-primary)]/10 transition-colors">
+              <ChevronLeft className={cn('h-4 w-4 text-[var(--foreground)]/60', isAr && 'rotate-180')} />
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        {[
-          { label: isAr ? 'إنجازات' : 'Completions', value: totalCompletions, icon: CheckCircle2 },
-          { label: isAr ? 'أيام نشطة' : 'Active Days', value: dayData.length, icon: CalendarIcon },
-          { label: isAr ? 'جلسات' : 'Sessions', value: totalSessions, icon: Timer },
-        ].map((s, i) => (
-          <motion.div key={i} whileHover={{ scale: 1.02, y: -3 }}
-            className="rounded-2xl p-5 text-center border transition-all duration-300 cursor-default hover:shadow-[0_8px_30px_rgba(var(--color-primary-rgb)/0.12)]"
-            style={{ background: 'rgba(var(--color-primary-rgb) / 0.03)', borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-            <div className="h-10 w-10 rounded-xl mx-auto mb-2.5 flex items-center justify-center" style={{ background: 'rgba(var(--color-primary-rgb) / 0.08)', border: '1px solid rgba(var(--color-primary-rgb) / 0.1)' }}>
-              <s.icon className="h-5 w-5" style={{ color: 'var(--color-primary)' }} />
+            <div className="text-center">
+              <span className="text-sm font-bold">{MONTH_NAMES[lang][calMonth.month]} {calMonth.year}</span>
             </div>
-            <p className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-primary)' }}>{s.value}</p>
-            <p className="text-xs font-bold text-[var(--foreground)]/60 mt-1">{s.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Timeline */}
-      <div className="space-y-3">
-        {dayData.map(({ date, logs, sessions }, dayIdx) => {
-          const isToday = date === today;
-          const isYesterday = date === yesterday;
-          const dayLabel = getDateLabel(date);
-          const completedCount = logs.filter(l => l.log.completed).length;
-          const totalCount = logs.length;
-
-          return (
-            <motion.div key={date}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: dayIdx * 0.03, duration: 0.3 }}
-              className="rounded-2xl overflow-hidden transition-all duration-300"
-              style={{ border: `1.5px solid ${isToday ? 'rgba(var(--color-primary-rgb) / 0.25)' : 'rgba(var(--color-primary-rgb) / 0.08)'}` }}>
-
-              {/* Date header */}
-              <div className="flex items-center justify-between px-4 sm:px-5 py-3.5"
-                style={{ background: isToday ? 'rgba(var(--color-primary-rgb) / 0.06)' : 'rgba(var(--color-primary-rgb) / 0.02)' }}>
-                <div className="flex items-center gap-3">
-                  {/* Date number badge */}
-                  <div className="h-12 w-12 rounded-xl flex flex-col items-center justify-center shrink-0"
-                    style={isToday
-                      ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.3)' }
-                      : { background: 'rgba(var(--color-primary-rgb) / 0.06)', border: '1px solid rgba(var(--color-primary-rgb) / 0.1)' }}>
-                    <span className={cn('text-lg font-black leading-none', isToday ? 'text-white' : '')} style={!isToday ? { color: 'var(--color-primary)' } : undefined}>
-                      {date.split('-')[2]}
-                    </span>
-                    <span className={cn('text-[9px] font-bold leading-none mt-0.5', isToday ? 'text-white/70' : 'text-[var(--foreground)]/40')}>
-                      {date.split('-')[1]}/{date.split('-')[0].slice(2)}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black">{dayLabel}</p>
-                      {isToday && <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-white" style={{ background: 'var(--color-primary)' }}>{isAr ? 'اليوم' : 'TODAY'}</span>}
-                      {isYesterday && !isToday && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(var(--color-primary-rgb) / 0.1)', color: 'var(--color-primary)' }}>{isAr ? 'أمس' : 'Yesterday'}</span>}
-                    </div>
-                    <p className="text-[11px] font-semibold text-[var(--foreground)]/40 mt-0.5" dir="ltr">{fmtDate(date)}</p>
-                  </div>
-                </div>
-                {/* Right side stats */}
-                <div className="flex items-center gap-2">
-                  {sessions.length > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(var(--color-primary-rgb) / 0.06)', color: 'var(--color-primary)' }}>
-                      <Timer className="h-3 w-3" /> {sessions.length}
-                    </span>
-                  )}
-                  <span className={cn('flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg',
-                    completedCount === totalCount && completedCount > 0 ? 'bg-emerald-500/10 text-emerald-600' : 'text-[var(--foreground)]/50')}
-                    style={completedCount > 0 && completedCount < totalCount ? { background: 'rgba(var(--color-primary-rgb) / 0.08)', color: 'var(--color-primary)' } : undefined}>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    {completedCount}/{totalCount}
-                  </span>
-                </div>
-              </div>
-
-              {/* Logs */}
-              <div>
-                {logs.map(({ habit, log }, logIdx) => {
-                  const hc = resolveHabitColor(habit.color);
-                  const isCompleted = log.completed;
-                  return (
-                    <Link key={log.id} href={`/app/habits/${habit.id}`}
-                      className="flex items-center gap-3.5 px-4 sm:px-5 py-3 transition-all duration-200 group"
-                      style={{ borderTop: logIdx > 0 || sessions.length > 0 ? '1px solid rgba(var(--color-primary-rgb) / 0.04)' : undefined }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${hc}06`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                      {/* Color accent + status */}
-                      <div className="relative shrink-0">
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-300"
-                          style={{ background: isCompleted ? `${hc}15` : 'rgba(var(--color-primary-rgb) / 0.04)', border: `1.5px solid ${isCompleted ? `${hc}30` : 'rgba(var(--color-primary-rgb) / 0.08)'}` }}>
-                          {isCompleted
-                            ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
-                            : <Circle className="h-4.5 w-4.5 text-[var(--foreground)]/20" />}
-                        </div>
-                        {/* Color dot */}
-                        <div className="absolute -top-0.5 -end-0.5 h-3 w-3 rounded-full border-2" style={{ background: hc, borderColor: 'var(--color-background)' }} />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className={cn('text-sm font-bold transition-colors duration-200 group-hover:text-[var(--color-primary)]', !isCompleted && 'text-[var(--foreground)]/60')}>{isAr ? habit.nameAr : habit.nameEn}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {log.time && (
-                            <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--foreground)]/40" dir="ltr">
-                              <Clock className="h-3 w-3" />{log.time}
-                            </span>
-                          )}
-                          {log.duration && log.duration > 0 && (
-                            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${hc}10`, color: hc }}>
-                              {log.duration}m
-                            </span>
-                          )}
-                          {log.value !== undefined && log.value > 0 && (
-                            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${hc}10`, color: hc }}>
-                              {log.value} {habit.targetUnit || ''}
-                            </span>
-                          )}
-                          {log.status && log.status !== 'completed' && log.status !== 'pending' && (
-                            <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-md',
-                              log.status === 'partial' ? 'bg-amber-500/10 text-amber-600' :
-                              log.status === 'skipped' ? 'bg-blue-500/10 text-blue-500' :
-                              log.status === 'missed' ? 'bg-red-500/10 text-red-500' : '')}>
-                              {log.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Arrow */}
-                      <ArrowRight className={cn('h-4 w-4 shrink-0 text-[var(--foreground)]/15 group-hover:text-[var(--color-primary)] transition-all duration-300 group-hover:translate-x-0.5', isAr && 'rotate-180 group-hover:-translate-x-0.5')} />
-                    </Link>
-                  );
-                })}
-
-                {/* Timer sessions */}
-                {sessions.map((session, si) => {
-                  const habit = allHabits.find(h => h.id === session.habitId);
-                  if (!habit) return null;
-                  const hc = resolveHabitColor(habit.color);
-                  return (
-                    <Link key={session.id} href={`/app/habits/${habit.id}`}
-                      className="block px-4 sm:px-5 py-3 transition-all duration-200 group"
-                      style={{ borderTop: logs.length > 0 || si > 0 ? '1px solid rgba(var(--color-primary-rgb) / 0.04)' : undefined }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${hc}06`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: `${hc}12`, border: `1.5px solid ${hc}25` }}>
-                          <Timer className="h-4 w-4" style={{ color: hc }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold transition-colors duration-200 group-hover:text-[var(--color-primary)]">{isAr ? habit.nameAr : habit.nameEn}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] font-black" style={{ color: hc }}>{formatDur(session.duration)}</span>
-                            {session.completed
-                              ? <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" /> {isAr ? 'مكتمل' : 'Done'}</span>
-                              : <span className="text-[10px] font-bold text-red-400 flex items-center gap-0.5"><X className="h-3 w-3" /> {isAr ? 'ملغى' : 'Cancelled'}</span>}
-                          </div>
-                        </div>
-                        <ArrowRight className={cn('h-4 w-4 shrink-0 text-[var(--foreground)]/15 group-hover:text-[var(--color-primary)] transition-all duration-300 group-hover:translate-x-0.5', isAr && 'rotate-180 group-hover:-translate-x-0.5')} />
-                      </div>
-                      {/* Session events */}
-                      {session.events && session.events.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap mt-2 ms-[3.25rem]">
-                          {session.events.map((evt, ei) => (
-                            <span key={ei} className={cn('text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1',
-                              evt.action === 'start' || evt.action === 'finish' ? 'bg-emerald-500/10 text-emerald-600' :
-                              evt.action === 'pause' ? 'bg-amber-500/10 text-amber-600' :
-                              evt.action === 'resume' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500')}>
-                              {evt.action === 'start' && <Play className="h-2.5 w-2.5" />}
-                              {evt.action === 'pause' && <Pause className="h-2.5 w-2.5" />}
-                              {evt.action === 'resume' && <Play className="h-2.5 w-2.5" />}
-                              {evt.action === 'finish' && <Square className="h-2.5 w-2.5" />}
-                              {evt.action === 'cancel' && <X className="h-2.5 w-2.5" />}
-                              {evt.action} <span dir="ltr">{formatTime(evt.at)}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {dayData.length === 0 && (
-          <div className="text-center py-20">
-            <div className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'rgba(var(--color-primary-rgb) / 0.06)' }}>
-              <CalendarIcon className="h-8 w-8" style={{ color: 'rgba(var(--color-primary-rgb) / 0.25)' }} />
+            <div className="flex items-center gap-1">
+              <button onClick={goToday} className="rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors">
+                {isAr ? 'اليوم' : 'Today'}
+              </button>
+              <button onClick={nextMonth} className="rounded-lg p-1.5 hover:bg-[var(--color-primary)]/10 transition-colors">
+                <ChevronRight className={cn('h-4 w-4 text-[var(--foreground)]/60', isAr && 'rotate-180')} />
+              </button>
             </div>
-            <p className="text-base font-black text-[var(--foreground)]/60">{isAr ? 'لا توجد سجلات بعد' : 'No history yet'}</p>
-            <p className="text-sm text-[var(--foreground)]/40 mt-1.5">{isAr ? 'ابدأ بإنجاز عاداتك وسيظهر كل شيء هنا' : 'Complete your habits and everything appears here'}</p>
           </div>
-        )}
+
+          {/* Day names */}
+          <div className="grid grid-cols-7 border-t border-[var(--color-primary)]/10">
+            {DAY_NAMES[lang].map(d => (
+              <div key={d} className="py-1.5 text-center text-[10px] font-bold text-[var(--foreground)]/40">{d}</div>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div className="grid grid-cols-7 pb-2 px-1">
+            {calDays.map((cell, i) => {
+              if (!cell.inMonth) return <div key={i} className="h-10" />;
+              const isSelected = cell.date === selectedDate;
+              const isTodayCell = cell.date === today;
+              const isFutureCell = cell.date > today;
+              const { done, total } = completionCountForDay(cell.date);
+              const allDone = total > 0 && done === total;
+              const someDone = done > 0 && done < total;
+              const noneDone = total > 0 && done === 0 && !isFutureCell;
+
+              return (
+                <button key={i} onClick={() => setSelectedDate(cell.date)}
+                  className={cn(
+                    'relative h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all text-[12px] font-semibold mx-0.5',
+                    isSelected ? 'text-white font-black' : isTodayCell ? 'text-[var(--color-primary)] font-bold' : isFutureCell ? 'text-[var(--foreground)]/25' : 'text-[var(--foreground)]/70 hover:bg-[var(--foreground)]/[0.04]',
+                  )}
+                  style={isSelected ? { background: 'var(--color-primary)', borderRadius: 8 } : undefined}>
+                  {cell.day}
+                  {/* Completion dots */}
+                  {!isSelected && total > 0 && !isFutureCell && (
+                    <div className="flex gap-px absolute bottom-0.5">
+                      <span className={cn('h-1 w-1 rounded-full', allDone ? 'bg-emerald-500' : someDone ? 'bg-amber-500' : noneDone ? 'bg-red-400' : 'bg-[var(--foreground)]/15')} />
+                    </div>
+                  )}
+                  {isSelected && total > 0 && (
+                    <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-[14px] rounded-full bg-white text-[8px] font-black flex items-center justify-center" style={{ color: 'var(--color-primary)' }}>{done}/{total}</span>
+                  )}
+                  {isTodayCell && !isSelected && (
+                    <span className="absolute bottom-0.5 h-0.5 w-3 rounded-full bg-[var(--color-primary)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══ DAY DETAILS ═══ */}
+        <div className="rounded-2xl border border-[var(--color-primary)]/20 overflow-hidden">
+          {/* Day header */}
+          <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(var(--color-primary-rgb) / 0.04)' }}>
+            <div>
+              <p className="text-sm font-bold">{selectedDateLabel}</p>
+              <p className="text-[10px] text-[var(--foreground)]/40">{selectedDate}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {scheduledHabits.length > 0 && (
+                <span className={cn('text-xs font-black px-2.5 py-1 rounded-lg', completionRate === 100 ? 'bg-emerald-500/10 text-emerald-600' : completionRate > 0 ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]/40')}
+                  style={completionRate > 0 && completionRate < 100 ? { background: 'rgba(var(--color-primary-rgb) / 0.08)' } : undefined}>
+                  {doneHabits.length}/{scheduledHabits.length} — {completionRate}%
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Habits list */}
+          <div className="divide-y divide-[var(--color-primary)]/[0.06]">
+            {scheduledHabits.length === 0 ? (
+              <div className="py-12 text-center">
+                <CalendarIcon className="h-8 w-8 mx-auto mb-2 text-[var(--foreground)]/15" />
+                <p className="text-sm font-medium text-[var(--foreground)]/40">
+                  {isFuture
+                    ? (isAr ? 'لا توجد عادات مجدولة لهذا اليوم بعد' : 'No habits scheduled for this day yet')
+                    : (isAr ? 'لا توجد عادات مجدولة لهذا اليوم' : 'No habits scheduled for this day')}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Done section */}
+                {doneHabits.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 px-4 pt-3 pb-1 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {isAr ? 'مكتمل' : 'Completed'} ({doneHabits.length})
+                    </p>
+                    {doneHabits.map(habit => (
+                      <HabitDayRow key={habit.id} habit={habit} date={selectedDate} store={store} isAr={isAr} done />
+                    ))}
+                  </div>
+                )}
+
+                {/* Not done section */}
+                {notDoneHabits.length > 0 && !isFuture && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground)]/40 px-4 pt-3 pb-1 flex items-center gap-1">
+                      <Circle className="h-3 w-3" />
+                      {isToday ? (isAr ? 'متبقي' : 'Remaining') : (isAr ? 'لم يُنجز' : 'Not completed')} ({notDoneHabits.length})
+                    </p>
+                    {notDoneHabits.map(habit => (
+                      <HabitDayRow key={habit.id} habit={habit} date={selectedDate} store={store} isAr={isAr} done={false} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Future — just show scheduled */}
+                {isFuture && notDoneHabits.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--foreground)]/35 px-4 pt-3 pb-1 flex items-center gap-1">
+                      <Target className="h-3 w-3" />
+                      {isAr ? 'مجدول' : 'Scheduled'} ({notDoneHabits.length})
+                    </p>
+                    {notDoneHabits.map(habit => (
+                      <HabitDayRow key={habit.id} habit={habit} date={selectedDate} store={store} isAr={isAr} done={false} future />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+// ── Single Habit Row for a Day ──
+function HabitDayRow({ habit, date, store, isAr, done, future }: {
+  habit: Habit; date: string; store: ReturnType<typeof useAppStore>; isAr: boolean; done: boolean; future?: boolean;
+}) {
+  const hc = resolveHabitColor(habit.color);
+  const name = isAr ? habit.nameAr : habit.nameEn;
+  const catLabel = isAr ? (CATEGORY_LABELS[habit.category]?.ar ?? habit.category) : (CATEGORY_LABELS[habit.category]?.en ?? habit.category);
+  const freqLabel = isAr ? (FREQ_LABELS[habit.frequency]?.ar ?? habit.frequency) : (FREQ_LABELS[habit.frequency]?.en ?? habit.frequency);
+  const hasDuration = !!habit.expectedDuration;
+  const logs = store.habitLogs.filter(l => l.habitId === habit.id && l.date === date);
+  const totalDuration = logs.reduce((s, l) => s + (l.duration ?? 0), 0);
+  const repCount = getDoneRepCountForDate(habit, store.habitLogs, date);
+  const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
+
+  return (
+    <Link href={`/app/habits/${habit.id}?viewDate=${date}`}
+      className="flex items-center gap-3 px-4 py-2.5 transition-all duration-200 group hover:bg-[var(--color-primary)]/[0.04]">
+      {/* Status icon */}
+      <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200"
+        style={{
+          background: done ? `${hc}15` : future ? 'rgba(var(--color-primary-rgb) / 0.03)' : 'rgba(var(--color-primary-rgb) / 0.04)',
+          border: `1.5px solid ${done ? `${hc}30` : 'rgba(var(--color-primary-rgb) / 0.1)'}`,
+        }}>
+        {done
+          ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          : future
+            ? <Target className="h-4 w-4 text-[var(--foreground)]/20" />
+            : <Circle className="h-4 w-4 text-[var(--foreground)]/20" />}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className={cn('text-[13px] font-bold truncate transition-colors duration-200 group-hover:text-[var(--color-primary)]', done && 'line-through text-[var(--foreground)]/50', !done && !future && 'text-[var(--foreground)]/70', future && 'text-[var(--foreground)]/35')}>
+            {name}
+          </span>
+          {done && <span className="shrink-0 rounded px-1.5 py-px text-[9px] font-black bg-emerald-500 text-white">{isAr ? 'تم' : 'Done'}</span>}
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <span className="text-[9px] font-semibold rounded px-1 py-px" style={{ background: `${hc}10`, color: hc }}>{catLabel}</span>
+          <span className="text-[9px] font-semibold text-[var(--foreground)]/30">{freqLabel}</span>
+          {lastLog?.time && <span className="text-[9px] text-[var(--foreground)]/30 flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{lastLog.time}</span>}
+          {totalDuration > 0 && <span className="text-[9px] font-bold" style={{ color: hc }}>{formatDurationSecs(totalDuration)}</span>}
+          {repCount > 1 && <span className="text-[9px] font-bold" style={{ color: hc }}>{repCount}x</span>}
+        </div>
+      </div>
+
+      {/* Arrow */}
+      <ArrowRight className={cn('h-3.5 w-3.5 shrink-0 text-[var(--foreground)]/15 group-hover:text-[var(--color-primary)] transition-all duration-200 group-hover:translate-x-0.5', isAr && 'rotate-180 group-hover:-translate-x-0.5')} />
+    </Link>
   );
 }

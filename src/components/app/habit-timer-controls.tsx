@@ -143,8 +143,10 @@ export function useStoreHabitTimer(store: ReturnType<typeof useAppStore>) {
 }
 
 // Compact timer controls — reusable across all views
-export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm', disabled = false, customDurationSecs }: {
+export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm', disabled = false, customDurationSecs, dense = false }: {
   habit: Habit; isAr: boolean; store: ReturnType<typeof useAppStore>; today: string; done: boolean; size?: 'sm' | 'xs' | 'md'; disabled?: boolean; customDurationSecs?: number;
+  /** Tighter layout for modals: shorter face + controls beside it on sm+ */
+  dense?: boolean;
 }) {
   const t = useHabitTimer(habit, store, customDurationSecs);
   const toast = useToast();
@@ -297,7 +299,7 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
   const pctText = t.hasDuration && t.targetSecs > 0 ? Math.round(progress * 100) : null;
   const isActive = t.isMyTimer && (t.running || t.paused);
   const isIdle = !isActive;
-  const timerSegments = 20;
+  const timerSegments = dense ? 10 : 20;
   const filledSegs = Math.min(timerSegments, Math.round(progress * timerSegments));
 
   // Per-rep status: done means at least 1 rep earned
@@ -340,45 +342,76 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
 
   const timerBorder = t.running ? `${hc}35` : t.paused ? '#f59e0b30' : allRepsDone ? '#22c55e25' : canDoMore ? '#3b82f625' : `${hc}15`;
 
+  const btnPad = dense ? 'py-2 px-2.5 rounded-xl text-xs' : 'py-2.5 rounded-xl text-[11px]';
+  const iconSz = dense ? 'h-4 w-4 shrink-0' : 'h-3.5 w-3.5 shrink-0';
+
   return (
-    <div className="flex flex-col gap-2" onClick={e => e.stopPropagation()}>
-      <div className="hc-timer rounded-xl overflow-hidden relative" style={{ background: timerBg, border: `1.5px solid ${timerBorder}`, minHeight: isActive && t.hasCustomDuration ? 120 : 100 }}>
+    <div
+      className={cn(dense ? 'flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2' : 'flex flex-col gap-2')}
+      onClick={e => e.stopPropagation()}>
+      <div
+        className={cn(
+          'hc-timer overflow-hidden relative transition-[box-shadow,border-color] duration-200 motion-safe:hover:shadow-md',
+          dense ? 'flex-1 min-w-0 rounded-lg' : 'rounded-xl',
+        )}
+        style={{
+          background: timerBg,
+          border: `${dense ? '1px' : '1.5px'} solid ${timerBorder}`,
+          ...(dense ? {} : { minHeight: isActive && t.hasCustomDuration ? 120 : 100 }),
+        }}>
         {t.running && (
-          <div className="absolute inset-0 rounded-xl animate-pulse opacity-30" style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
+          <div className={cn('absolute inset-0 animate-pulse opacity-30', dense ? 'rounded-lg' : 'rounded-xl')} style={{ background: `radial-gradient(ellipse at center, ${hc}20, transparent 70%)` }} />
         )}
         <div className="relative p-2.5">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--foreground)]/50">{statusLabel}</span>
+          <div className={cn('flex items-center justify-between', dense ? 'mb-1' : 'mb-1')}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className={cn('rounded-full shrink-0', dense ? 'h-1.5 w-1.5' : 'h-1.5 w-1.5')} style={{ background: statusDotColor, boxShadow: t.running ? `0 0 6px ${statusDotColor}` : undefined }} />
+              <span className={cn('font-bold uppercase tracking-wide text-[var(--foreground)]/50 truncate', dense ? 'text-[10px] sm:text-xs' : 'text-[9px] tracking-wider')}>{statusLabel}</span>
             </div>
-            <Timer className="h-3 w-3" style={{ color: isActive ? hc : `${hc}50` }} />
+            <Timer className={dense ? 'h-3.5 w-3.5 shrink-0' : 'h-3 w-3'} style={{ color: isActive ? hc : `${hc}50` }} />
           </div>
 
           <div className={cn(
-            'text-lg font-mono font-black tracking-tight text-center transition-all duration-300',
-            t.running && 'scale-105',
+            'font-mono font-black tracking-tight text-center transition-all duration-300',
+            dense ? 'text-base sm:text-lg leading-snug' : 'text-lg',
+            t.running && !dense && 'scale-105',
+            t.running && dense && 'scale-[1.02]',
             isIdle && !cumulativeDone && 'opacity-40',
           )} style={{ color: allTimerRepsComplete ? '#22c55e' : canDoMore ? '#3b82f6' : hc }}>
             {allTimerRepsComplete && !isActive ? (
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
+              dense ? (
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <span className="text-sm font-black">{isAr ? 'مكتمل' : 'Done'}</span>
+                  <span className="text-xs font-bold text-emerald-600/80 tabular-nums">{t.earnedReps}/{maxReps} · {fmtSecs(todayTotalSecs)}</span>
                 </div>
-                <span className="text-[9px] font-bold text-emerald-600/60">{t.earnedReps}/{maxReps} — {fmtSecs(todayTotalSecs)}</span>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-sm">{isAr ? 'مكتمل' : 'Done'}</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-emerald-600/60">{t.earnedReps}/{maxReps} — {fmtSecs(todayTotalSecs)}</span>
+                </div>
+              )
             ) : canDoMore && !isActive ? (
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-sm font-bold text-emerald-600">{t.earnedReps}x ✓</span>
-                <span className="text-[9px] opacity-60">{isAr ? `${fmtSecs(todayTotalSecs)} — ابدأ جلسة أخرى` : `${fmtSecs(todayTotalSecs)} — start next`}</span>
-              </div>
+              dense ? (
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-sm">
+                  <span className="font-black text-emerald-600">{t.earnedReps}x ✓</span>
+                  <span className="text-xs text-[var(--foreground)]/55">{fmtSecs(todayTotalSecs)} · {isAr ? 'جلسة +' : 'next'}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-sm font-bold text-emerald-600">{t.earnedReps}x ✓</span>
+                  <span className="text-[9px] opacity-60">{isAr ? `${fmtSecs(todayTotalSecs)} — ابدأ جلسة أخرى` : `${fmtSecs(todayTotalSecs)} — start next`}</span>
+                </div>
+              )
             ) : displayTime}
           </div>
 
           {isIdle && t.hasDuration && !allTimerRepsComplete && !canDoMore && (
-            <div className="text-center mt-0.5">
-              <span className="text-[9px] font-semibold text-[var(--foreground)]/40">
+            <div className={cn('text-center', dense ? 'mt-0.5' : 'mt-0.5')}>
+              <span className={cn('font-semibold text-[var(--foreground)]/45', dense ? 'text-xs leading-snug' : 'text-[9px]')}>
                 {isAr ? `الهدف: ${formatDurationSecs(habit.expectedDuration!)}` : `Target: ${formatDurationSecs(habit.expectedDuration!)}`}
                 {todayTotalSecs > 0 && ` — ${fmtSecs(todayTotalSecs)} ${isAr ? 'إجمالي' : 'done'}`}
               </span>
@@ -386,37 +419,37 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           )}
 
           {t.hasDuration && (
-            <div className="mt-2">
-              <div className="flex items-center justify-between mb-0.5">
+            <div className={dense ? 'mt-1' : 'mt-2'}>
+              <div className="flex items-center justify-between gap-1 mb-0.5">
                 {isActive && (
-                  <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
+                  <span className={cn('font-bold truncate', dense ? 'text-xs' : 'text-[9px]')} style={{ color: `${hc}80` }}>
                     {fmtSecs(Math.floor(t.cumulativeWithCurrent % t.targetSecs))} / {fmtSecs(t.targetSecs)}
-                    {t.todayCumulativeSecs > 0 && <span className="text-[var(--foreground)]/40"> ({isAr ? 'إجمالي' : 'total'}: {fmtSecs(Math.floor(t.cumulativeWithCurrent))})</span>}
+                    {t.todayCumulativeSecs > 0 && <span className="text-[var(--foreground)]/40"> ({isAr ? 'Σ' : 'Σ'}{fmtSecs(Math.floor(t.cumulativeWithCurrent))})</span>}
                   </span>
                 )}
                 {!isActive && todayTotalSecs > 0 && (
-                  <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
+                  <span className={cn('font-bold truncate', dense ? 'text-xs' : 'text-[9px]')} style={{ color: `${hc}80` }}>
                     {fmtSecs(todayTotalSecs % t.targetSecs)} / {fmtSecs(t.targetSecs)}
-                    {t.earnedReps > 0 && <span className="text-emerald-600"> ({t.earnedReps}x ✓)</span>}
+                    {t.earnedReps > 0 && <span className="text-emerald-600"> ({t.earnedReps}x✓)</span>}
                   </span>
                 )}
                 {!isActive && todayTotalSecs === 0 && (
-                  <span className="text-[9px] font-bold text-[var(--foreground)]/30">
-                    0:00 / {formatTimerDuration(t.targetSecs)}
+                  <span className={cn('font-bold text-[var(--foreground)]/35', dense ? 'text-xs' : 'text-[9px]')}>
+                    0 / {formatTimerDuration(t.targetSecs)}
                   </span>
                 )}
-                <span className="text-[10px] font-black" style={{ color: isActive ? hc : allTimerRepsComplete ? '#22c55e' : canDoMore ? '#3b82f6' : `${hc}40` }}>
+                <span className={cn('font-black tabular-nums shrink-0', dense ? 'text-xs' : 'text-[10px]')} style={{ color: isActive ? hc : allTimerRepsComplete ? '#22c55e' : canDoMore ? '#3b82f6' : `${hc}40` }}>
                   {pctText != null ? `${pctText}%` : allTimerRepsComplete ? '100%' : todayTotalSecs > 0 ? `${Math.round(progress * 100)}%` : '0%'}
                 </span>
               </div>
-              <div className="flex gap-[2px]">
+              <div className="flex gap-px sm:gap-[2px]">
                 {Array.from({ length: timerSegments }).map((_, si) => (
                   <div key={si} className="flex-1 h-1.5 rounded-sm transition-all duration-300"
                     style={{
                       background: allTimerRepsComplete && !isActive
                         ? '#22c55e'
                         : si < filledSegs ? hc : `${hc}10`,
-                      transitionDelay: isActive ? `${si * 20}ms` : '0ms',
+                      transitionDelay: isActive ? `${si * 15}ms` : '0ms',
                     }} />
                 ))}
               </div>
@@ -424,74 +457,109 @@ export function HabitTimerControls({ habit, isAr, store, today, done, size = 'sm
           )}
 
           {!t.hasDuration && isActive && (
-            <div className="mt-1 text-center">
-              <span className="text-[9px] font-bold" style={{ color: `${hc}80` }}>
-                {Math.floor(t.elapsed / 60)} {isAr ? 'دقيقة' : 'min'} {Math.floor(t.elapsed % 60).toString().padStart(2, '0')} {isAr ? 'ثانية' : 'sec'}
+            <div className="mt-0.5 text-center">
+              <span className={cn('font-bold', dense ? 'text-xs' : 'text-[9px]')} style={{ color: `${hc}80` }}>
+                {Math.floor(t.elapsed / 60)} {isAr ? 'د' : 'm'} {Math.floor(t.elapsed % 60).toString().padStart(2, '0')} {isAr ? 'ث' : 's'}
               </span>
             </div>
           )}
 
-          {/* Done badge — shows rep count when running */}
           {isActive && t.earnedRepsWithCurrent >= 1 && (
-            <div className="mt-1 flex items-center justify-center gap-1">
-              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-              <span className="text-[9px] font-black text-emerald-600">
-                {t.earnedRepsWithCurrent}x ✓ — {fmtSecs(Math.floor(t.cumulativeWithCurrent))} {isAr ? 'إجمالي' : 'total'}
+            <div className={cn('flex items-center justify-center gap-1', dense ? 'mt-1' : 'mt-1')}>
+              <CheckCircle2 className={cn('text-emerald-500 shrink-0', dense ? 'h-3.5 w-3.5' : 'h-3 w-3')} />
+              <span className={cn('font-black text-emerald-600', dense ? 'text-xs' : 'text-[9px]')}>
+                {t.earnedRepsWithCurrent}x ✓ · {fmtSecs(Math.floor(t.cumulativeWithCurrent))}
               </span>
             </div>
           )}
 
-          {/* Custom timer info */}
           {isActive && t.hasCustomDuration && !cumulativeDone && (
-            <div className="mt-1 text-center">
-              <span className="text-[8px] font-medium text-[var(--foreground)]/40">
-                {isAr ? `الهدف: ${formatDurationSecs(t.targetSecs)} | المؤقت: ${formatDurationSecs(countdownTotal)}` : `Target: ${formatDurationSecs(t.targetSecs)} | Timer: ${formatDurationSecs(countdownTotal)}`}
+            <div className={dense ? 'mt-1 text-center' : 'mt-1 text-center'}>
+              <span className={cn('font-medium text-[var(--foreground)]/45', dense ? 'text-[11px] sm:text-xs block leading-snug' : 'text-[8px]')}>
+                {isAr ? `هدف ${formatDurationSecs(t.targetSecs)} · عد ${formatDurationSecs(countdownTotal)}` : `${formatDurationSecs(t.targetSecs)} tgt · ${formatDurationSecs(countdownTotal)} cd`}
               </span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 h-[32px]">
+      <div className={cn(
+        'flex items-stretch',
+        dense ? 'w-full flex-row flex-wrap gap-1 sm:w-auto sm:min-w-[6.75rem] sm:flex-col sm:flex-nowrap sm:justify-center' : 'gap-2 min-h-[36px]',
+      )}>
         {!t.isMyTimer && (
           <button onClick={() => (t.anotherRunning || cantStart) ? notifyDisabled() : t.start()}
-            className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold text-white transition-all active:scale-95',
-              (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed')}
-            style={{ background: `linear-gradient(135deg, ${hc}, ${hc}cc)` }}>
-            <Play className="h-3.5 w-3.5" /> {cantStart ? (isAr ? 'غير متاح' : 'Unavailable') : (isAr ? 'ابدأ' : 'Start')}
+            className={cn(
+              'flex items-center justify-center gap-1 font-bold text-white border transition-all duration-200 ease-out',
+              btnPad,
+              dense ? 'flex-1 min-w-[5.5rem] sm:flex-none sm:w-full' : 'flex-1 gap-1.5',
+              'motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-lg motion-safe:hover:brightness-110 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              (t.anotherRunning || cantStart) && 'opacity-40 cursor-not-allowed motion-safe:hover:translate-y-0 motion-safe:hover:shadow-none motion-safe:hover:brightness-100',
+            )}
+            style={{
+              background: `linear-gradient(135deg, ${hc}, ${hc}cc)`,
+              borderColor: `${hc}55`,
+              boxShadow: dense ? `0 1px 6px -1px ${hc}50` : `0 2px 10px -2px ${hc}55`,
+            }}>
+            <Play className={iconSz} /> {cantStart ? (isAr ? 'غير متاح' : 'Unavailable') : (isAr ? 'ابدأ' : 'Start')}
           </button>
         )}
         {t.running && (
           <>
             <button onClick={() => t.pause()}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-600 transition-all active:scale-95">
-              <Pause className="h-3.5 w-3.5" /> {isAr ? 'إيقاف' : 'Pause'}
+              className={cn(
+                'flex items-center justify-center gap-1 font-bold border border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-400 transition-all duration-200 ease-out',
+                btnPad,
+                dense ? 'flex-1 min-w-[4.5rem] sm:flex-none sm:w-full' : 'flex-1 gap-1.5',
+                'motion-safe:hover:bg-amber-500/22 motion-safe:hover:border-amber-500/40 motion-safe:hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/35 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              )}>
+              <Pause className={iconSz} /> {isAr ? 'إيقاف' : 'Pause'}
             </button>
             <button onClick={() => t.stop(today, done)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-              <Square className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Stop'}
+              className={cn(
+                'flex items-center justify-center gap-1 font-bold border border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 transition-all duration-200 ease-out',
+                btnPad,
+                dense ? 'flex-1 min-w-[4.5rem] sm:flex-none sm:w-full' : 'flex-1 gap-1.5',
+                'motion-safe:hover:bg-emerald-500/22 motion-safe:hover:border-emerald-500/40 motion-safe:hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/35 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              )}>
+              <Square className={iconSz} /> {isAr ? 'إنهاء' : 'Stop'}
             </button>
           </>
         )}
         {t.paused && (
           <>
             <button onClick={() => t.resume()}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all active:scale-95"
-              style={{ background: `${hc}15`, color: hc }}>
-              <Play className="h-3.5 w-3.5" /> {isAr ? 'استئناف' : 'Resume'}
+              className={cn(
+                'flex items-center justify-center gap-1 font-bold border transition-all duration-200 ease-out',
+                btnPad,
+                dense ? 'flex-1 min-w-[4.5rem] sm:flex-none sm:w-full' : 'flex-1 gap-1.5',
+                'motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:hover:brightness-110 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              )}
+              style={{ background: `${hc}18`, color: hc, borderColor: `${hc}40`, boxShadow: dense ? `0 1px 5px -1px ${hc}40` : `0 2px 8px -2px ${hc}44` }}>
+              <Play className={iconSz} /> {isAr ? 'استئناف' : 'Resume'}
             </button>
             <button onClick={() => t.stop(today, done)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-600 transition-all active:scale-95">
-              <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنهاء' : 'Done'}
+              className={cn(
+                'flex items-center justify-center gap-1 font-bold border border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 transition-all duration-200 ease-out',
+                btnPad,
+                dense ? 'flex-1 min-w-[4.5rem] sm:flex-none sm:w-full' : 'flex-1 gap-1.5',
+                'motion-safe:hover:bg-emerald-500/22 motion-safe:hover:border-emerald-500/40 motion-safe:hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/35 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              )}>
+              <CheckCircle2 className={iconSz} /> {isAr ? 'إنهاء' : 'Done'}
             </button>
             <button onClick={() => t.cancel()}
-              className="flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg text-[11px] font-bold bg-red-500/10 text-red-500 transition-all active:scale-95">
-              <X className="h-3.5 w-3.5" />
+              className={cn(
+                'flex items-center justify-center gap-0.5 font-bold border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 transition-all duration-200',
+                dense ? 'px-2.5 py-2 rounded-xl text-xs sm:w-full' : 'gap-1 py-2.5 px-3 rounded-xl text-[11px]',
+                'motion-safe:hover:bg-red-500/18 motion-safe:hover:border-red-500/35 motion-safe:hover:shadow-md motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]',
+              )}>
+              <X className={iconSz} />
             </button>
           </>
         )}
         {!t.isMyTimer && t.anotherRunning && !done && (
-          <span className="text-[11px] font-bold text-amber-500">{t.blockingHabitName ? (isAr ? `مؤقت "${t.blockingHabitName.ar}" نشط` : `"${t.blockingHabitName.en}" timer active`) : (isAr ? 'مؤقت آخر نشط' : 'Another timer active')}</span>
+          <span className={cn('font-bold text-amber-500 w-full', dense ? 'text-xs leading-snug py-0.5' : 'text-[11px]')}>{t.blockingHabitName ? (isAr ? `مؤقت "${t.blockingHabitName.ar}" نشط` : `"${t.blockingHabitName.en}" timer active`) : (isAr ? 'مؤقت آخر نشط' : 'Another timer active')}</span>
         )}
       </div>
     </div>

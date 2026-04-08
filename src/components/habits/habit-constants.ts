@@ -105,11 +105,14 @@ export function normalizeDurationToSecs(dur: number | undefined): number {
 }
 
 export function isHabitDoneToday(habit: Habit, logs: HabitLog[], today: string): boolean {
+  // Check for any completed log first (covers manual completions, timer completions, etc.)
+  if (logs.some(l => l.habitId === habit.id && l.date === today && l.completed)) return true;
+  // For timer habits, also check if cumulative duration meets the target
   if (habit.expectedDuration) {
     const totalSecs = sumLoggedDurationSecsOnDate(habit.id, logs, today);
     return totalSecs >= habit.expectedDuration;
   }
-  return logs.some(l => l.habitId === habit.id && l.date === today && l.completed);
+  return false;
 }
 
 export function getHabitTimeStats(habit: Habit, logs: HabitLog[]) {
