@@ -15,11 +15,13 @@ import {
 } from '@/components/habits/habit-constants';
 import {
   ArrowLeft, Calendar as CalendarIcon, Clock, Flame, Target, Archive,
-  ChevronLeft, ChevronRight, Star, Activity,
+  ChevronLeft, ChevronRight, Star, Activity, Eye, Edit3, Play,
   MapPin, Repeat, CheckCircle2, Circle,
   Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare, ListChecks, ChevronDown,
 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/app/toast-notifications';
+import { HabitDetail } from '@/components/habits/habit-detail';
 
 // ── Labels ──
 const DAY_NAMES = {
@@ -45,15 +47,30 @@ const FIELD_LABELS: Record<string, { en: string; ar: string }> = {
   priority: { en: 'Priority', ar: 'الأولوية' }, difficulty: { en: 'Difficulty', ar: 'الصعوبة' },
   color: { en: 'Color', ar: 'اللون' }, icon: { en: 'Icon', ar: 'الأيقونة' },
   type: { en: 'Type', ar: 'النوع' }, trackingType: { en: 'Tracking Type', ar: 'نوع التتبع' },
-  targetValue: { en: 'Target Value', ar: 'القيمة المستهدفة' }, targetUnit: { en: 'Target Unit', ar: 'وحدة القياس' },
+  targetValue: { en: 'Target Value', ar: 'القيمة المستهدفة' }, targetUnit: { en: 'Unit', ar: 'وحدة القياس' },
   scheduleType: { en: 'Schedule', ar: 'الجدول' }, scheduleDays: { en: 'Schedule Days', ar: 'أيام الجدول' },
   archived: { en: 'Archived', ar: 'مؤرشفة' }, image: { en: 'Image', ar: 'الصورة' },
-  preferredTime: { en: 'Preferred Time', ar: 'الوقت المفضل' }, expectedDuration: { en: 'Expected Duration', ar: 'المدة المتوقعة' },
+  preferredTime: { en: 'Preferred Time', ar: 'الوقت المفضل' }, expectedDuration: { en: 'Timer Duration', ar: 'مدة المؤقت' },
   placeEn: { en: 'Place', ar: 'المكان' }, placeAr: { en: 'Place (AR)', ar: 'المكان (عربي)' },
-  cueEn: { en: 'Cue', ar: 'الإشارة' }, routineEn: { en: 'Routine', ar: 'الروتين' }, rewardEn: { en: 'Reward', ar: 'المكافأة' },
+  cueEn: { en: 'Cue', ar: 'الإشارة' }, cueAr: { en: 'Cue (AR)', ar: 'الإشارة (عربي)' },
+  routineEn: { en: 'Routine', ar: 'الروتين' }, routineAr: { en: 'Routine (AR)', ar: 'الروتين (عربي)' },
+  rewardEn: { en: 'Reward', ar: 'المكافأة' }, rewardAr: { en: 'Reward (AR)', ar: 'المكافأة (عربي)' },
   reminderEnabled: { en: 'Reminder', ar: 'التذكير' }, reminderTime: { en: 'Reminder Time', ar: 'وقت التذكير' },
-  windowStart: { en: 'Window Start', ar: 'بداية النافذة' }, windowEnd: { en: 'Window End', ar: 'نهاية النافذة' },
-  allowPartial: { en: 'Allow Partial', ar: 'السماح بالجزئي' }, allowSkip: { en: 'Allow Skip', ar: 'السماح بالتخطي' },
+  windowStart: { en: 'Window Start', ar: 'بداية النافذة الزمنية' }, windowEnd: { en: 'Window End', ar: 'نهاية النافذة الزمنية' },
+  strictWindow: { en: 'Strict Time Window', ar: 'نافذة زمنية صارمة' },
+  completionWindowStart: { en: 'Completion Window Start', ar: 'بداية نافذة الإنجاز' },
+  completionWindowEnd: { en: 'Completion Window End', ar: 'نهاية نافذة الإنجاز' },
+  allowPartial: { en: 'Allow Partial', ar: 'السماح بالإنجاز الجزئي' }, allowSkip: { en: 'Allow Skip', ar: 'السماح بالتخطي' },
+  maxDailyReps: { en: 'Max Daily Reps', ar: 'أقصى تكرارات يومية' },
+  customDays: { en: 'Custom Days', ar: 'أيام مخصصة' }, customMonthDays: { en: 'Month Days', ar: 'أيام الشهر' },
+  customScheduleType: { en: 'Schedule Type', ar: 'نوع الجدول' },
+  endDate: { en: 'End Date', ar: 'تاريخ الانتهاء' },
+  streakGoal: { en: 'Streak Goal', ar: 'هدف السلسلة' }, streakRewardEn: { en: 'Streak Reward', ar: 'مكافأة السلسلة' },
+  notes: { en: 'Notes', ar: 'ملاحظات' },
+  order: { en: 'Display Order', ar: 'ترتيب العرض' },
+  goalReps: { en: 'Total Reps Goal', ar: 'هدف التكرارات الإجمالي' },
+  goalHours: { en: 'Total Hours Goal', ar: 'هدف الساعات الإجمالي' },
+  checklistItems: { en: 'Checklist Items', ar: 'عناصر القائمة' },
 };
 
 const TRACKING_LABELS: Record<HabitTrackingType, { en: string; ar: string }> = {
@@ -68,17 +85,44 @@ function getEffectiveTrackingType(habit: Habit): HabitTrackingType {
 function habitUsesTimerToLog(habit: Habit): boolean {
   return getEffectiveTrackingType(habit) === 'timer';
 }
-function formatHistoryDisplayValue(field: string, val: unknown): string {
+function formatHistoryDisplayValue(field: string, val: unknown, isAr?: boolean): string {
   if (val === null || val === undefined) return '—';
-  if (typeof val === 'boolean') return val ? '✓' : '✗';
-  if (field === 'expectedDuration' && typeof val === 'number' && val > 0) return formatDurationSecs(val);
+  if (typeof val === 'boolean') return val ? (isAr ? 'نعم ✓' : 'Yes ✓') : (isAr ? 'لا ✗' : 'No ✗');
+  // Duration fields (seconds)
+  if ((field === 'expectedDuration' || field === 'targetDuration') && typeof val === 'number' && val > 0) return formatDurationSecs(val);
+  // Target value — if large number, might be seconds
+  if (field === 'targetValue' && typeof val === 'number' && val >= 60) return formatDurationSecs(val);
+  // Unit labels
+  if (field === 'targetUnit' && typeof val === 'string') {
+    const unitLabels: Record<string, string> = { times: isAr ? 'مرات' : 'times', cups: isAr ? 'أكواب' : 'cups', pages: isAr ? 'صفحات' : 'pages', minutes: isAr ? 'دقائق' : 'minutes', steps: isAr ? 'خطوات' : 'steps', reps: isAr ? 'تكرارات' : 'reps' };
+    return unitLabels[val] || val;
+  }
+  // Frequency
+  if (field === 'frequency' && typeof val === 'string') {
+    const freqMap: Record<string, string> = { daily: isAr ? 'يومي' : 'Daily', weekly: isAr ? 'أسبوعي' : 'Weekly', monthly: isAr ? 'شهري' : 'Monthly', custom: isAr ? 'مخصص' : 'Custom' };
+    return freqMap[val] || val;
+  }
+  // Priority / Difficulty
+  if ((field === 'priority' || field === 'difficulty') && typeof val === 'string') {
+    const levelMap: Record<string, string> = { low: isAr ? 'منخفض' : 'Low', medium: isAr ? 'متوسط' : 'Medium', high: isAr ? 'مرتفع' : 'High', easy: isAr ? 'سهل' : 'Easy', hard: isAr ? 'صعب' : 'Hard' };
+    return levelMap[val] || val;
+  }
+  // Type
+  if (field === 'type' && typeof val === 'string') {
+    return val === 'positive' ? (isAr ? 'إيجابية (بناء)' : 'Positive (Build)') : (isAr ? 'تجنب (كسر)' : 'Avoidance (Break)');
+  }
+  // Tracking type
+  if (field === 'trackingType' && typeof val === 'string') {
+    const ttMap: Record<string, string> = { boolean: isAr ? 'نعم/لا' : 'Yes/No', count: isAr ? 'عداد' : 'Count', timer: isAr ? 'مؤقت' : 'Timer', checklist: isAr ? 'قائمة' : 'Checklist', duration: isAr ? 'مدة' : 'Duration' };
+    return ttMap[val] || val;
+  }
   if (typeof val === 'string' && val.length > 48) return val.slice(0, 48) + '...';
-  if (Array.isArray(val)) return val.join(', ') || '—';
+  if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : '—';
   return String(val);
 }
 
 // ── Shared styles ──
-const cardBase = 'rounded-2xl border border-[rgba(var(--color-primary-rgb)/0.15)] bg-[var(--color-background)]';
+const cardBase = 'rounded-2xl border-2 border-[var(--color-primary)]/30 bg-[var(--color-background)]';
 const btnBase = 'rounded-xl flex items-center justify-center border border-[rgba(var(--color-primary-rgb)/0.2)] transition-all duration-200 hover:bg-[rgba(var(--color-primary-rgb)/0.08)] hover:border-[rgba(var(--color-primary-rgb)/0.35)]';
 const badge = 'text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-lg border';
 
@@ -229,6 +273,8 @@ export default function HabitDetailPage() {
   const freqLabel = isAr ? (FREQ_LABELS[habit.frequency]?.ar ?? habit.frequency) : (FREQ_LABELS[habit.frequency]?.en ?? habit.frequency);
   const effectiveTracking = getEffectiveTrackingType(habit);
   const trackingLabel = isAr ? TRACKING_LABELS[effectiveTracking].ar : TRACKING_LABELS[effectiveTracking].en;
+  const hc = resolveHabitColor(habit.color);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-5 py-5 sm:py-8 space-y-5">
@@ -256,6 +302,41 @@ export default function HabitDetailPage() {
           </div>
         </div>
       </motion.header>
+
+      {/* ═══ Action Buttons ═══ */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+        className="flex flex-wrap items-center gap-2">
+        {/* Open Detail Modal */}
+        <button type="button" onClick={() => setShowDetailModal(true)}
+          className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
+          <Eye className="h-3.5 w-3.5" /> {isAr ? 'عرض سريع' : 'Quick View'}
+        </button>
+        {/* Edit */}
+        <Link href={`/app/habits?openHabit=${habit.id}`}
+          className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
+          <Edit3 className="h-3.5 w-3.5" /> {isAr ? 'تعديل' : 'Edit'}
+        </Link>
+        {/* Timer (for timer habits) */}
+        {effectiveTracking === 'timer' && (
+          <Link href={`/app/timers?habitId=${habit.id}`}
+            className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
+            <Play className="h-3.5 w-3.5" /> {isAr ? 'بدء المؤقت' : 'Start Timer'}
+          </Link>
+        )}
+        {/* Mark Done (boolean, today only) */}
+        {effectiveTracking === 'boolean' && !viewingDateDone && isViewingToday && (
+          <button type="button" onClick={handleToggleDay}
+            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-bold text-white transition-all duration-200 hover:shadow-md active:scale-95"
+            style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' }}>
+            <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنجاز اليوم' : 'Mark Done'}
+          </button>
+        )}
+        {/* Archive / Restore */}
+        <button type="button" onClick={() => { store.toggleHabitArchive(habit.id); toast.notifySuccess(isAr ? (habit.archived ? 'تم الاستعادة' : 'تم الأرشفة') : (habit.archived ? 'Restored' : 'Archived')); }}
+          className="flex items-center gap-1.5 rounded-xl border-2 border-amber-500/25 px-3 py-2 text-[12px] font-bold text-amber-600 transition-all duration-200 hover:border-amber-500 hover:bg-amber-500 hover:text-white hover:shadow-md active:scale-95">
+          <Archive className="h-3.5 w-3.5" /> {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
+        </button>
+      </motion.div>
 
       {/* ═══ 2. Stats Row ═══ */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.35 }}
@@ -327,7 +408,7 @@ export default function HabitDetailPage() {
             <div className="flex gap-2">
               <textarea value={dailyNote} onChange={e => setDailyNote(e.target.value)}
                 placeholder={isAr ? 'اكتب ملاحظة عن هذا اليوم...' : 'Write a note about this day...'}
-                className="flex-1 rounded-xl px-3 py-2 text-sm resize-none bg-[var(--foreground)]/[0.03] border border-[rgba(var(--color-primary-rgb)/0.12)] placeholder:text-[var(--foreground)]/25 focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                className="flex-1 rounded-xl px-3 py-2 text-sm resize-none bg-[var(--foreground)]/[0.03] border-2 border-[var(--color-primary)]/20 placeholder:text-[var(--foreground)]/25 focus:outline-none focus:border-[var(--color-primary)] transition-colors"
                 rows={2} />
               <button onClick={handleSaveNote} disabled={savingNote}
                 className={cn(btnBase, 'shrink-0 h-10 w-10 self-end',
@@ -407,6 +488,23 @@ export default function HabitDetailPage() {
         </motion.div>
       )}
 
+      {/* ═══ Detail Modal ═══ */}
+      <AnimatePresence>
+        {showDetailModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowDetailModal(false)} className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
+            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-x-0 sm:inset-x-2 md:inset-x-4 top-0 sm:top-[2%] md:top-[3%] z-[var(--z-modal)] md:w-[min(960px,calc(100vw-2rem))] lg:w-[1100px] md:inset-x-0 md:mx-auto max-h-[100vh] sm:max-h-[96vh] md:max-h-[95vh] overflow-y-auto rounded-none sm:rounded-2xl md:rounded-3xl bg-[var(--color-background)] border-0 sm:border border-[var(--foreground)]/[0.18] shadow-2xl">
+              <HabitDetail habit={habit} onClose={() => setShowDetailModal(false)} onEdit={() => {}} onViewFull={() => {}}
+                allHabits={store.habits.filter(h => !h.archived)} onNavigate={() => {}}
+                onArchive={() => { store.toggleHabitArchive(habit.id); setShowDetailModal(false); }}
+                onDelete={() => { store.deleteHabit(habit.id); setShowDetailModal(false); }} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -589,14 +687,11 @@ function DayLogs({ habitId, viewingDate, viewingDateLogs, store, isAr }: {
 // ══════════════════════════════════════════════════════════
 function SettingsChanges({ entries, isAr }: { entries: HabitHistoryEntry[]; isAr: boolean }) {
   return (
-    <details className="group border-t border-[rgba(var(--color-primary-rgb)/0.1)] pt-2">
-      <summary className="flex cursor-pointer items-center justify-between gap-2 py-2 text-xs font-bold text-[var(--foreground)]/50 list-none [&::-webkit-details-marker]:hidden hover:text-[var(--foreground)]/70 transition-colors">
-        <span className="flex items-center gap-2">
-          <Pencil className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-          {isAr ? 'تحديثات إعدادات العادة هذا اليوم' : 'Habit settings updated this day'}
-        </span>
-        <ChevronRight className="h-4 w-4 text-[var(--foreground)]/30 transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:-rotate-90" />
-      </summary>
+    <div className="border-t-2 border-violet-500/20 pt-3">
+      <p className="flex items-center gap-2 text-xs font-bold text-violet-500 mb-2">
+        <Pencil className="h-3.5 w-3.5" />
+        {isAr ? 'تعديلات هذا اليوم' : 'Changes on this day'}
+      </p>
       <div className="space-y-2 pb-1 pt-1">
         {entries.map(entry => {
           const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
@@ -619,9 +714,9 @@ function SettingsChanges({ entries, isAr }: { entries: HabitHistoryEntry[]; isAr
                       <li key={field} className="text-[11px] text-[var(--foreground)]/60 leading-snug">
                         <span className="font-semibold text-[var(--foreground)]/75">{label}</span>
                         <span className="text-[var(--foreground)]/30 mx-1">:</span>
-                        <span className="line-through decoration-red-400/50 text-red-400/70">{formatHistoryDisplayValue(field, diff.from)}</span>
-                        <span className="text-[var(--foreground)]/30 mx-1">-&gt;</span>
-                        <span className="text-emerald-500 font-medium">{formatHistoryDisplayValue(field, diff.to)}</span>
+                        <span className="line-through decoration-red-400/50 text-red-400/70">{formatHistoryDisplayValue(field, diff.from, isAr)}</span>
+                        <span className="text-[var(--foreground)]/30 mx-1">→</span>
+                        <span className="text-emerald-500 font-medium">{formatHistoryDisplayValue(field, diff.to, isAr)}</span>
                       </li>
                     );
                   })}
@@ -631,7 +726,7 @@ function SettingsChanges({ entries, isAr }: { entries: HabitHistoryEntry[]; isAr
           );
         })}
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -727,8 +822,8 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
                 !isSelected && hasCompletion && hasLateCompletion && 'bg-amber-500 text-white',
                 // Missed = solid red
                 !isSelected && isMissed && 'bg-red-500 text-white',
-                // Not scheduled = red-tinted with X
-                !isSelected && isNotScheduled && !beforeCreated && !hasCompletion && 'bg-red-500/10 text-red-400/60',
+                // Not scheduled = red X
+                !isSelected && isNotScheduled && !beforeCreated && !hasCompletion && 'bg-red-500/15 text-red-500 font-black',
                 // Future = gray
                 !isSelected && isFuture && isScheduled && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
                 // Before created = invisible-ish
@@ -743,9 +838,9 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
                 ...(isToday && !isSelected ? { ['--tw-ring-color' as string]: hc } : {}),
               }}>
               {isNotScheduled && !beforeCreated && !hasCompletion ? '✕' : day}
-              {/* Purple dot for settings changes */}
+              {/* Settings modified indicator */}
               {hasHistory && (
-                <span className="absolute bottom-0 start-0.5 h-1.5 w-1.5 rounded-full bg-violet-500 z-[2]" />
+                <span className="absolute bottom-0 start-0.5 h-2.5 w-2.5 rounded-full bg-violet-500 z-[2] border border-white dark:border-gray-900" />
               )}
               {/* Multi-rep badge */}
               {repCount > 1 && (
