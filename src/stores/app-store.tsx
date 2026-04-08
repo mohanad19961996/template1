@@ -461,9 +461,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           if (logs && logs.length > 0) {
             const localLogIds = new Set(prev.habitLogs.map(l => l.id));
             const dbLogIds = new Set(logs.map(l => l.id));
-            // Keep all local logs + any DB logs not in local
+            // Keep all local logs + any DB logs not in local (by id)
             const dbOnly = logs.filter(l => !localLogIds.has(l.id));
-            mergedLogs = [...prev.habitLogs, ...dbOnly];
+            const combined = [...prev.habitLogs, ...dbOnly];
+            // Deduplicate: same habitId+date+time+duration+source = same log (keep first)
+            const seen = new Set<string>();
+            mergedLogs = combined.filter(l => {
+              const key = `${l.habitId}|${l.date}|${l.time}|${l.duration ?? 0}|${l.source ?? ''}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
             // Sync any local-only logs back to DB (they were created offline)
             const localOnly = prev.habitLogs.filter(l => !dbLogIds.has(l.id));
             if (localOnly.length > 0) {

@@ -163,11 +163,17 @@ export default function HabitDetailPage() {
       .finally(() => setLoadingHistory(false));
   }, [habitId]);
 
-  // All logs for this habit
-  const habitLogs = useMemo(() =>
-    store.habitLogs.filter(l => l.habitId === habitId),
-    [store.habitLogs, habitId]
-  );
+  // All logs for this habit (deduplicated — same date+time+duration = same log)
+  const habitLogs = useMemo(() => {
+    const raw = store.habitLogs.filter(l => l.habitId === habitId);
+    const seen = new Set<string>();
+    return raw.filter(l => {
+      const key = `${l.date}|${l.time}|${l.duration ?? 0}|${l.completed}|${l.source ?? ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [store.habitLogs, habitId]);
 
   // Logs indexed by date for fast lookup
   const logsByDate = useMemo(() => {
@@ -468,35 +474,136 @@ export default function HabitDetailPage() {
           </div>
         )}
 
-        {/* Logs for this day */}
-        {viewingDateLogs.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'السجلات' : 'Logs'}</p>
-            {viewingDateLogs.map(log => (
-              <div key={log.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-[var(--foreground)]/[0.03]">
-                {log.completed
-                  ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  : <Circle className="h-4 w-4 text-[var(--foreground)]/30 shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-medium">{log.time}</span>
-                    {log.status && <span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold',
-                      log.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' :
-                      log.status === 'partial' ? 'bg-amber-500/10 text-amber-600' :
-                      log.status === 'skipped' ? 'bg-gray-500/10 text-gray-600' :
-                      'bg-red-500/10 text-red-600'
-                    )}>{log.status}</span>}
-                    {log.duration ? <span className="text-[var(--foreground)]/40">{formatDurationSecs(log.duration)}</span> : null}
+        {/* Logs + timer sessions for this day */}
+        {(() => {
+          const daySessions = store.timerSessions.filter(s => s.habitId === habitId && s.startedAt?.startsWith(viewingDate));
+          const hasContent = viewingDateLogs.length > 0 || daySessions.length > 0;
+          if (!hasContent) return null;
+
+          const EVENT_LABELS: Record<string, { en: string; ar: string; color: string }> = {
+            start: { en: 'Started', ar: 'بدأ', color: 'text-blue-500 bg-blue-500/10' },
+            pause: { en: 'Paused', ar: 'توقف', color: 'text-amber-500 bg-amber-500/10' },
+            resume: { en: 'Resumed', ar: 'استئناف', color: 'text-sky-500 bg-sky-500/10' },
+            finish: { en: 'Completed', ar: 'اكتمل', color: 'text-emerald-500 bg-emerald-500/10' },
+            cancel: { en: 'Cancelled', ar: 'ألغي', color: 'text-red-400 bg-red-400/10' },
+          };
+
+          return (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'السجلات' : 'Logs'}</p>
+
+              {/* Completion logs */}
+              {viewingDateLogs.map(log => {
+                // Find matching timer session for this log (by time proximity)
+                const matchedSession = log.source === 'timer' && log.duration
+                  ? daySessions.find(s => Math.abs(s.duration - (log.duration ?? 0)) < 5)
+                  : null;
+                const startEvent = matchedSession?.events?.find(e => e.action === 'start');
+                const finishEvent = matchedSession?.events?.find(e => e.action === 'finish' || e.action === 'cancel');
+                const startTime = startEvent ? new Date(startEvent.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' }) : null;
+                const endTime = finishEvent ? new Date(finishEvent.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' }) : null;
+
+                return (
+                  <div key={log.id} className="rounded-xl border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02] p-3 space-y-2">
+                    {/* Main log row */}
+                    <div className="flex items-center gap-2.5">
+                      {log.completed
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                        : <Circle className="h-4 w-4 text-[var(--foreground)]/30 shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-1.5 text-xs">
+                          {log.source === 'timer' && <span className="font-bold text-blue-500 bg-blue-500/10 rounded px-1.5 py-0.5 text-[9px]">{isAr ? 'مؤقت' : 'Timer'}</span>}
+                          {log.completed && <span className="font-bold text-emerald-500 bg-emerald-500/10 rounded px-1.5 py-0.5 text-[9px]">{isAr ? 'مكتمل' : 'Done'}</span>}
+                          {log.duration && log.duration > 0 && <span className="font-bold text-[var(--foreground)]/50">{formatDurationSecs(log.duration)}</span>}
+                        </div>
+                      </div>
+                      {log.moodAfter && (
+                        <span className="text-sm">{['😞','😐','🙂','😊','🤩'][log.moodAfter - 1]}</span>
+                      )}
+                    </div>
+
+                    {/* Time details — start and done times */}
+                    <div className="flex items-center gap-3 text-[11px] text-[var(--foreground)]/50 ps-6">
+                      {/* Start time: from timer event, or computed from log.time - duration */}
+                      {(() => {
+                        let computedStart = startTime;
+                        if (!computedStart && log.time && log.duration && log.duration > 0) {
+                          const [hh, mm] = log.time.split(':').map(Number);
+                          const endMins = hh * 60 + mm;
+                          const startMins = endMins - Math.floor(log.duration / 60);
+                          const sH = Math.floor(((startMins % 1440) + 1440) % 1440 / 60);
+                          const sM = ((startMins % 1440) + 1440) % 1440 % 60;
+                          computedStart = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`;
+                        }
+                        return computedStart ? (
+                          <span className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                            {isAr ? 'بدأ' : 'Start'}: <span className="font-bold text-[var(--foreground)]/70">{computedStart}</span>
+                          </span>
+                        ) : null;
+                      })()}
+                      {/* Done time: from timer finish event, or log.time */}
+                      {(endTime || log.time) && (
+                        <span className="flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          {isAr ? 'انتهى' : 'Done'}: <span className="font-bold text-[var(--foreground)]/70">{endTime || log.time}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Full timer event timeline (if matched session has events) */}
+                    {matchedSession?.events && matchedSession.events.length > 1 && (
+                      <div className="ps-6 flex flex-wrap gap-1">
+                        {matchedSession.events.map((ev, ei) => {
+                          const info = EVENT_LABELS[ev.action] || { en: ev.action, ar: ev.action, color: 'text-[var(--foreground)]/50 bg-[var(--foreground)]/[0.05]' };
+                          const time = new Date(ev.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                          return (
+                            <span key={ei} className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold', info.color)}>
+                              {isAr ? info.ar : info.en} {time}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {log.note && <p className="text-[10px] text-[var(--foreground)]/40 ps-6">{log.note}</p>}
                   </div>
-                  {log.note && <p className="text-[10px] text-[var(--foreground)]/50 mt-0.5">{log.note}</p>}
+                );
+              })}
+
+              {/* Standalone timer sessions (not matched to any log) */}
+              {daySessions.filter(s => !viewingDateLogs.some(l => l.source === 'timer' && l.duration && Math.abs(s.duration - (l.duration ?? 0)) < 5)).map(session => (
+                <div key={session.id} className="rounded-xl border border-blue-500/15 bg-blue-500/[0.02] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Timer className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{isAr ? 'جلسة مؤقت' : 'Timer Session'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {session.completed
+                        ? <span className="text-[9px] font-bold rounded px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500">{isAr ? 'مكتمل' : 'Done'}</span>
+                        : <span className="text-[9px] font-bold rounded px-1.5 py-0.5 bg-red-500/10 text-red-400">{isAr ? 'ملغي' : 'Cancelled'}</span>}
+                      <span className="text-[10px] font-bold text-[var(--foreground)]/50">{formatDurationSecs(session.duration)}</span>
+                    </div>
+                  </div>
+                  {session.events && session.events.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {session.events.map((ev, ei) => {
+                        const info = EVENT_LABELS[ev.action] || { en: ev.action, ar: ev.action, color: 'text-[var(--foreground)]/50 bg-[var(--foreground)]/[0.05]' };
+                        const time = new Date(ev.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        return (
+                          <span key={ei} className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold', info.color)}>
+                            {isAr ? info.ar : info.en} {time}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                {log.moodAfter && (
-                  <div className="text-xs text-[var(--foreground)]/40">{['😞','😐','🙂','😊','🤩'][log.moodAfter - 1]}</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Habit settings activity (collapsed — not raw debug) */}
         {viewingDateHistory.length > 0 && (
