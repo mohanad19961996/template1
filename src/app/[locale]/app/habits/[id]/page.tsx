@@ -710,40 +710,46 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
           const isScheduled = isHabitScheduledForDate(habit, dateStr);
           const hasLateCompletion = hasCompletion && habit.strictWindow && habit.windowStart && habit.windowEnd && logs.some(l => l.completed && l.time && (l.time < habit.windowStart! || l.time > habit.windowEnd!));
 
+          const isNotScheduled = !isScheduled && !isFuture;
+          const beforeCreated = habit.createdAt.split('T')[0] > dateStr;
+
           return (
             <button type="button" key={day}
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-              disabled={isFuture && !hasCompletion}
+              disabled={beforeCreated}
               className={cn(
-                'relative h-11 rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition-all duration-150 overflow-hidden',
-                isSelected ? 'text-white font-bold shadow-lg scale-[1.02]'
-                : isToday ? 'font-black'
-                : isFuture || (!isScheduled && !hasCompletion) ? 'opacity-35 cursor-default'
-                : 'hover:bg-[rgba(var(--color-primary-rgb)/0.06)]',
+                'relative h-9 sm:h-10 rounded-md flex items-center justify-center text-[11px] sm:text-sm font-bold transition-all duration-150 cursor-pointer',
+                // Selected = solid theme
+                isSelected && 'text-white shadow-md ring-2 ring-offset-1',
+                // Done = solid green
+                !isSelected && hasCompletion && !hasLateCompletion && 'bg-emerald-500 text-white',
+                // Done late = solid amber
+                !isSelected && hasCompletion && hasLateCompletion && 'bg-amber-500 text-white',
+                // Missed = solid red
+                !isSelected && isMissed && 'bg-red-500 text-white',
+                // Not scheduled = red-tinted with X
+                !isSelected && isNotScheduled && !beforeCreated && !hasCompletion && 'bg-red-500/10 text-red-400/60',
+                // Future = gray
+                !isSelected && isFuture && isScheduled && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
+                // Before created = invisible-ish
+                beforeCreated && 'opacity-20 cursor-default',
+                // Today ring
+                isToday && !isSelected && 'ring-2 ring-offset-1 font-black',
+                // Default hover
+                !isSelected && !hasCompletion && !isMissed && !isFuture && !isNotScheduled && !beforeCreated && 'text-[var(--foreground)]/70 hover:bg-[rgba(var(--color-primary-rgb)/0.08)]',
               )}
               style={{
-                ...(isSelected ? { background: `var(--color-primary)` } : {}),
-                ...(isToday && !isSelected ? { boxShadow: `inset 0 -2px 0 0 ${hc}` } : {}),
+                ...(isSelected ? { background: 'var(--color-primary)', ['--tw-ring-color' as string]: 'var(--color-primary)' } : {}),
+                ...(isToday && !isSelected ? { ['--tw-ring-color' as string]: hc } : {}),
               }}>
-              <span className={cn('relative z-[1]', hasCompletion && !isSelected && 'text-white font-bold drop-shadow-sm')}>
-                {day}
-              </span>
-
-              {/* Green bg for done */}
-              {hasCompletion && !isSelected && (
-                <div className="absolute inset-0.5 rounded-lg -z-0" style={{ background: hasLateCompletion ? '#f59e0b' : habitColor, opacity: 0.8 }} />
-              )}
-              {/* Red dot for missed */}
-              {isMissed && !isSelected && (
-                <span className="absolute top-1 end-1 h-1.5 w-1.5 rounded-full bg-red-400 z-[2]" />
-              )}
+              {isNotScheduled && !beforeCreated && !hasCompletion ? '✕' : day}
               {/* Purple dot for settings changes */}
               {hasHistory && (
-                <span className="absolute bottom-0.5 start-0.5 h-1.5 w-1.5 rounded-full bg-violet-500 z-[2]" />
+                <span className="absolute bottom-0 start-0.5 h-1.5 w-1.5 rounded-full bg-violet-500 z-[2]" />
               )}
               {/* Multi-rep badge */}
               {repCount > 1 && (
-                <span className="absolute bottom-0.5 end-0 min-w-[14px] px-0.5 rounded-full bg-blue-600 text-white text-[7px] font-black text-center z-[2]">{repCount}x</span>
+                <span className="absolute -top-1 -end-1 min-w-[16px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black text-center z-[2] shadow-sm ring-1 ring-white dark:ring-gray-900">{repCount}x</span>
               )}
             </button>
           );
@@ -751,26 +757,18 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[rgba(var(--color-primary-rgb)/0.1)] flex-wrap">
-        <LegendDot color={habitColor} label={isAr ? 'مكتملة' : 'Done'} />
-        <LegendDot color="rgb(248 113 113)" dot label={isAr ? 'فائتة' : 'Missed'} />
-        <LegendDot color="rgb(139 92 246)" dot label={isAr ? 'تعديل' : 'Settings'} />
-        {habit.strictWindow && <LegendDot color="#f59e0b" label={isAr ? 'متأخر' : 'Late'} />}
+      <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 pt-3 border-t border-[rgba(var(--color-primary-rgb)/0.1)] flex-wrap">
+        <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'مكتمل' : 'Done'}</span></div>
+        <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-red-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'فائت' : 'Missed'}</span></div>
+        <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-gray-300 dark:bg-gray-600" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'قادم' : 'Upcoming'}</span></div>
+        <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-red-500/10 text-red-400 text-[6px] font-black flex items-center justify-center">✕</div><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'غير مجدول' : 'N/A'}</span></div>
+        {habit.strictWindow && <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-amber-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'متأخر' : 'Late'}</span></div>}
+        <div className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-violet-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'تعديل' : 'Edit'}</span></div>
       </div>
     </div>
   );
 }
 
-function LegendDot({ color, label, dot }: { color: string; label: string; dot?: boolean }) {
-  return (
-    <div className="flex items-center gap-1.5 text-[9px] text-[var(--foreground)]/45">
-      {dot
-        ? <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-        : <span className="h-3 w-3 rounded" style={{ background: color, opacity: 0.75 }} />}
-      {label}
-    </div>
-  );
-}
 
 // ══════════════════════════════════════════════════════════
 // Small utility components
