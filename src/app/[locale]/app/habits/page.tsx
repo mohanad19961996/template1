@@ -16,13 +16,13 @@ import {
 import {
   Plus, Target, Search, X, Archive, Filter, Sparkles, Repeat,
   Table2, SlidersHorizontal, GripVertical, CalendarDays,
-  Calendar as CalendarIcon,
+  Calendar as CalendarIcon, ChevronDown,
 } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 
 // ── Extracted Components ──
-import { fadeUp, isHabitDoneToday, isHabitScheduledForDate } from '@/components/habits/habit-constants';
+import { fadeUp, isHabitDoneToday, isHabitScheduledForDate, getCategoryLabel } from '@/components/habits/habit-constants';
 import CategoryChipsRail from '@/components/habits/category-chips-rail';
 import ActiveTimerBanner from '@/components/habits/habits-active-timer-banner';
 import HabitCompactRow from '@/components/habits/habit-compact-card';
@@ -32,6 +32,21 @@ import HabitFullCalendar from '@/components/habits/habit-full-calendar';
 import HabitFormModal, { type HabitFormData } from '@/components/habits/habit-form-modal';
 
 import { HabitDetail } from '@/components/habits/habit-detail';
+
+const SCHEDULE_GROUP_ORDER: HabitFrequency[] = ['daily', 'weekly', 'monthly', 'custom'];
+const SCHEDULE_SECTION_LABELS: Record<HabitFrequency, { en: string; ar: string }> = {
+  daily: { en: 'Daily habits', ar: 'العادات اليومية' },
+  weekly: { en: 'Weekly habits', ar: 'العادات الأسبوعية' },
+  monthly: { en: 'Monthly habits', ar: 'العادات الشهرية' },
+  custom: { en: 'Custom schedule', ar: 'جدول مخصص' },
+};
+
+const SCHEDULE_ICONS: Record<HabitFrequency, typeof Repeat> = {
+  daily: Repeat,
+  weekly: CalendarDays,
+  monthly: CalendarIcon,
+  custom: SlidersHorizontal,
+};
 
 export default function HabitsPage() {
   const locale = useLocale();
@@ -88,6 +103,19 @@ export default function HabitsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'done' | 'pending' | 'missed'>('all');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  /** Collapsible schedule sections — counts stay visible on the header when open or closed */
+  const [openScheduleSections, setOpenScheduleSections] = useState<Record<HabitFrequency, boolean>>({
+    daily: true,
+    weekly: true,
+    monthly: true,
+    custom: true,
+  });
+  const toggleScheduleSection = useCallback((f: HabitFrequency) => {
+    setOpenScheduleSections((p) => ({ ...p, [f]: !p[f] }));
+  }, []);
+
+  /** Category filter rail — collapsible (same scroll-safe pattern as schedule groups) */
+  const [categoriesOpen, setCategoriesOpen] = useState(true);
 
   // ── Form State ──
   const [formData, setFormData] = useState<HabitFormData>({
@@ -282,6 +310,27 @@ export default function HabitsPage() {
     return result;
   }, [store.habits, store.habitLogs, showArchived, filterCategory, filterType, filterPriority, filterTracking, filterStatus, searchQuery, today]);
 
+  const habitsBySchedule = useMemo(() => {
+    const buckets: Record<HabitFrequency, Habit[]> = { daily: [], weekly: [], monthly: [], custom: [] };
+    for (const h of filteredHabits) {
+      const raw = h.frequency ?? 'daily';
+      const key: HabitFrequency = SCHEDULE_GROUP_ORDER.includes(raw as HabitFrequency) ? (raw as HabitFrequency) : 'daily';
+      buckets[key].push(h);
+    }
+    for (const k of SCHEDULE_GROUP_ORDER) {
+      buckets[k].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    }
+    return SCHEDULE_GROUP_ORDER.map((key) => ({
+      key,
+      label: SCHEDULE_SECTION_LABELS[key],
+      habits: buckets[key],
+      count: buckets[key].length,
+    }));
+  }, [filteredHabits]);
+
+  /** Flattened list in section order — used for drag-and-drop and global reorder */
+  const habitsForDnd = useMemo(() => habitsBySchedule.flatMap((s) => s.habits), [habitsBySchedule]);
+
   const activeHabitsCount = store.habits.filter(h => !h.archived).length;
   const todayScheduledCount = store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, today)).length;
   const completedTodayCount = store.habits.filter(h => !h.archived && isHabitDoneToday(h, store.habitLogs, today)).length;
@@ -291,12 +340,12 @@ export default function HabitsPage() {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = filteredHabits.findIndex(h => h.id === active.id);
-    const newIndex = filteredHabits.findIndex(h => h.id === over.id);
+    const oldIndex = habitsForDnd.findIndex(h => h.id === active.id);
+    const newIndex = habitsForDnd.findIndex(h => h.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(filteredHabits, oldIndex, newIndex);
+    const reordered = arrayMove(habitsForDnd, oldIndex, newIndex);
     store.reorderHabits(reordered.map(h => h.id));
-  }, [filteredHabits, store]);
+  }, [habitsForDnd, store]);
   const isDragMode = true;
 
   // ═══════════════════════════════════════════════════════
@@ -310,19 +359,62 @@ export default function HabitsPage() {
 
       {/* Hero */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        className="relative overflow-hidden rounded-2xl mb-3"
+        className="group/hero relative overflow-hidden rounded-2xl mb-3 transition-[box-shadow,filter,transform] duration-500 ease-out motion-safe:hover:shadow-[0_20px_50px_-14px_rgba(var(--color-primary-rgb)_/_0.42)] motion-safe:hover:brightness-[1.04] motion-safe:hover:scale-[1.008]"
         style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.7))', boxShadow: '0 6px 24px rgba(var(--color-primary-rgb) / 0.18)' }}>
         <div className="pointer-events-none absolute -end-16 -top-16 h-48 w-48 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)' }} />
         <div className="relative z-10 flex flex-col items-center justify-center gap-1 px-5 py-3 sm:px-7 sm:py-3.5">
-          <motion.div className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl" style={{ background: 'rgba(255,255,255,0.18)' }}
+          <motion.div className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl transition-transform duration-300 ease-out motion-safe:group-hover/hero:scale-110" style={{ background: 'rgba(255,255,255,0.18)' }}
             animate={{ rotate: [0, 360] }} transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}>
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white transition-[filter,transform] duration-300 motion-safe:group-hover/hero:drop-shadow-[0_0_12px_rgba(255,255,255,0.65)] motion-safe:group-hover/hero:scale-110" />
           </motion.div>
-          <motion.h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white" animate={{ scale: [1, 1.04, 1] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
+          <motion.h1
+            className="text-4xl sm:text-5xl font-black tracking-tight text-white cursor-default select-none rounded-xl px-3 py-1 -mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            animate={{
+              scale: [1, 1.02, 1],
+              textShadow: [
+                '0 2px 20px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.12)',
+                '0 6px 36px rgba(255,255,255,0.32), 0 3px 20px rgba(0,0,0,0.3)',
+                '0 2px 20px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.12)',
+              ],
+            }}
+            transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+            whileHover={{
+              scale: 1.09,
+              y: -4,
+              textShadow: '0 10px 48px rgba(255,255,255,0.5), 0 4px 28px rgba(0,0,0,0.32), 0 0 2px rgba(255,255,255,0.95)',
+            }}
+            whileTap={{ scale: 1.02, y: -1 }}
+            style={{ willChange: 'transform' }}
+          >
             {isAr ? 'العادات' : 'Habits'}
           </motion.h1>
-          <motion.div className="h-[3px] rounded-full bg-white/90" initial={{ width: 0 }} animate={{ width: ['0%', '60%', '40%', '50%'] }} transition={{ duration: 2, ease: 'easeOut' }} />
-          <motion.p className="text-sm sm:text-base font-semibold text-white/90" animate={{ opacity: [0.8, 1, 0.8] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
+          <motion.div
+            className="h-[3px] rounded-full bg-gradient-to-r from-white/40 via-white to-white/40"
+            initial={{ width: '48%', opacity: 0.8 }}
+            animate={{
+              width: ['42%', '58%', '46%', '54%', '48%'],
+              opacity: [0.65, 1, 0.75, 1, 0.7],
+            }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.p
+            className="text-sm sm:text-base font-semibold cursor-default select-none rounded-lg px-3 py-1.5 max-w-lg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45"
+            animate={{
+              opacity: [0.78, 1, 0.82, 1, 0.78],
+              scale: [1, 1.04, 1, 1.03, 1],
+              y: [0, -2, 0, -1, 0],
+              color: ['rgba(255,255,255,0.78)', 'rgba(255,255,255,0.98)', 'rgba(255,255,255,0.82)', 'rgba(255,255,255,1)', 'rgba(255,255,255,0.78)'],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+            whileHover={{
+              scale: 1.12,
+              y: -3,
+              color: '#ffffff',
+              textShadow: '0 0 28px rgba(255,255,255,0.75), 0 4px 18px rgba(0,0,0,0.22)',
+            }}
+            whileTap={{ scale: 1.05 }}
+            style={{ willChange: 'transform' }}
+          >
             {isAr ? 'ابنِ عاداتك، اصنع حياتك' : 'Build your habits, shape your life'}
           </motion.p>
         </div>
@@ -334,9 +426,9 @@ export default function HabitsPage() {
         const dailyHabits = store.habits.filter(h => !h.archived && h.frequency === 'daily').length;
         const nonDailyHabits = store.habits.filter(h => !h.archived && h.frequency !== 'daily').length;
         return (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="rounded-2xl border px-5 py-4 flex items-center gap-4 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.15)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }}>
-              <div className="relative h-14 w-14 shrink-0">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            <div className="group/stat rounded-2xl border px-5 py-4 flex items-center gap-4 cursor-default transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:shadow-xl motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.02] motion-safe:hover:border-[var(--color-primary)]/35" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.15)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }}>
+              <div className="relative h-14 w-14 shrink-0 transition-transform duration-300 ease-out motion-safe:group-hover/stat:scale-110">
                 <svg className="h-14 w-14 -rotate-90" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--foreground)]/[0.06]" />
                   <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeDasharray={`${completionRate * 0.94} 94`} strokeLinecap="round" className="transition-all duration-700" />
@@ -348,16 +440,16 @@ export default function HabitsPage() {
                 <p className="text-[11px] font-semibold text-[var(--foreground)]/45">{isAr ? 'إنجاز اليوم' : "Today's progress"}</p>
               </div>
             </div>
-            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-orange-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-orange-500/10"><Repeat className="h-5 w-5 text-orange-500" /></div>
+            <div className="group/stat2 rounded-2xl border px-4 py-3.5 flex items-center gap-3 cursor-default transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:shadow-xl motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.02] motion-safe:hover:border-orange-400/35" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-orange-500/10 transition-transform duration-300 motion-safe:group-hover/stat2:scale-110 motion-safe:group-hover/stat2:rotate-3"><Repeat className="h-5 w-5 text-orange-500 transition-transform duration-300 motion-safe:group-hover/stat2:scale-110" /></div>
               <div className="min-w-0"><p className="text-base font-bold tabular-nums">{dailyHabits}</p><p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'عادة يومية' : 'Daily habits'}</p></div>
             </div>
-            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-purple-400/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-purple-500/10"><CalendarDays className="h-5 w-5 text-purple-500" /></div>
+            <div className="group/stat3 rounded-2xl border px-4 py-3.5 flex items-center gap-3 cursor-default transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:shadow-xl motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.02] motion-safe:hover:border-purple-400/35" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-purple-500/10 transition-transform duration-300 motion-safe:group-hover/stat3:scale-110 motion-safe:group-hover/stat3:-rotate-3"><CalendarDays className="h-5 w-5 text-purple-500 transition-transform duration-300 motion-safe:group-hover/stat3:scale-110" /></div>
               <div className="min-w-0"><p className="text-base font-bold tabular-nums">{nonDailyHabits}</p><p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? 'أسبوعية / شهرية / مخصصة' : 'Weekly / Monthly / Custom'}</p></div>
             </div>
-            <div className="rounded-2xl border px-4 py-3.5 flex items-center gap-3 transition-all duration-200 cursor-default hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-400/25 col-span-2 sm:col-span-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
-              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-emerald-500/10"><Target className="h-5 w-5 text-emerald-500" /></div>
+            <div className="group/stat4 rounded-2xl border px-4 py-3.5 flex items-center gap-3 cursor-default transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:shadow-xl motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.02] motion-safe:hover:border-emerald-400/35 col-span-2 sm:col-span-1" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.08)' }}>
+              <div className="h-11 w-11 shrink-0 rounded-xl flex items-center justify-center bg-emerald-500/10 transition-transform duration-300 motion-safe:group-hover/stat4:scale-110"><Target className="h-5 w-5 text-emerald-500 transition-transform duration-300 motion-safe:group-hover/stat4:scale-110" /></div>
               <div className="min-w-0"><p className="text-base font-bold tabular-nums">{activeHabitsCount} <span className="text-[10px] text-[var(--foreground)]/25">{isAr ? 'إجمالي' : 'total'}</span></p><p className="text-[10px] font-semibold text-[var(--foreground)]/45">{isAr ? `${dailyHabits} يومية + ${nonDailyHabits} أخرى` : `${dailyHabits} daily + ${nonDailyHabits} other`}</p></div>
             </div>
           </motion.div>
@@ -366,10 +458,10 @@ export default function HabitsPage() {
 
       {/* Quote */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5 }}
-        className="mb-4 cursor-default rounded-xl border px-4 py-3 text-center transition-all duration-300 hover:shadow-md sm:px-6 sm:py-3.5"
+        className="group/quote cursor-default rounded-xl border px-4 py-3 text-center mb-4 sm:px-6 sm:py-3.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.008] motion-safe:hover:border-[var(--color-primary)]/28"
         style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)', background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.03), rgba(var(--color-primary-rgb) / 0.06))' }}
         dir="rtl">
-        <p className="text-xs font-semibold italic leading-relaxed text-[var(--foreground)]/50 sm:text-sm">
+        <p className="text-xs font-semibold italic leading-relaxed text-[var(--foreground)]/50 sm:text-sm transition-colors duration-300 motion-safe:group-hover/quote:text-[var(--foreground)]/62">
           أغمض عينيك، وسافر بخيالك إلى مستقبلٍ بعيد، حيث تقف أمام عمرٍ أثقلته الحسرة وأحلامٍ أرهقها التأجيل. هناك تمنّيت فرصة واحدة فقط: أن تعود إلى هذه اللحظة لتبدأ كما ينبغي.
           <span className="font-black not-italic" style={{ color: 'var(--color-primary)' }}> افتح عينيك... أنت هنا فعلًا. انهض وابدأ!</span>
         </p>
@@ -377,37 +469,41 @@ export default function HabitsPage() {
 
       {/* Toolbar */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} className="mb-4 flex items-center gap-1.5 sm:gap-2 relative z-[100]">
-        <div className="relative flex-1 min-w-0 group/search">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200 group-focus-within/search:text-[var(--color-primary)]" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
-          {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute end-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] hover:bg-[var(--foreground)]/[0.15] transition-colors"><X className="h-3 w-3 text-[var(--foreground)]/50" /></button>}
+        <div className="relative flex-1 min-w-0 group/search rounded-xl transition-shadow duration-300 motion-safe:group-hover/search:shadow-md motion-safe:group-focus-within/search:shadow-md">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 z-[1] transition-all duration-300 group-focus-within/search:text-[var(--color-primary)] motion-safe:group-hover/search:scale-110 motion-safe:group-hover/search:text-[var(--color-primary)]/90" style={{ color: 'rgba(var(--color-primary-rgb) / 0.35)' }} />
+          {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute end-2.5 top-1/2 -translate-y-1/2 z-[1] h-6 w-6 rounded-full flex items-center justify-center bg-[var(--foreground)]/[0.08] text-[var(--foreground)]/50 transition-all duration-200 motion-safe:hover:scale-110 motion-safe:active:scale-90 motion-safe:hover:bg-[var(--color-primary)]/15 motion-safe:hover:text-[var(--color-primary)]"><X className="h-3 w-3" /></button>}
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={isAr ? 'بحث...' : 'Search...'}
-            className="w-full rounded-xl border ps-9 pe-9 py-2 text-[13px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-200 bg-transparent"
+            className="w-full rounded-xl border ps-9 pe-9 py-2 text-[13px] font-semibold placeholder:text-[var(--foreground)]/30 focus:outline-none transition-all duration-300 bg-transparent motion-safe:hover:border-[var(--color-primary)]/22"
             style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}
             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--color-primary-rgb) / 0.08)'; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb) / 0.12)'; e.currentTarget.style.boxShadow = 'none'; }} />
         </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { resetForm(); setShowForm(true); }}
-          className="shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 sm:px-5 py-2 text-[13px] font-bold text-white transition-all"
+        <motion.button
+          whileHover={{ scale: 1.04, boxShadow: '0 10px 28px rgba(var(--color-primary-rgb) / 0.32)' }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+          onClick={() => { resetForm(); setShowForm(true); }}
+          className="group/newhabit shrink-0 flex items-center gap-1.5 rounded-xl px-3.5 sm:px-5 py-2 text-[13px] font-bold text-white transition-[filter] duration-200 motion-safe:hover:brightness-110"
           style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.85))', boxShadow: '0 4px 14px rgba(var(--color-primary-rgb) / 0.2)' }}>
-          <Plus className="h-4 w-4" /><span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
+          <Plus className="h-4 w-4 transition-transform duration-300 ease-out motion-safe:group-hover/newhabit:rotate-90" /><span className="hidden sm:inline">{isAr ? 'عادة جديدة' : 'New Habit'}</span>
         </motion.button>
-        <button onClick={() => setShowArchived(!showArchived)}
-          className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold transition-all cursor-pointer', showArchived ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25')}
+        <button type="button" onClick={() => setShowArchived(!showArchived)}
+          className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:translate-y-0 motion-safe:active:scale-[0.97] motion-safe:hover:[&_svg]:scale-110', showArchived ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35')}
           style={showArchived ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
           <Archive className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'الأرشيف' : 'Archive'}</span>
           {store.habits.filter(h => h.archived).length > 0 && <span className={cn('rounded-full px-1.5 py-px text-[10px] font-black tabular-nums', showArchived ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600')}>{store.habits.filter(h => h.archived).length}</span>}
         </button>
-        <button onClick={() => setShowFullTable(true)} className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all cursor-pointer hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          <Table2 className="h-3.5 w-3.5" /><span className="hidden lg:inline">{isAr ? 'الالتزام الشهري' : 'Monthly Compliance'}</span>
+        <button type="button" onClick={() => setShowFullTable(true)} className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35 motion-safe:hover:[&_svg]:scale-110" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+          <Table2 className="h-3.5 w-3.5 transition-transform duration-200" /><span className="hidden lg:inline">{isAr ? 'الالتزام الشهري' : 'Monthly Compliance'}</span>
         </button>
-        <Link href="/app/habits/log" className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
-          <CalendarIcon className="h-3.5 w-3.5" /><span className="hidden lg:inline">{isAr ? 'السجل' : 'Log'}</span>
+        <Link href="/app/habits/log" className="shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold text-[var(--foreground)]/70 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35 motion-safe:hover:[&_svg]:scale-110" style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
+          <CalendarIcon className="h-3.5 w-3.5 transition-transform duration-200" /><span className="hidden lg:inline">{isAr ? 'السجل' : 'Log'}</span>
         </Link>
         {(() => {
           const activeFilterCount = [filterType !== 'all', filterPriority !== 'all', filterTracking !== 'all', filterStatus !== 'all'].filter(Boolean).length;
           return (
-            <button onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold transition-all cursor-pointer', showAdvancedFilters || activeFilterCount > 0 ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/25')}
+            <button type="button" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-bold cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-[0.97] motion-safe:hover:[&_svg]:scale-110', showAdvancedFilters || activeFilterCount > 0 ? 'text-white' : 'text-[var(--foreground)]/70 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/35')}
               style={(showAdvancedFilters || activeFilterCount > 0) ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))', borderColor: 'var(--color-primary)' } : { borderColor: 'rgba(var(--color-primary-rgb) / 0.12)' }}>
               <SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'فلاتر' : 'Filters'}</span>
               {activeFilterCount > 0 && <span className="text-[10px] font-black bg-white/25 text-white h-4 min-w-[16px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
@@ -420,12 +516,12 @@ export default function HabitsPage() {
       <AnimatePresence>
         {showAdvancedFilters && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-            <div className="rounded-2xl border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.02] p-5">
+            <div className="rounded-2xl border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.02] p-5 transition-all duration-300 motion-safe:hover:border-[var(--foreground)]/16 motion-safe:hover:shadow-md motion-safe:hover:bg-[var(--foreground)]/[0.025]">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-bold">{isAr ? 'فلاتر متقدمة' : 'Advanced Filters'}</span>
                 {(filterType !== 'all' || filterPriority !== 'all' || filterTracking !== 'all' || filterStatus !== 'all') && (
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setFilterType('all'); setFilterPriority('all'); setFilterTracking('all'); setFilterStatus('all'); }}
-                    className="text-xs text-[var(--color-primary)] font-bold hover:underline px-2 py-1 rounded-lg hover:bg-[var(--color-primary)]/10 transition-colors">
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={() => { setFilterType('all'); setFilterPriority('all'); setFilterTracking('all'); setFilterStatus('all'); }}
+                    className="text-xs text-[var(--color-primary)] font-bold px-2 py-1 rounded-lg hover:bg-[var(--color-primary)]/12 hover:underline transition-all duration-200 motion-safe:hover:shadow-sm">
                     {isAr ? 'مسح الكل' : 'Clear All'}
                   </motion.button>
                 )}
@@ -441,8 +537,8 @@ export default function HabitsPage() {
                     <label className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-wider mb-2 block">{filter.label}</label>
                     <div className="flex flex-wrap gap-1">
                       {filter.options.map(o => (
-                        <button key={o.v} onClick={() => (filter.setter as (v: string) => void)(o.v)}
-                          className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer', filter.state === o.v ? 'text-white shadow-sm' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.06]')}
+                        <button type="button" key={o.v} onClick={() => (filter.setter as (v: string) => void)(o.v)}
+                          className={cn('px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:scale-105 motion-safe:active:scale-95', filter.state === o.v ? 'text-white shadow-sm motion-safe:hover:shadow-md' : 'text-[var(--foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/[0.08]')}
                           style={filter.state === o.v ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
                           {isAr ? o.ar : o.en}
                         </button>
@@ -456,59 +552,276 @@ export default function HabitsPage() {
         )}
       </AnimatePresence>
 
-      {/* Category Rail */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2.15} className="relative z-[90] mb-3 sm:mb-4">
-        <CategoryChipsRail isAr={isAr} allCategories={allCategories} filterCategory={filterCategory} setFilterCategory={setFilterCategory} showArchived={showArchived} store={store} toast={toast} />
-      </motion.div>
+      {/* Categories — collapsible (same pattern as schedule groups) */}
+      <div
+        className={cn(
+          'habits-schedule-section relative z-[90] mb-3 sm:mb-4 rounded-xl border overflow-hidden transition-[border-color,background-color] duration-200',
+          categoriesOpen
+            ? 'border-[var(--color-primary)]/22 bg-[var(--color-background)]'
+            : 'border-[var(--foreground)]/[0.09] bg-[var(--color-background)]',
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setCategoriesOpen((o) => !o)}
+          aria-expanded={categoriesOpen}
+          className={cn(
+            'group/acc relative w-full grid items-center gap-x-2 sm:gap-x-4 gap-y-2',
+            'grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+            'px-3 py-3 sm:px-4 sm:py-3.5',
+            'border-0 bg-transparent text-start transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            categoriesOpen && 'border-b border-[var(--foreground)]/[0.08]',
+            'hover:bg-[var(--foreground)]/[0.03] motion-safe:hover:bg-[var(--foreground)]/[0.045]',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/25',
+          )}
+        >
+          <span
+            className={cn(
+              'pointer-events-none absolute inset-y-2.5 start-0 z-[1] w-0.5 rounded-full bg-[var(--color-primary)] transition-opacity duration-200',
+              categoriesOpen ? 'opacity-100' : 'opacity-0 group-hover/acc:opacity-100',
+            )}
+            aria-hidden
+          />
+          <div className="relative z-[1] col-start-1 row-start-1 flex items-center gap-2 justify-self-start min-w-0 ps-1 sm:col-auto sm:row-auto">
+            <div
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.03] transition-all duration-200 ease-out',
+                'text-[var(--color-primary)] group-hover/acc:border-[var(--color-primary)]/25 group-hover/acc:bg-[var(--color-primary)]/[0.06]',
+                'motion-safe:group-hover/acc:scale-105 motion-safe:group-hover/acc:shadow-sm',
+              )}
+            >
+              <Filter className="h-[18px] w-[18px] sm:h-5 sm:w-5 transition-transform duration-200 motion-safe:group-hover/acc:rotate-12" strokeWidth={2} aria-hidden />
+            </div>
+            <span
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/45 transition-all duration-200',
+                'group-hover/acc:border-[var(--color-primary)]/22 group-hover/acc:text-[var(--color-primary)]',
+                categoriesOpen && 'border-[var(--color-primary)]/25 text-[var(--color-primary)]',
+                categoriesOpen ? 'rotate-0' : '-rotate-90',
+              )}
+            >
+              <ChevronDown className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </span>
+          </div>
+          <div className="relative z-[1] col-span-2 row-start-2 flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:max-w-md sm:justify-self-center">
+            <span className="text-center text-[15px] font-bold leading-snug tracking-tight text-[var(--foreground)] line-clamp-2 sm:text-base">
+              {isAr ? 'الفئات' : 'Categories'}
+            </span>
+            <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px]">
+              {filterCategory === 'all'
+                ? (isAr ? 'تصفية حسب الفئة' : 'Filter by category')
+                : getCategoryLabel(filterCategory, isAr, store.deletedCategories)}
+            </span>
+          </div>
+          <div className="relative z-[1] col-start-2 row-start-1 flex flex-wrap items-center justify-end gap-2 justify-self-end min-w-0 sm:col-auto sm:row-auto">
+            <span
+              className={cn(
+                'shrink-0 rounded-md border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.06] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--foreground)]/80 sm:text-xs',
+                'transition-transform duration-200 motion-safe:group-hover/acc:scale-105',
+              )}
+            >
+              {allCategories.length}
+            </span>
+            <span
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 sm:px-3 sm:text-[11px]',
+                'border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/55',
+                'group-hover/acc:border-[var(--color-primary)]/28 group-hover/acc:text-[var(--color-primary)]',
+                categoriesOpen && 'border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.06] text-[var(--color-primary)]',
+              )}
+            >
+              {categoriesOpen ? (isAr ? 'طيّ' : 'Collapse') : (isAr ? 'توسيع' : 'Expand')}
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', categoriesOpen && 'rotate-180')} strokeWidth={2} aria-hidden />
+            </span>
+          </div>
+        </button>
+
+        <div
+          className="habits-schedule-collapse overflow-hidden"
+          style={{ gridTemplateRows: categoriesOpen ? '1fr' : '0fr' }}
+        >
+          <div className={cn('min-h-0 overflow-hidden', !categoriesOpen && 'pointer-events-none')}>
+            <div className="px-2 pb-2 pt-1 sm:px-3">
+              <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2.15}>
+                <CategoryChipsRail isAr={isAr} allCategories={allCategories} filterCategory={filterCategory} setFilterCategory={setFilterCategory} showArchived={showArchived} store={store} toast={toast} />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Archive Mode Banner */}
       {showArchived && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 flex items-center gap-4 rounded-2xl border-2 border-amber-500/25 bg-amber-500/[0.06] px-5 py-4">
-          <div className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center bg-amber-500/15"><Archive className="h-6 w-6 text-amber-600" /></div>
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="group/archive-banner mb-4 flex items-center gap-4 rounded-2xl border-2 border-amber-500/25 bg-amber-500/[0.06] px-5 py-4 transition-all duration-300 motion-safe:hover:border-amber-500/35 motion-safe:hover:shadow-md">
+          <div className="h-12 w-12 shrink-0 rounded-xl flex items-center justify-center bg-amber-500/15 transition-transform duration-300 motion-safe:group-hover/archive-banner:scale-105"><Archive className="h-6 w-6 text-amber-600 transition-transform duration-300 motion-safe:group-hover/archive-banner:-rotate-6" /></div>
           <div className="flex-1 min-w-0">
             <p className="text-lg font-black text-amber-700 dark:text-amber-400">{isAr ? 'وضع الأرشيف' : 'Archive Mode'}</p>
             <p className="text-sm font-semibold text-amber-600/70 dark:text-amber-400/60 mt-0.5">
               {isAr ? `${store.habits.filter(h => h.archived).length} عادة مؤرشفة — يمكنك استعادتها أو حذفها نهائياً` : `${store.habits.filter(h => h.archived).length} archived habits — restore or permanently delete`}
             </p>
           </div>
-          <button onClick={() => setShowArchived(false)} className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-amber-700 dark:text-amber-400 border-2 border-amber-500/25 hover:bg-amber-500/15 transition-all">
-            <X className="h-4 w-4" />{isAr ? 'خروج من الأرشيف' : 'Exit Archive'}
+          <button type="button" onClick={() => setShowArchived(false)} className="group/exit-arch shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-amber-700 dark:text-amber-400 border-2 border-amber-500/25 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:bg-amber-500/15 motion-safe:hover:scale-105 motion-safe:active:scale-95 motion-safe:hover:border-amber-500/40 motion-safe:hover:shadow-md">
+            <X className="h-4 w-4 transition-transform duration-200 motion-safe:group-hover/exit-arch:rotate-90" />{isAr ? 'خروج من الأرشيف' : 'Exit Archive'}
           </button>
         </motion.div>
       )}
 
-      {/* Habits Grid */}
+      {/* Habits by schedule — collapsible sections (count always on header) */}
       {(() => {
-        const habitGrid = (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-            {filteredHabits.map((habit, i) => (
-              <SortableItem key={habit.id} id={habit.id} disabled={!isDragMode}>
-                <HabitCompactRow habit={habit} index={i} isAr={isAr} store={store} today={today}
-                  onEdit={() => openEdit(habit)} onArchive={() => store.toggleHabitArchive(habit.id)} onDelete={() => store.deleteHabit(habit.id)} onDetail={() => setDetailHabit(habit)} onViewPage={`/app/habits/${habit.id}`} />
-              </SortableItem>
-            ))}
-          </div>
+        const renderHabitCard = (habit: Habit, i: number) => (
+          <SortableItem key={habit.id} id={habit.id} disabled={!isDragMode}>
+            <HabitCompactRow habit={habit} index={i} isAr={isAr} store={store} today={today}
+              onEdit={() => openEdit(habit)} onArchive={() => store.toggleHabitArchive(habit.id)} onDelete={() => store.deleteHabit(habit.id)} onDetail={() => setDetailHabit(habit)} onViewPage={`/app/habits/${habit.id}`} />
+          </SortableItem>
         );
+
+        const sections = habitsBySchedule.filter((s) => s.count > 0).map((section) => {
+          const open = openScheduleSections[section.key];
+          const title = isAr ? section.label.ar : section.label.en;
+          const SectionIcon = SCHEDULE_ICONS[section.key];
+          return (
+            <div
+              key={section.key}
+              className={cn(
+                'habits-schedule-section mb-3 sm:mb-4 rounded-xl border overflow-hidden transition-[border-color,background-color] duration-200',
+                open
+                  ? 'border-[var(--color-primary)]/22 bg-[var(--color-background)]'
+                  : 'border-[var(--foreground)]/[0.09] bg-[var(--color-background)]',
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => toggleScheduleSection(section.key)}
+                aria-expanded={open}
+                className={cn(
+                  'group/acc relative w-full grid items-center gap-x-2 sm:gap-x-4 gap-y-2',
+                  'grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+                  'px-3 py-3 sm:px-4 sm:py-3.5',
+                  'border-0 bg-transparent text-start',
+                  'transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                  open && 'border-b border-[var(--foreground)]/[0.08]',
+                  'hover:bg-[var(--foreground)]/[0.03] motion-safe:hover:bg-[var(--foreground)]/[0.045]',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)]/25',
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none absolute inset-y-2.5 start-0 z-[1] w-0.5 rounded-full bg-[var(--color-primary)] transition-opacity duration-200',
+                    open ? 'opacity-100' : 'opacity-0 group-hover/acc:opacity-100',
+                  )}
+                  aria-hidden
+                />
+                <div className="relative z-[1] col-start-1 row-start-1 flex items-center gap-2 justify-self-start min-w-0 ps-1 sm:col-auto sm:row-auto">
+                  <div
+                    className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.03] transition-all duration-200 ease-out',
+                      'text-[var(--color-primary)] group-hover/acc:border-[var(--color-primary)]/25 group-hover/acc:bg-[var(--color-primary)]/[0.06]',
+                      'motion-safe:group-hover/acc:scale-105 motion-safe:group-hover/acc:shadow-sm',
+                    )}
+                  >
+                    <SectionIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5 transition-transform duration-200 motion-safe:group-hover/acc:scale-110" strokeWidth={2} aria-hidden />
+                  </div>
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/45 transition-all duration-200',
+                      'group-hover/acc:border-[var(--color-primary)]/22 group-hover/acc:text-[var(--color-primary)]',
+                      open && 'border-[var(--color-primary)]/25 text-[var(--color-primary)]',
+                      open ? 'rotate-0' : '-rotate-90',
+                    )}
+                  >
+                    <ChevronDown className="h-4 w-4" strokeWidth={2} aria-hidden />
+                  </span>
+                </div>
+
+                <div className="relative z-[1] col-span-2 row-start-2 flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:max-w-md sm:justify-self-center">
+                  <span className="text-center text-[15px] font-bold leading-snug tracking-tight text-[var(--foreground)] line-clamp-2 sm:text-base">
+                    {title}
+                  </span>
+                  <span className="text-center text-[10px] font-medium text-[var(--foreground)]/45 line-clamp-2 sm:text-[11px]">
+                    {open
+                      ? (isAr ? 'إخفاء العادات' : 'Hide habits in this group')
+                      : (isAr ? 'عرض العادات' : 'Show habits in this group')}
+                  </span>
+                </div>
+
+                <div className="relative z-[1] col-start-2 row-start-1 flex flex-wrap items-center justify-end gap-2 justify-self-end min-w-0 sm:col-auto sm:row-auto">
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold tabular-nums sm:text-xs',
+                      'bg-[var(--foreground)]/[0.06] text-[var(--foreground)]/80',
+                      'border border-[var(--foreground)]/[0.08]',
+                      'transition-transform duration-200 motion-safe:group-hover/acc:scale-105',
+                    )}
+                  >
+                    {section.count}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 sm:px-3 sm:text-[11px]',
+                      'border-[var(--foreground)]/[0.1] bg-[var(--color-background)] text-[var(--foreground)]/55',
+                      'group-hover/acc:border-[var(--color-primary)]/28 group-hover/acc:text-[var(--color-primary)]',
+                      open && 'border-[var(--color-primary)]/25 bg-[var(--color-primary)]/[0.06] text-[var(--color-primary)]',
+                    )}
+                  >
+                    {open ? (isAr ? 'طيّ' : 'Collapse') : (isAr ? 'توسيع' : 'Expand')}
+                    <ChevronDown
+                      className={cn('h-3.5 w-3.5 transition-transform duration-200', open && 'rotate-180')}
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  </span>
+                </div>
+              </button>
+
+              {/* CSS grid 0fr→1fr avoids height:auto layout thrash + scroll anchoring jumps */}
+              <div
+                className="habits-schedule-collapse overflow-hidden"
+                style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+              >
+                <div className={cn('min-h-0 overflow-hidden', !open && 'pointer-events-none')}>
+                  <div className="px-2 sm:px-3 pb-2.5 sm:pb-3 pt-0">
+                    <div
+                      className={cn(
+                        'rounded-lg border border-[var(--foreground)]/[0.08] bg-[var(--color-background)] p-2 sm:p-3',
+                        'transition-all duration-300 ease-out motion-safe:hover:border-[var(--foreground)]/14 motion-safe:hover:shadow-md',
+                      )}
+                    >
+                      <p className="mb-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/40 text-center sm:text-start">
+                        {isAr ? `${section.count} عادة في هذا القسم` : `${section.count} habit${section.count === 1 ? '' : 's'} in this section`}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+                        {section.habits.map((habit, idx) => renderHabitCard(habit, idx))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        });
+
+        const groupedContent = <div className="space-y-0">{sections}</div>;
+
         return isDragMode ? (
           <>
-            <div className="flex items-center gap-2 mb-3">
-              <GripVertical className="h-4 w-4 text-[var(--foreground)]" />
-              <span className="text-xs font-medium text-[var(--foreground)]">{isAr ? 'اسحب العادات لإعادة ترتيبها' : 'Drag habits to reorder them'}</span>
+            <div className="flex items-center gap-2 mb-3 rounded-lg px-1 py-0.5 transition-colors duration-200 motion-safe:hover:bg-[var(--foreground)]/[0.03]">
+              <GripVertical className="h-4 w-4 text-[var(--foreground)]/60 transition-all duration-200 motion-safe:hover:text-[var(--color-primary)] motion-safe:hover:scale-110" />
+              <span className="text-xs font-medium text-[var(--foreground)] transition-colors duration-200 motion-safe:hover:text-[var(--foreground)]/90">{isAr ? 'اسحب العادات لإعادة ترتيبها (عبر الأقسام)' : 'Drag habits to reorder (across sections)'}</span>
             </div>
             <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={filteredHabits.map(h => h.id)} strategy={rectSortingStrategy}>
-                {habitGrid}
+              <SortableContext items={habitsForDnd.map(h => h.id)} strategy={rectSortingStrategy}>
+                {groupedContent}
               </SortableContext>
             </DndContext>
           </>
-        ) : habitGrid;
+        ) : groupedContent;
       })()}
 
       {/* Empty State */}
       {filteredHabits.length === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--foreground)]/[0.05]">
-            <Target className="h-6 w-6 text-[var(--foreground)]" />
+          <div className="group/empty-ico mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--foreground)]/[0.05] transition-all duration-300 motion-safe:hover:scale-110 motion-safe:hover:bg-[var(--color-primary)]/10 motion-safe:hover:shadow-md">
+            <Target className="h-6 w-6 text-[var(--foreground)] transition-colors duration-300 motion-safe:group-hover/empty-ico:text-[var(--color-primary)] motion-safe:group-hover/empty-ico:scale-110" />
           </div>
           <p className="text-sm font-medium text-[var(--foreground)] mb-1">
             {showArchived ? (isAr ? 'لا توجد عادات مؤرشفة' : 'No archived habits')
@@ -517,9 +830,9 @@ export default function HabitsPage() {
               : (isAr ? 'لا توجد عادات بعد' : 'No habits yet')}
           </p>
           <div className="flex items-center justify-center gap-2 mt-4">
-            {searchQuery && <button onClick={() => setSearchQuery('')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--foreground)] border border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]"><X className="h-3 w-3" /> {isAr ? 'مسح البحث' : 'Clear Search'}</button>}
-            {filterCategory !== 'all' && <button onClick={() => setFilterCategory('all')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--foreground)] border border-[var(--foreground)]/[0.18] hover:bg-[var(--foreground)]/[0.05]"><Filter className="h-3 w-3" /> {isAr ? 'كل الفئات' : 'All Categories'}</button>}
-            {!showArchived && <button onClick={() => { resetForm(); setShowForm(true); }} className="app-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white"><Plus className="h-3.5 w-3.5" /> {isAr ? 'إضافة عادة' : 'Add Habit'}</button>}
+            {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--foreground)] border border-[var(--foreground)]/[0.18] transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-95 hover:bg-[var(--foreground)]/[0.06] hover:border-[var(--color-primary)]/25 motion-safe:hover:[&_svg]:rotate-90"><X className="h-3 w-3 transition-transform duration-200" /> {isAr ? 'مسح البحث' : 'Clear Search'}</button>}
+            {filterCategory !== 'all' && <button type="button" onClick={() => setFilterCategory('all')} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--foreground)] border border-[var(--foreground)]/[0.18] transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:scale-95 hover:bg-[var(--color-primary)]/[0.08] hover:border-[var(--color-primary)]/30 motion-safe:hover:[&_svg]:scale-110"><Filter className="h-3 w-3 transition-transform duration-200" /> {isAr ? 'كل الفئات' : 'All Categories'}</button>}
+            {!showArchived && <button type="button" onClick={() => { resetForm(); setShowForm(true); }} className="group/empty-add app-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-all duration-200 motion-safe:hover:scale-105 motion-safe:active:scale-95 motion-safe:hover:shadow-lg motion-safe:hover:brightness-110"><Plus className="h-3.5 w-3.5 transition-transform duration-200 motion-safe:group-hover/empty-add:rotate-90" /> {isAr ? 'إضافة عادة' : 'Add Habit'}</button>}
           </div>
         </motion.div>
       )}

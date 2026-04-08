@@ -78,7 +78,7 @@ export function NewCategoryTile({ isAr, store, allCategories }: { isAr: boolean;
       onClick={() => setEditing(true)}
       className={cn(
         categoryTileBase,
-        'border-dashed border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
+        'border-dashed border-[var(--foreground)]/[0.12] bg-[var(--foreground)]/[0.02] text-[var(--foreground)] hover:border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/[0.08] motion-safe:hover:shadow-md',
       )}
     >
       <Plus className="h-3.5 w-3.5 shrink-0 opacity-40" style={{ color: 'var(--color-primary)' }} />
@@ -151,7 +151,7 @@ export function SortableCategoryTile({ id, label, count, isSelected, isEditMode,
           isEditMode
             ? 'border-dashed border-[var(--foreground)]/20 bg-[var(--foreground)]/[0.02] text-[var(--foreground)] cursor-pointer hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.04]'
             : isSelected
-              ? 'border-[var(--color-primary)] text-white shadow-sm'
+              ? 'border-[var(--color-primary)] text-white shadow-sm motion-safe:hover:shadow-md motion-safe:hover:brightness-[1.05]'
               : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
         )}
         style={!isEditMode && isSelected ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
@@ -254,7 +254,7 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
       className="min-w-0 flex-1"
     >
       <div
-        className="overflow-hidden rounded-xl border-2 shadow-sm"
+        className="overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-300 ease-out motion-safe:hover:shadow-lg motion-safe:hover:border-[var(--color-primary)]/25"
         style={{
           borderColor: isEditMode ? 'rgba(var(--color-primary-rgb) / 0.3)' : 'rgba(var(--color-primary-rgb) / 0.14)',
           background: 'linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.04) 0%, var(--color-background) 40%)',
@@ -262,17 +262,17 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
         }}
       >
         <div
-          className="flex items-center gap-2 border-b-2 px-2.5 py-2 sm:px-3 sm:py-2"
+          className="group/cat-head flex items-center gap-2 border-b-2 px-2.5 py-2 sm:px-3 sm:py-2 transition-colors duration-200 motion-safe:hover:bg-[var(--color-primary)]/[0.06]"
           style={{ borderColor: 'rgba(var(--color-primary-rgb) / 0.1)', background: 'rgba(var(--color-primary-rgb) / 0.04)' }}
         >
           <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border sm:h-8 sm:w-8"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-all duration-200 motion-safe:group-hover/cat-head:scale-110 motion-safe:group-hover/cat-head:shadow-sm sm:h-8 sm:w-8"
             style={{
               borderColor: 'rgba(var(--color-primary-rgb) / 0.2)',
               background: 'rgba(var(--color-primary-rgb) / 0.08)',
             }}
           >
-            <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: 'var(--color-primary)' }} strokeWidth={2.25} />
+            <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-200 motion-safe:group-hover/cat-head:-rotate-12" style={{ color: 'var(--color-primary)' }} strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black tracking-tight text-[var(--foreground)] sm:text-[13px]">
@@ -288,10 +288,10 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
             type="button"
             onClick={() => setIsEditMode(e => !e)}
             className={cn(
-              'flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition-all duration-150 sm:text-[11px]',
+              'flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] sm:text-[11px] motion-safe:hover:scale-105 motion-safe:active:scale-95',
               isEditMode
-                ? 'border-transparent text-white shadow-md'
-                : 'border-[var(--foreground)]/[0.15] text-[var(--foreground)]/60 hover:border-[var(--color-primary)]/25 hover:bg-[var(--color-primary)]/[0.05] hover:text-[var(--color-primary)]',
+                ? 'border-transparent text-white shadow-md motion-safe:hover:shadow-lg'
+                : 'border-[var(--foreground)]/[0.15] text-[var(--foreground)]/60 hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.08] hover:text-[var(--color-primary)] motion-safe:hover:shadow-sm',
             )}
             style={isEditMode ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}
           >
@@ -312,7 +312,7 @@ function CategoryChipsRail({ isAr, allCategories, filterCategory, setFilterCateg
                     className={cn(
                       categoryTileBase,
                       filterCategory === 'all'
-                        ? 'border-[var(--color-primary)] text-white shadow-sm'
+                        ? 'border-[var(--color-primary)] text-white shadow-sm motion-safe:hover:shadow-md motion-safe:hover:brightness-[1.05]'
                         : 'border-[var(--foreground)]/[0.1] bg-[var(--foreground)]/[0.015] text-[var(--foreground)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.06]',
                     )}
                     style={

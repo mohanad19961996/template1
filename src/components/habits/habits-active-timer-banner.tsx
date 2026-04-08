@@ -31,21 +31,22 @@ function ActiveTimerBanner({ store, isAr, today, onDetail }: {
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-      className="sticky top-[85px] z-[190] mb-4 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl"
+      whileHover={{ scale: 1.01, transition: { type: 'spring', stiffness: 400, damping: 28 } }}
+      className="group/timer-banner sticky top-[85px] z-[190] mb-4 rounded-2xl overflow-hidden shadow-lg backdrop-blur-xl cursor-default transition-shadow duration-300 motion-safe:hover:shadow-xl"
       style={{ background: `linear-gradient(135deg, ${hc}15, rgba(var(--color-background-rgb, 255 255 255) / 0.85))`, border: `1.5px solid ${hc}30` }}
     >
       <div className="px-4 py-3 flex items-center gap-3">
         {/* Pulsing indicator */}
         <div className="relative shrink-0">
-          <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `${hc}20` }}>
-            <Timer className={cn('h-5 w-5', isRunning && 'animate-pulse')} style={{ color: hc }} />
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center transition-transform duration-300 motion-safe:group-hover/timer-banner:scale-105" style={{ background: `${hc}20` }}>
+            <Timer className={cn('h-5 w-5 transition-transform duration-300 motion-safe:group-hover/timer-banner:rotate-12', isRunning && 'animate-pulse')} style={{ color: hc }} />
           </div>
           <div className="absolute -top-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900"
             style={{ background: isRunning ? '#22c55e' : '#f59e0b' }} />
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => habit && onDetail(habit)}>
+        <div className="flex-1 min-w-0 cursor-pointer rounded-lg px-1 py-0.5 -mx-1 -my-0.5 transition-colors duration-200 motion-safe:hover:bg-[var(--foreground)]/[0.04]" onClick={() => habit && onDetail(habit)}>
           <p className="text-sm font-bold truncate">{habitName}</p>
           <p className="text-[10px] font-semibold" style={{ color: hc }}>
             {isPaused ? (isAr ? 'متوقف مؤقتًا' : 'Paused') : (isAr ? 'قيد التشغيل' : 'Running')}

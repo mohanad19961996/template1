@@ -54,8 +54,16 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const habitNameAr = habit.nameAr || '';
   const habitNameEn = habit.nameEn || '';
-  const deleteConfirmTarget = habitNameAr && habitNameEn ? `${habitNameAr} / ${habitNameEn}` : (habitNameAr || habitNameEn);
-  const isDeleteConfirmed = deleteConfirmText.trim() === deleteConfirmTarget.trim();
+  const deleteConfirmDisplay = habitNameAr && habitNameEn ? `${habitNameAr} / ${habitNameEn}` : (habitNameAr || habitNameEn);
+  // Accept either Arabic OR English name (case-insensitive for English)
+  const isDeleteConfirmed = (() => {
+    const typed = deleteConfirmText.trim();
+    if (!typed) return false;
+    if (habitNameAr && typed === habitNameAr.trim()) return true;
+    if (habitNameEn && typed.toLowerCase() === habitNameEn.trim().toLowerCase()) return true;
+    if (typed === deleteConfirmDisplay.trim()) return true;
+    return false;
+  })();
 
   // Custom timer duration (H:M:S) — defaults to habit's original target
   const [customTimerSecs, setCustomTimerSecs] = useState<number>(habit.expectedDuration || 0);
@@ -399,16 +407,20 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                     </div>
                     <div>
                       <label className="text-[11px] font-semibold text-[var(--foreground)]/50 mb-1 block">
-                        {isAr ? 'اكتب اسم العادة للتأكيد:' : 'Type the habit name to confirm:'}
-                        <span className="font-black text-red-500 ms-1">{deleteConfirmTarget}</span>
+                        {isAr ? 'اكتب اسم العادة للتأكيد (عربي أو إنجليزي):' : 'Type the habit name to confirm (Arabic or English):'}
                       </label>
+                      {habitNameAr && <p className="text-[10px] font-black text-red-500 mb-0.5">{habitNameAr}</p>}
+                      {habitNameEn && <p className="text-[10px] font-black text-red-500 mb-1">{habitNameEn}</p>}
                       <input
                         value={deleteConfirmText}
                         onChange={e => setDeleteConfirmText(e.target.value)}
-                        placeholder={deleteConfirmTarget}
-                        className="w-full rounded-lg border-2 border-red-500/20 bg-transparent px-3 py-2 text-sm font-medium focus:border-red-500/50 focus:outline-none"
+                        placeholder={isAr ? habitNameAr || habitNameEn : habitNameEn || habitNameAr}
+                        className={cn('w-full rounded-lg border-2 bg-transparent px-3 py-2 text-sm font-medium focus:outline-none', isDeleteConfirmed ? 'border-emerald-500/50 focus:border-emerald-500' : 'border-red-500/20 focus:border-red-500/50')}
                         dir="auto"
                       />
+                      {deleteConfirmText.trim() && !isDeleteConfirmed && (
+                        <p className="text-[10px] text-red-400 mt-1">{isAr ? 'الاسم غير مطابق — اكتب الاسم بالضبط' : 'Name does not match — type the exact name'}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
@@ -416,9 +428,11 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                         {isAr ? 'إلغاء' : 'Cancel'}
                       </button>
                       <button
-                        onClick={() => { if (isDeleteConfirmed) { onDelete(); onClose(); toast.notifySuccess(isAr ? 'تم حذف العادة نهائياً' : 'Habit permanently deleted'); } }}
-                        disabled={!isDeleteConfirmed}
-                        className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-all', isDeleteConfirmed ? 'bg-red-500 text-white hover:bg-red-600 shadow-sm' : 'bg-red-500/20 text-red-500/40 cursor-not-allowed')}>
+                        onClick={() => {
+                          if (isDeleteConfirmed) { onDelete(); onClose(); toast.notifySuccess(isAr ? 'تم حذف العادة نهائياً' : 'Habit permanently deleted'); }
+                          else { toast.notifyWarning(isAr ? 'اكتب اسم العادة أولاً' : 'Type the habit name first', isAr ? 'يجب كتابة الاسم بالعربي أو الإنجليزي للتأكيد' : 'Type the Arabic or English name to confirm deletion'); }
+                        }}
+                        className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-all', isDeleteConfirmed ? 'bg-red-500 text-white hover:bg-red-600 shadow-sm' : 'bg-red-500/20 text-red-500/50 hover:bg-red-500/30 cursor-pointer')}>
                         {isAr ? 'تأكيد الحذف' : 'Confirm Delete'}
                       </button>
                     </div>

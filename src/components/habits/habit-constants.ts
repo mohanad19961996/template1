@@ -79,7 +79,7 @@ export const habitsHeroTitle = {
 // ── CSS Base Classes ────────────────────────────────────
 
 export const categoryTileBase =
-  'group relative flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-start transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]';
+  'group relative flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-start transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md motion-safe:active:translate-y-0 motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-background)]';
 
 // ── Checklist State Helpers ─────────────────────────────
 
