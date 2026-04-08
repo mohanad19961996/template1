@@ -308,19 +308,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                   return;
                 }
                 if (done) {
-                  if (habit.strictWindow && habit.windowStart && habit.windowEnd && wExp) {
-                    toast.notifySuccess(isAr ? 'مكتمل بالفعل' : 'Already done', isAr ? 'هذه العادة مكتملة اليوم ولا يمكن التراجع بعد انتهاء النافذة' : 'This habit is done today. Cannot undo after the time window has passed');
-                    return;
-                  }
-                  if (hasDuration) {
-                    toast.notifySuccess(isAr ? 'مكتمل بالفعل' : 'Already done', isAr ? 'تم إكمال هذه العادة عبر المؤقت' : 'This habit was completed via the timer');
-                    return;
-                  }
-                  if (isCountHabit) {
-                    toast.notifySuccess(isAr ? 'مكتمل بالفعل' : 'Already done', isAr ? 'تم إكمال هذه العادة عبر العداد' : 'This habit was completed via the counter');
-                    return;
-                  }
-                  if (todayLog) { store.deleteHabitLog(todayLog.id); return; }
+                  toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'العادة مكتملة اليوم — الالتزام يعني عدم التراجع!' : 'Habit is done today — commitment means no going back!');
                   return;
                 }
                 const sLocked = habit.strictWindow && habit.windowStart && habit.windowEnd && wExp;
@@ -603,9 +591,19 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
               const clAllDone = clItems.length > 0 && clItems.every(item => clState[item.id]);
 
               const handleClToggle = (itemId: string) => {
+                // If all items are already done (habit completed), block unchecking
+                if (clAllDone) {
+                  toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'القائمة مكتملة — الالتزام يعني عدم التراجع!' : 'Checklist complete — commitment means no going back!');
+                  return;
+                }
                 const wasChecked = typeof clState[itemId] === 'object' ? (clState[itemId] as { done: boolean }).done : !!clState[itemId];
+                // Block unchecking individual items that are already checked
+                if (wasChecked) {
+                  toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'لا يمكن إلغاء تحديد عنصر مكتمل' : 'Cannot uncheck a completed item');
+                  return;
+                }
                 const newState: Record<string, boolean> = {};
-                clItems.forEach(item => { newState[item.id] = item.id === itemId ? !wasChecked : (typeof clState[item.id] === 'object' ? (clState[item.id] as { done: boolean }).done : !!clState[item.id]); });
+                clItems.forEach(item => { newState[item.id] = item.id === itemId ? true : (typeof clState[item.id] === 'object' ? (clState[item.id] as { done: boolean }).done : !!clState[item.id]); });
                 const allDone = clItems.every(item => newState[item.id]);
                 if (clLog) store.deleteHabitLog(clLog.id);
                 store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: allDone, checklistState: newState, source: 'manual' });
@@ -660,8 +658,8 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
 
               const handleClick = () => {
                 if (done) {
-                  const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
-                  if (log) store.deleteHabitLog(log.id);
+                  toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'العادة مكتملة اليوم — الالتزام يعني عدم التراجع!' : 'Habit is done today — commitment means no going back!');
+                  return;
                 } else if (notScheduled) {
                   toast.notifyInfo(isAr ? 'غير مجدولة اليوم' : 'Not scheduled today', isAr ? 'هذه العادة غير مجدولة لهذا اليوم' : 'This habit is not scheduled for today');
                 } else if (isBooleanWindowBlocked) {
@@ -683,7 +681,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                       : 'text-white')}
                   style={!done && !isDisabled ? { background: `linear-gradient(135deg, ${hc}, ${hc}dd)`, boxShadow: `0 4px 16px ${hc}25` } : undefined}>
                   <CheckCircle2 className="h-4 w-4" />
-                  {done ? (isAr ? 'مكتملة — تراجع' : 'Done — Undo')
+                  {done ? (isAr ? '✓ مكتملة اليوم' : '✓ Done Today')
                     : isBooleanWindowBlocked ? (isAr ? `متاح ${cwLabel}` : `${cwLabel}`)
                     : strictNotYet ? (isAr ? `متاح من ${to12h(habit.windowStart!)}` : `From ${to12h(habit.windowStart!)}`)
                     : strictLocked ? (isAr ? 'فات الوقت' : 'Window Passed')

@@ -119,7 +119,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
             <table className="w-full">
               <thead className="sticky top-0 z-20 bg-[var(--color-background)]">
                 <tr className="border-b border-[var(--foreground)]/[0.1]">
-                  <th className="text-start px-3 py-2 text-[10px] font-bold text-[var(--foreground)]/60 uppercase tracking-wider sticky start-0 z-30 bg-[var(--color-background)] min-w-[140px] max-w-[160px] border-e border-[var(--foreground)]/[0.15]">
+                  <th className="text-start px-3 py-2 text-[10px] font-bold text-[var(--foreground)]/60 uppercase tracking-wider sticky start-0 z-30 bg-[var(--color-background)] min-w-[160px] max-w-[220px] border-e border-[var(--foreground)]/[0.15]">
                     {isAr ? 'العادة' : 'Habit'}
                   </th>
                   {pageDates.map(d => {
@@ -165,7 +165,7 @@ function HabitsComplianceTable({ habits, isAr, store, onClose }: { habits: Habit
                         <div className="flex items-center gap-1.5">
                           <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: habit.color }} />
                           <div className="min-w-0">
-                            <span className="text-[11px] font-bold truncate block max-w-[120px]">{isAr ? habit.nameAr : habit.nameEn}</span>
+                            <span className="text-[11px] font-bold block max-w-[200px] leading-tight line-clamp-2" title={isAr ? habit.nameAr : habit.nameEn}>{isAr ? habit.nameAr : habit.nameEn}</span>
                             <span className="text-[8px] font-semibold text-[var(--foreground)]/35">
                               {habit.frequency === 'daily' ? (isAr ? 'يومي' : 'Daily')
                                 : habit.frequency === 'weekly' ? (isAr ? 'أسبوعي' : 'Weekly')

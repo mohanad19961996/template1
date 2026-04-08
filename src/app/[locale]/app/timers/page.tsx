@@ -6,17 +6,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/app-store';
 import {
-  TimerMode, DEFAULT_POMODORO, formatTimerDuration, formatDuration,
-  todayString, MoodLevel, Difficulty, computeTimerElapsed, formatLocalDate,
+  TimerMode, formatTimerDuration,
+  todayString, MoodLevel, computeTimerElapsed, formatLocalDate,
 } from '@/types/app';
 import { useTimerDisplay } from '@/lib/use-timer-display';
 import { stopAlarmSound } from '@/lib/alarm-sounds';
 import { useSearchParams } from 'next/navigation';
 import {
-  Play, Pause, Square, RotateCcw, Timer, Clock, Zap, Brain,
-  Coffee, AlertCircle, Plus, X, Star, Volume2, VolumeX,
-  Maximize2, Minimize2, Settings, ChevronDown, GraduationCap,
-  ListChecks, Target, TrendingUp, Flame, Keyboard,
+  Play, Pause, Square, RotateCcw, Timer, Clock, Zap,
+  AlertCircle, X, Star, Volume2, VolumeX,
+  Maximize2, Minimize2, ChevronDown, GraduationCap,
+  ListChecks, TrendingUp, Keyboard,
   ChevronUp, Hash, Sparkles,
 } from 'lucide-react';
 
@@ -43,14 +43,13 @@ export default function TimersPage() {
   const store = useAppStore();
 
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<TimerMode>('pomodoro');
+  const [mode, setMode] = useState<TimerMode>('countdown');
   const [linkedSkillId, setLinkedSkillId] = useState<string>('');
   const [linkedHabitId, setLinkedHabitId] = useState<string>(searchParams.get('habitId') ?? '');
   const [countdownMinutes, setCountdownMinutes] = useState(25);
   const [customH, setCustomH] = useState(0);
   const [customM, setCustomM] = useState(25);
   const [customS, setCustomS] = useState(0);
-  const [pomodoroConfig, setPomodoroConfig] = useState(DEFAULT_POMODORO);
   const [labelEn, setLabelEn] = useState('Focus Session');
   const [labelAr, setLabelAr] = useState('جلسة تركيز');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -94,7 +93,6 @@ export default function TimersPage() {
   const handleStart = () => {
     let targetDuration: number | undefined;
     if (mode === 'countdown') targetDuration = (customH * 3600) + (customM * 60) + customS;
-    if (mode === 'pomodoro') targetDuration = pomodoroConfig.workMinutes * 60;
 
     const timerType = linkedHabitId ? 'habit-linked' : linkedSkillId ? 'skill-linked' : 'independent';
     const finalLabelEn = selectedHabit ? selectedHabit.nameEn : labelEn;
@@ -109,8 +107,6 @@ export default function TimersPage() {
       startedAt: new Date().toISOString(),
       duration: 0,
       targetDuration,
-      pomodoroConfig: mode === 'pomodoro' ? pomodoroConfig : undefined,
-      pomodoroRound: mode === 'pomodoro' ? 1 : undefined,
     });
   };
 
@@ -179,16 +175,6 @@ export default function TimersPage() {
   const ringRadius = 140;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringOffset = ringCircumference - (progress / 100) * ringCircumference;
-
-  const pomodoroPhaseLabel = useMemo(() => {
-    if (!active?.pomodoroPhase) return '';
-    const labels: Record<string, { en: string; ar: string }> = {
-      'work': { en: 'Focus', ar: 'تركيز' },
-      'short-break': { en: 'Short Break', ar: 'استراحة قصيرة' },
-      'long-break': { en: 'Long Break', ar: 'استراحة طويلة' },
-    };
-    return isAr ? labels[active.pomodoroPhase]?.ar : labels[active.pomodoroPhase]?.en;
-  }, [active?.pomodoroPhase, isAr]);
 
   // Stats
   const recentTimers = useMemo(() =>
@@ -266,8 +252,7 @@ export default function TimersPage() {
     completed: 'var(--color-success)',
   };
 
-  const modeIcons = {
-    pomodoro: Brain,
+  const modeIcons: Record<string, React.ElementType> = {
     countdown: Timer,
     stopwatch: Clock,
   };
@@ -381,7 +366,6 @@ export default function TimersPage() {
             <motion.div variants={fadeUp} className="mb-10">
               <div className="relative flex p-1 rounded-2xl bg-[var(--foreground)]/[0.05] border border-[rgba(var(--color-primary-rgb)/0.06)]">
                 {([
-                  { m: 'pomodoro' as TimerMode, en: 'Pomodoro', ar: 'بومودورو', icon: Brain },
                   { m: 'countdown' as TimerMode, en: 'Countdown', ar: 'عد تنازلي', icon: Timer },
                   { m: 'stopwatch' as TimerMode, en: 'Stopwatch', ar: 'ساعة إيقاف', icon: Clock },
                 ]).map((item) => (
@@ -427,23 +411,9 @@ export default function TimersPage() {
                 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold',
                 'bg-[rgba(var(--color-primary-rgb)/0.08)] text-[var(--color-primary)]'
               )}>
-                {React.createElement(modeIcons[active.mode], { className: 'h-3.5 w-3.5' })}
-                {active.mode === 'pomodoro' ? (isAr ? 'بومودورو' : 'Pomodoro') : active.mode === 'countdown' ? (isAr ? 'عد تنازلي' : 'Countdown') : (isAr ? 'ساعة إيقاف' : 'Stopwatch')}
+                {modeIcons[active.mode] && React.createElement(modeIcons[active.mode], { className: 'h-3.5 w-3.5' })}
+                {active.mode === 'countdown' ? (isAr ? 'عد تنازلي' : 'Countdown') : (isAr ? 'ساعة إيقاف' : 'Stopwatch')}
               </span>
-              {active.pomodoroPhase && (
-                <span className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold',
-                  active.pomodoroPhase === 'work'
-                    ? 'bg-red-500/8 text-red-500 dark:bg-red-500/15'
-                    : active.pomodoroPhase === 'short-break'
-                      ? 'bg-sky-500/8 text-sky-500 dark:bg-sky-500/15'
-                      : 'bg-emerald-500/8 text-emerald-500 dark:bg-emerald-500/15'
-                )}>
-                  {active.pomodoroPhase === 'work' ? <Target className="h-3 w-3" /> : <Coffee className="h-3 w-3" />}
-                  {pomodoroPhaseLabel}
-                  {active.pomodoroRound && ` ${active.pomodoroRound}/${pomodoroConfig.roundsBeforeLongBreak}`}
-                </span>
-              )}
             </motion.div>
           )}
 
@@ -545,9 +515,7 @@ export default function TimersPage() {
                 {/* Timer display */}
                 {(() => {
                   const totalSec = isIdle
-                    ? mode === 'countdown' ? (customH * 3600) + (customM * 60) + customS
-                    : mode === 'pomodoro' ? pomodoroConfig.workMinutes * 60
-                    : 0
+                    ? mode === 'countdown' ? (customH * 3600) + (customM * 60) + customS : 0
                     : displayTime;
                   const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
                   const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
@@ -611,13 +579,10 @@ export default function TimersPage() {
                 {/* Idle mode label */}
                 {isIdle && (
                   <p className="text-xs text-[var(--foreground)]/30 mt-2 font-medium">
-                    {isAr
-                      ? (mode === 'pomodoro' ? 'بومودورو' : mode === 'countdown' ? 'عد تنازلي' : 'ساعة إيقاف')
-                      : (mode === 'pomodoro' ? 'Pomodoro' : mode === 'countdown' ? 'Countdown' : 'Stopwatch')
-                    }
-                    {mode !== 'stopwatch' && isIdle && (
+                    {isAr ? (mode === 'countdown' ? 'عد تنازلي' : 'ساعة إيقاف') : (mode === 'countdown' ? 'Countdown' : 'Stopwatch')}
+                    {mode === 'countdown' && isIdle && (
                       <span className="ms-1.5 tabular-nums">
-                        · {mode === 'pomodoro' ? `${pomodoroConfig.workMinutes}m` : `${customH ? `${customH}h ` : ''}${customM ? `${customM}m ` : ''}${customS ? `${customS}s` : !customH && !customM ? '0s' : ''}`.trim()}
+                        · {`${customH ? `${customH}h ` : ''}${customM ? `${customM}m ` : ''}${customS ? `${customS}s` : !customH && !customM ? '0s' : ''}`.trim()}
                       </span>
                     )}
                   </p>
@@ -882,34 +847,6 @@ export default function TimersPage() {
                         ))}
                       </div>
                     </div>
-                  </motion.div>
-                )}
-
-                {/* Pomodoro Settings */}
-                {mode === 'pomodoro' && (
-                  <motion.div variants={fadeUp} className="rounded-2xl app-card p-5 space-y-4">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]/40 flex items-center gap-2">
-                      <Settings className="h-3.5 w-3.5" />
-                      {isAr ? 'إعدادات بومودورو' : 'Pomodoro Config'}
-                    </h3>
-                    {[
-                      { key: 'workMinutes', labelEn: 'Focus', labelAr: 'تركيز', value: pomodoroConfig.workMinutes, icon: Target, color: 'text-red-500/60' },
-                      { key: 'shortBreakMinutes', labelEn: 'Short Break', labelAr: 'استراحة قصيرة', value: pomodoroConfig.shortBreakMinutes, icon: Coffee, color: 'text-sky-500/60' },
-                      { key: 'longBreakMinutes', labelEn: 'Long Break', labelAr: 'استراحة طويلة', value: pomodoroConfig.longBreakMinutes, icon: Coffee, color: 'text-emerald-500/60' },
-                      { key: 'roundsBeforeLongBreak', labelEn: 'Rounds', labelAr: 'جولات', value: pomodoroConfig.roundsBeforeLongBreak, icon: Flame, color: 'text-amber-500/60' },
-                    ].map(s => (
-                      <div key={s.key} className="flex items-center justify-between group">
-                        <span className="flex items-center gap-2 text-sm text-[var(--foreground)]/60">
-                          <s.icon className={cn('h-4 w-4', s.color)} />
-                          {isAr ? s.labelAr : s.labelEn}
-                        </span>
-                        <input
-                          type="number" min={1} max={120} value={s.value}
-                          onChange={e => setPomodoroConfig(c => ({ ...c, [s.key]: Number(e.target.value) }))}
-                          className="w-16 rounded-lg app-input px-2 py-1.5 text-sm text-center tabular-nums font-semibold"
-                        />
-                      </div>
-                    ))}
                   </motion.div>
                 )}
 

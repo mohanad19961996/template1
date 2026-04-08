@@ -253,16 +253,20 @@ export default function HabitDetailPage() {
 
   const handleToggleDay = () => {
     if (!habit) return;
-    if (habitUsesTimerToLog(habit) && isViewingToday) return; // timer habits — log from main habits / timer
-    if (viewingDateDone && viewingDateLog) {
-      store.deleteHabitLog(viewingDateLog.id);
-    } else {
-      store.logHabit({
-        habitId: habit.id, date: viewingDate,
-        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        note: dailyNote, reminderUsed: false, perceivedDifficulty: habit.difficulty || 'medium', completed: true,
-      });
+    if (viewingDateDone) {
+      toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'العادة مكتملة — الالتزام يعني عدم التراجع!' : 'Habit is done — commitment means no going back!');
+      return;
     }
+    if (!isViewingToday) {
+      toast.notifyWarning(isAr ? 'اليوم فقط' : 'Today only', isAr ? 'يمكنك تسجيل الإنجاز في نفس اليوم فقط' : 'You can only mark habits done on the same day');
+      return;
+    }
+    if (habitUsesTimerToLog(habit)) return;
+    store.logHabit({
+      habitId: habit.id, date: viewingDate,
+      time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+      note: dailyNote, reminderUsed: false, perceivedDifficulty: habit.difficulty || 'medium', completed: true,
+    });
   };
 
   if (!habit) {
@@ -398,26 +402,18 @@ export default function HabitDetailPage() {
           const isDisabled = !!strictLocked || !!strictNotYet || isBooleanBefore9pm || needTimerToday;
 
           const handleClick = () => {
-            if (isBooleanBefore9pm) {
-              toast.notifyInfo(
-                isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM',
-                isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day'
-              );
+            if (viewingDateDone) {
+              toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'العادة مكتملة — الالتزام يعني عدم التراجع!' : 'Habit is done — commitment means no going back!');
+            } else if (!isViewingToday) {
+              toast.notifyWarning(isAr ? 'اليوم فقط' : 'Today only', isAr ? 'يمكنك تسجيل الإنجاز في نفس اليوم فقط' : 'You can only mark habits done on the same day');
+            } else if (isBooleanBefore9pm) {
+              toast.notifyInfo(isAr ? 'متاح بعد ٩ مساءً' : 'Available after 9 PM', isAr ? 'يمكنك تسجيل هذه العادة بعد الساعة ٩ مساءً لتقييم يومك' : 'You can check in after 9 PM to evaluate your full day');
             } else if (strictLocked) {
-              toast.notifyWarning(
-                isAr ? 'فات الوقت' : 'Window passed',
-                isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`
-              );
+              toast.notifyWarning(isAr ? 'فات الوقت' : 'Window passed', isAr ? `انتهى وقت النافذة (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)})` : `Time window (${to12h(habit.windowStart!)}–${to12h(habit.windowEnd!)}) has passed`);
             } else if (strictNotYet) {
-              toast.notifyInfo(
-                isAr ? 'لم يحن الوقت بعد' : 'Not yet',
-                isAr ? `النافذة تبدأ الساعة ${to12h(habit.windowStart!)}` : `Window starts at ${to12h(habit.windowStart!)}`
-              );
+              toast.notifyInfo(isAr ? 'لم يحن الوقت بعد' : 'Not yet', isAr ? `النافذة تبدأ الساعة ${to12h(habit.windowStart!)}` : `Window starts at ${to12h(habit.windowStart!)}`);
             } else if (needTimerToday) {
-              toast.notifyInfo(
-                isAr ? 'استخدم المؤقت' : 'Use the timer',
-                isAr ? `سجّل الجلسة من صفحة العادات أو المؤقتات (${habit.expectedDuration ? formatDurationSecs(habit.expectedDuration) : '—'})` : `Log this habit from the habits list or timers (${habit.expectedDuration ? formatDurationSecs(habit.expectedDuration) : '—'})`
-              );
+              toast.notifyInfo(isAr ? 'استخدم المؤقت' : 'Use the timer', isAr ? `سجّل الجلسة من صفحة العادات أو المؤقتات (${habit.expectedDuration ? formatDurationSecs(habit.expectedDuration) : '—'})` : `Log this habit from the habits list or timers (${habit.expectedDuration ? formatDurationSecs(habit.expectedDuration) : '—'})`);
             } else {
               handleToggleDay();
             }
@@ -438,7 +434,7 @@ export default function HabitDetailPage() {
                 )}>
                 {viewingDateDone ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5 opacity-60" />}
                 {viewingDateDone
-                  ? (isAr ? 'مكتمل — للتراجع اضغط' : 'Done — tap to undo')
+                  ? (isAr ? '✓ مكتمل' : '✓ Done')
                   : isBooleanBefore9pm
                     ? (isAr ? 'يُسجَّل بعد ٩ مساءً' : 'Check-in after 9 PM')
                     : strictNotYet
@@ -472,8 +468,8 @@ export default function HabitDetailPage() {
           </div>
         )}
 
-        {/* Logs for this day (past days) */}
-        {!isViewingToday && viewingDateLogs.length > 0 && (
+        {/* Logs for this day */}
+        {viewingDateLogs.length > 0 && (
           <div className="space-y-2">
             <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider">{isAr ? 'السجلات' : 'Logs'}</p>
             {viewingDateLogs.map(log => (
@@ -612,58 +608,238 @@ export default function HabitDetailPage() {
 
       {/* ── History Tab ── */}
       {activeTab === 'history' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-          {loadingHistory ? (
-            <div className="text-center py-12 text-sm text-[var(--foreground)]/40">{isAr ? 'جاري التحميل...' : 'Loading...'}</div>
-          ) : history.length === 0 ? (
-            <div className="text-center py-12 text-sm text-[var(--foreground)]/40">{isAr ? 'لا يوجد سجل تغييرات' : 'No change history'}</div>
-          ) : (
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute top-0 bottom-0 start-[19px] w-0.5 bg-[var(--foreground)]/[0.18]" />
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          {/* ── Completion Activity Log ── */}
+          {(() => {
+            // Group logs + timer sessions + history changes by date
+            const grouped: Record<string, { logs: typeof habitLogs; sessions: typeof store.timerSessions; changes: typeof history }> = {};
+            const ensureDate = (date: string) => { if (!grouped[date]) grouped[date] = { logs: [], sessions: [], changes: [] }; };
+            habitLogs.forEach(l => { ensureDate(l.date); grouped[l.date].logs.push(l); });
+            const habitTimerSessions = store.timerSessions.filter(s => s.habitId === habitId);
+            habitTimerSessions.forEach(s => {
+              const date = s.startedAt ? s.startedAt.slice(0, 10) : (s.endedAt ? s.endedAt.slice(0, 10) : '');
+              if (date) { ensureDate(date); grouped[date].sessions.push(s); }
+            });
+            // Integrate history entries (created/edited/archived/restored)
+            history.forEach(h => { ensureDate(h.date); grouped[h.date].changes.push(h); });
+            const sortedDates = Object.keys(grouped).sort().reverse();
 
-              {history.map((entry, i) => {
-                const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
-                return (
-                  <motion.div key={entry.id} initial={{ opacity: 0, x: isAr ? 20 : -20 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="relative flex items-start gap-3 py-3 ps-0">
-                    {/* Timeline dot */}
-                    <div className={cn('relative z-10 h-10 w-10 rounded-full flex items-center justify-center shrink-0 border-2 border-[var(--color-background)]', info.color)}>
-                      {info.icon}
-                    </div>
+            if (sortedDates.length === 0) {
+              return (
+                <div className="text-center py-12">
+                  <History className="h-8 w-8 text-[var(--foreground)]/20 mx-auto mb-2" />
+                  <p className="text-sm text-[var(--foreground)]/40">{isAr ? 'لا يوجد نشاط بعد' : 'No activity yet'}</p>
+                </div>
+              );
+            }
 
-                    <div className="flex-1 min-w-0 rounded-xl border border-[rgba(var(--color-primary-rgb)/0.15)] bg-[rgba(var(--color-background-rgb)/0.5)] backdrop-blur-md p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-bold">{isAr ? info.ar : info.en}</p>
-                        <p className="text-[10px] text-[var(--foreground)]/40 shrink-0">
-                          {new Date(entry.timestamp).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })}
-                          {' '}
-                          {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+            const ACTION_LABELS: Record<string, { en: string; ar: string; color: string }> = {
+              start: { en: 'Started', ar: 'بدأ', color: 'text-blue-500 bg-blue-500/10' },
+              pause: { en: 'Paused', ar: 'توقف', color: 'text-amber-500 bg-amber-500/10' },
+              resume: { en: 'Resumed', ar: 'استئناف', color: 'text-sky-500 bg-sky-500/10' },
+              finish: { en: 'Completed', ar: 'اكتمل', color: 'text-emerald-500 bg-emerald-500/10' },
+              cancel: { en: 'Cancelled', ar: 'ألغي', color: 'text-red-400 bg-red-400/10' },
+            };
+
+            return (
+              <div className="space-y-3">
+                {/* Summary */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.08] p-2.5 text-center">
+                    <p className="text-lg font-black text-emerald-500">{habitLogs.filter(l => l.completed).length}</p>
+                    <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'مرة مكتمل' : 'Completions'}</p>
+                  </div>
+                  <div className="rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.08] p-2.5 text-center">
+                    <p className="text-lg font-black text-blue-500">{habitTimerSessions.length}</p>
+                    <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'جلسة مؤقت' : 'Timer sessions'}</p>
+                  </div>
+                  <div className="rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.08] p-2.5 text-center">
+                    <p className="text-lg font-black text-violet-500">{sortedDates.length}</p>
+                    <p className="text-[9px] font-semibold text-[var(--foreground)]/40">{isAr ? 'يوم نشط' : 'Active days'}</p>
+                  </div>
+                </div>
+
+                {/* Day-by-day timeline */}
+                {sortedDates.map(date => {
+                  const { logs: dayLogs, sessions: daySessions, changes: dayChanges } = grouped[date];
+                  const dayCompleted = dayLogs.some(l => l.completed);
+                  const totalDurationSecs = dayLogs.reduce((s, l) => s + (l.duration ?? 0), 0);
+                  const repCount = getDoneRepCountForDate(habit, habitLogs, date);
+                  const dateLabel = date === today
+                    ? (isAr ? 'اليوم' : 'Today')
+                    : new Date(date + 'T00:00:00').toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { weekday: 'short', month: 'short', day: 'numeric' });
+
+                  return (
+                    <div key={date} className="rounded-2xl border border-[var(--foreground)]/[0.1] overflow-hidden">
+                      {/* Day header */}
+                      <div className={cn('flex items-center justify-between px-3.5 py-2.5', dayCompleted ? 'bg-emerald-500/[0.06]' : 'bg-[var(--foreground)]/[0.02]')}>
+                        <div className="flex items-center gap-2">
+                          {dayCompleted
+                            ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            : <Circle className="h-4 w-4 text-[var(--foreground)]/25" />}
+                          <span className="text-sm font-bold">{dateLabel}</span>
+                          <span className="text-[10px] text-[var(--foreground)]/35">{date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {repCount > 0 && <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 rounded-md px-1.5 py-0.5">{repCount}x</span>}
+                          {totalDurationSecs > 0 && <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 rounded-md px-1.5 py-0.5">{formatDurationSecs(totalDurationSecs)}</span>}
+                        </div>
                       </div>
 
-                      {Object.keys(entry.changes).length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {Object.entries(entry.changes).map(([field, diff]) => {
-                            const label = FIELD_LABELS[field] ? (isAr ? FIELD_LABELS[field].ar : FIELD_LABELS[field].en) : field;
-                            return (
-                              <div key={field} className="flex items-center gap-2 text-xs">
-                                <span className="font-medium text-[var(--foreground)]/60 shrink-0">{label}</span>
-                                <span className="text-red-400/90 line-through truncate max-w-[140px]">{formatHistoryDisplayValue(field, diff.from)}</span>
-                                <span className="text-[var(--foreground)]/30">→</span>
-                                <span className="text-emerald-500 truncate max-w-[140px]">{formatHistoryDisplayValue(field, diff.to)}</span>
+                      <div className="px-3.5 py-2 space-y-1.5">
+                        {/* Completion logs */}
+                        {dayLogs.map(log => (
+                          <div key={log.id} className="flex items-start gap-2.5 py-1.5">
+                            <div className={cn('h-6 w-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5', log.completed ? 'bg-emerald-500/10' : 'bg-[var(--foreground)]/[0.05]')}>
+                              {log.completed ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Circle className="h-3.5 w-3.5 text-[var(--foreground)]/30" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center flex-wrap gap-1.5">
+                                <span className="text-xs font-bold text-[var(--foreground)]/70">{log.time || '—'}</span>
+                                {log.source && log.source !== 'manual' && (
+                                  <span className="text-[9px] font-bold rounded px-1 py-px bg-blue-500/10 text-blue-500">{log.source === 'timer' ? (isAr ? 'مؤقت' : 'Timer') : log.source}</span>
+                                )}
+                                {log.status && log.status !== 'completed' && log.status !== 'pending' && (
+                                  <span className={cn('text-[9px] font-bold rounded px-1 py-px',
+                                    log.status === 'partial' ? 'bg-amber-500/10 text-amber-500' :
+                                    log.status === 'skipped' ? 'bg-gray-500/10 text-gray-500' :
+                                    'bg-red-500/10 text-red-500')}>{log.status}</span>
+                                )}
+                                {log.completed && <span className="text-[9px] font-bold rounded px-1 py-px bg-emerald-500/10 text-emerald-500">{isAr ? 'مكتمل' : 'Done'}</span>}
+                                {log.duration && log.duration > 0 && (
+                                  <span className="text-[9px] font-bold text-[var(--foreground)]/40">{formatDurationSecs(log.duration)}</span>
+                                )}
+                                {log.value !== undefined && log.value !== null && (
+                                  <span className="text-[9px] font-bold text-violet-500">{log.value} {habit.targetUnit ?? ''}</span>
+                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              {log.note && <p className="text-[10px] text-[var(--foreground)]/45 mt-0.5">{log.note}</p>}
+                              {log.moodBefore && log.moodAfter && (
+                                <p className="text-[10px] text-[var(--foreground)]/35 mt-0.5">
+                                  {isAr ? 'المزاج:' : 'Mood:'} {['😞','😐','🙂','😊','🤩'][log.moodBefore - 1]} → {['😞','😐','🙂','😊','🤩'][log.moodAfter - 1]}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Timer sessions for this day */}
+                        {daySessions.map(session => (
+                          <div key={session.id} className="rounded-xl border border-blue-500/15 bg-blue-500/[0.02] p-2.5 mt-1">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <Timer className="h-3.5 w-3.5 text-blue-500" />
+                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                  {isAr ? 'جلسة مؤقت' : 'Timer Session'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {session.completed
+                                  ? <span className="text-[9px] font-bold rounded px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500">{isAr ? 'مكتمل' : 'Completed'}</span>
+                                  : <span className="text-[9px] font-bold rounded px-1.5 py-0.5 bg-red-500/10 text-red-400">{isAr ? 'ملغي' : 'Cancelled'}</span>}
+                                <span className="text-[10px] font-bold text-[var(--foreground)]/50">{formatDurationSecs(session.duration)}</span>
+                              </div>
+                            </div>
+                            {/* Event timeline */}
+                            {session.events && session.events.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {session.events.map((ev, ei) => {
+                                  const info = ACTION_LABELS[ev.action] || { en: ev.action, ar: ev.action, color: 'text-[var(--foreground)]/50 bg-[var(--foreground)]/[0.05]' };
+                                  const time = new Date(ev.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                  return (
+                                    <span key={ei} className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold', info.color)}>
+                                      {isAr ? info.ar : info.en} {time}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {session.note && <p className="text-[10px] text-[var(--foreground)]/40 mt-1">{session.note}</p>}
+                          </div>
+                        ))}
+
+                        {/* History changes for this day (created/edited/archived/restored) */}
+                        {dayChanges.map(entry => {
+                          const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
+                          const changeTime = new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' });
+                          return (
+                            <div key={entry.id} className="rounded-xl border border-violet-500/15 bg-violet-500/[0.02] p-2.5 mt-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={cn('h-5 w-5 rounded-md flex items-center justify-center shrink-0', info.color)}>{info.icon}</span>
+                                  <span className="text-xs font-bold">{isAr ? info.ar : info.en}</span>
+                                </div>
+                                <span className="text-[10px] text-[var(--foreground)]/35">{changeTime}</span>
+                              </div>
+                              {Object.keys(entry.changes).length > 0 && (
+                                <div className="space-y-0.5 mt-1">
+                                  {Object.entries(entry.changes).map(([field, diff]) => {
+                                    const label = FIELD_LABELS[field] ? (isAr ? FIELD_LABELS[field].ar : FIELD_LABELS[field].en) : field;
+                                    return (
+                                      <div key={field} className="text-[10px] text-[var(--foreground)]/55">
+                                        <span className="font-semibold">{label}</span>{': '}
+                                        <span className="line-through text-red-400/70">{formatHistoryDisplayValue(field, diff.from)}</span>
+                                        {' → '}
+                                        <span className="text-emerald-500">{formatHistoryDisplayValue(field, diff.to)}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+
+                {/* Standalone history entries not tied to any day (fallback — shouldn't happen normally) */}
+                {history.filter(h => !Object.keys(grouped).includes(h.date)).length > 0 && (
+                  <details className="rounded-2xl border border-[var(--foreground)]/[0.1] overflow-hidden">
+                    <summary className="flex cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 bg-[var(--foreground)]/[0.02] text-xs font-bold text-[var(--foreground)]/55 list-none [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center gap-2">
+                        <Pencil className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                        {isAr ? `سجل تعديلات الإعدادات (${history.length})` : `Settings changes (${history.length})`}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-[var(--foreground)]/35 transition-transform [details[open]>&]:rotate-90 rtl:rotate-180 rtl:[details[open]>&]:-rotate-90" />
+                    </summary>
+                    <div className="px-3.5 py-2 space-y-2">
+                      {history.map(entry => {
+                        const info = CHANGE_TYPE_LABELS[entry.changeType] || CHANGE_TYPE_LABELS.edited;
+                        return (
+                          <div key={entry.id} className="rounded-xl border border-[rgba(var(--color-primary-rgb)/0.12)] bg-[var(--foreground)]/[0.02] p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className={cn('h-6 w-6 rounded-lg flex items-center justify-center shrink-0', info.color)}>{info.icon}</span>
+                                <span className="text-xs font-bold">{isAr ? info.ar : info.en}</span>
+                              </div>
+                              <span className="text-[10px] text-[var(--foreground)]/35">
+                                {new Date(entry.timestamp).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { month: 'short', day: 'numeric' })}
+                                {' '}{new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {Object.keys(entry.changes).length > 0 && (
+                              <div className="mt-1.5 space-y-0.5">
+                                {Object.entries(entry.changes).map(([field, diff]) => {
+                                  const label = FIELD_LABELS[field] ? (isAr ? FIELD_LABELS[field].ar : FIELD_LABELS[field].en) : field;
+                                  return (
+                                    <div key={field} className="text-[10px] text-[var(--foreground)]/55">
+                                      <span className="font-semibold">{label}</span>: <span className="line-through text-red-400/70">{formatHistoryDisplayValue(field, diff.from)}</span> → <span className="text-emerald-500">{formatHistoryDisplayValue(field, diff.to)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                )}
+              </div>
+            );
+          })()}
         </motion.div>
       )}
 

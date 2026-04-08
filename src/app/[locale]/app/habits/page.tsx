@@ -55,6 +55,14 @@ export default function HabitsPage() {
   const today = todayString();
   const toast = useToast();
 
+  // Theme change detector — forces re-render of all theme-colored components
+  const [themeTick, setThemeTick] = useState(0);
+  useEffect(() => {
+    const observer = new MutationObserver(() => setThemeTick(t => t + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+    return () => observer.disconnect();
+  }, []);
+
   // Normalize order numbers
   useEffect(() => {
     const active = store.habits.filter(h => !h.archived);
@@ -789,7 +797,7 @@ export default function HabitsPage() {
                       <p className="mb-2 px-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/40 text-center sm:text-start">
                         {isAr ? `${section.count} عادة في هذا القسم` : `${section.count} habit${section.count === 1 ? '' : 's'} in this section`}
                       </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+                      <div key={themeTick} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                         {section.habits.map((habit, idx) => renderHabitCard(habit, idx))}
                       </div>
                     </div>

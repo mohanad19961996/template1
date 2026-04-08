@@ -36,11 +36,10 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (habit.archived) { toast.notifyWarning(isAr ? 'العادة مؤرشفة' : 'Habit is archived', isAr ? 'استعد العادة أولاً' : 'Restore the habit first'); return; }
-    if (hasDuration && !done) { toast.notifyInfo(isAr ? 'يتطلب مؤقت' : 'Timer required', isAr ? 'شغّل المؤقت أولاً' : 'Start the timer first'); return; }
+    if (done) { toast.notifyInfo(isAr ? 'لا يمكن التراجع' : 'Cannot undo', isAr ? 'العادة مكتملة اليوم — الالتزام يعني عدم التراجع!' : 'Habit is done today — commitment means no going back!'); return; }
+    if (hasDuration) { toast.notifyInfo(isAr ? 'يتطلب مؤقت' : 'Timer required', isAr ? 'شغّل المؤقت أولاً' : 'Start the timer first'); return; }
     if (tt === 'boolean' || tt === 'checklist') {
-      const existingLog = store.habitLogs.find(l => l.habitId === habit.id && l.date === today && l.completed);
-      if (existingLog) { store.deleteHabitLog(existingLog.id); }
-      else { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true }); }
+      store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: true });
     }
   };
 
@@ -57,14 +56,14 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
       }
       whileTap={habit.archived ? undefined : { scale: 0.995 }}
       className={cn(
-        'group relative rounded-2xl p-3 transition-[border-color,box-shadow,filter] duration-200 flex flex-col gap-1.5 cursor-default',
+        'group relative rounded-2xl p-3 transition-[border-color,box-shadow,filter] duration-200 flex flex-col gap-1.5 cursor-default overflow-hidden',
         habit.archived ? 'opacity-75' : 'habit-card-animate',
       )}
       style={{
-        border: `2.5px solid ${habit.archived ? 'rgba(245,158,11,0.5)' : done ? 'rgba(34,197,94,0.5)' : `rgba(var(--color-primary-rgb) / 0.45)`}`,
+        border: `2.5px solid ${habit.archived ? 'rgba(245,158,11,0.5)' : `${hc}45`}`,
         borderInlineStartWidth: '5px',
-        borderInlineStartColor: habit.archived ? '#f59e0b' : done ? '#22c55e' : hc,
-        background: habit.archived ? 'rgba(245,158,11,0.03)' : done ? 'rgba(34,197,94,0.03)' : 'var(--color-background)',
+        borderInlineStartColor: habit.archived ? '#f59e0b' : hc,
+        background: habit.archived ? 'rgba(245,158,11,0.03)' : 'var(--color-background)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
     >
@@ -84,9 +83,14 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
                 ? <Timer className="h-[18px] w-[18px]" style={{ color: `${hc}70` }} />
                 : <Circle className="h-[18px] w-[18px] text-[var(--foreground)]/20 hover:text-emerald-400 transition-colors" />}
         </button>
-        <span className={cn('flex-1 text-[13px] font-bold leading-tight truncate', habit.archived && 'text-[var(--foreground)]/40', done && !habit.archived && 'line-through text-[var(--foreground)]/35')}>
+        <span className={cn('flex-1 text-[13px] font-bold leading-tight truncate', habit.archived && 'text-[var(--foreground)]/40', done && !habit.archived && 'line-through text-[var(--foreground)]/50')}>
           {name}
         </span>
+        {done && !habit.archived && (
+          <span className="shrink-0 rounded-md px-2 py-0.5 text-[10px] font-black bg-emerald-500 text-white shadow-sm">
+            {isAr ? '✓ تم' : '✓ Done'}
+          </span>
+        )}
         {habit.archived && (
           <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/15 text-amber-600 border border-amber-500/20">
             {isAr ? 'مؤرشفة' : 'Archived'}
