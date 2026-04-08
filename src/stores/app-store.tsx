@@ -436,9 +436,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/timer').then(r => r.json()).then(res => {
       setState(prev => {
         if (res.data) {
-          // DB has an active timer — use it as source of truth
-          const withDbTimer = { ...prev, activeTimer: res.data };
-          return recoverTimer(withDbTimer, recoveredTimerKeysRef.current);
+          // DB has an active timer — use it directly as source of truth.
+          // Do NOT run recoverTimer here — let the global timer completion
+          // check in layout.tsx handle expired timers properly (with sound + UI).
+          // This prevents cross-device issues where recovery fires too early
+          // and deletes the timer before the log is confirmed saved.
+          return { ...prev, activeTimer: res.data };
         } else {
           // DB has no active timer — clear any stale local timer
           if (prev.activeTimer && prev.activeTimer.state !== 'completed') {
@@ -506,6 +509,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => {});
       }
     });
+
+    // Sync active timer to DB on page close/refresh (prevents data loss on browser close)
+    const handleBeforeUnload = () => {
+      const current = stateRef.current;
+      if (current.activeTimer && current.activeTimer.state !== 'completed') {
+        // Use sendBeacon for reliable delivery even during page unload
+        const url = '/api/timer';
+        const body = JSON.stringify(current.activeTimer);
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+        }
+      }
+      // Also save state to localStorage immediately (no debounce)
+      saveState(stateRef.current);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
