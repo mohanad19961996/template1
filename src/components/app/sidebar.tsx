@@ -33,7 +33,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/app', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: LayoutDashboard },
       { href: '/app/habits', labelEn: "Today's Habits", labelAr: 'عادات اليوم', icon: ListChecks },
       { href: '/app/habits/all', labelEn: 'All Habits', labelAr: 'كل العادات', icon: Library },
-      { href: '/app/tasks', labelEn: 'Tasks', labelAr: 'المهام', icon: ClipboardList },
       { href: '/app/timers', labelEn: 'Timers', labelAr: 'المؤقتات', icon: Timer },
     ],
   },

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && next dev --turbopack",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "cross-env": "^10.1.0"
   }
 }
