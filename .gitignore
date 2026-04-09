@@ -1,3 +1,7 @@
+# server logs
+.server.err.log
+.server.out.log
+
 # dependencies
 node_modules/
 .pnp
