@@ -372,7 +372,7 @@ function FlipCard({
                   }} />
                 ))}
                 <span className="text-[10px] text-foreground ms-1.5 font-medium">
-                  ({feature.reviews.toLocaleString()})
+                  ({feature.reviews.toLocaleString('en-US')})
                 </span>
               </div>
               )}
@@ -488,7 +488,7 @@ function FlipCard({
                       }} />
                     ))}
                     <span className="text-[9px] text-foreground ms-1 font-medium">
-                      {feature.reviews.toLocaleString()} {isAr ? "تقييم" : "reviews"}
+                      {feature.reviews.toLocaleString('en-US')} {isAr ? "تقييم" : "reviews"}
                     </span>
                   </div>
                 </div>
@@ -671,7 +671,7 @@ function FlipCard({
                 ))}
               </div>
               <span className="text-[11px] text-foreground font-medium">
-                {feature.rating}.0 ({feature.reviews.toLocaleString()} {isAr ? "تقييم" : "reviews"})
+                {feature.rating}.0 ({feature.reviews.toLocaleString('en-US')} {isAr ? "تقييم" : "reviews"})
               </span>
             </div>
             <span

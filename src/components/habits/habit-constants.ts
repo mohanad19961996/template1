@@ -237,6 +237,11 @@ export function getCompletionColor(habit: Habit, log: HabitLog | undefined, date
     const checkDate = dateStr || '';
     if (checkDate && !isHabitScheduledForDate(habit, checkDate)) return 'not-scheduled';
     if (checkDate > today) return 'none';
+    // Don't mark days before habit creation as missed
+    if (checkDate && habit.createdAt) {
+      const createdDate = habit.createdAt.slice(0, 10); // YYYY-MM-DD from ISO
+      if (checkDate < createdDate) return 'not-scheduled';
+    }
     if (checkDate === today) {
       if (habit.strictWindow && habit.windowEnd) {
         const now = new Date();

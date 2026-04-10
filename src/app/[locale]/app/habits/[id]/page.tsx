@@ -17,7 +17,7 @@ import {
   ArrowLeft, Calendar as CalendarIcon, Clock, Flame, Target, Archive,
   ChevronLeft, ChevronRight, Star, Activity, Eye, Edit3, Play,
   MapPin, Repeat, CheckCircle2, Circle,
-  Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare, ListChecks, ChevronDown,
+  Pencil, Plus, RotateCcw, AlertCircle, Timer, Hash, Send, MessageSquare, ListChecks, ChevronDown, Lightbulb,
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/app/toast-notifications';
@@ -160,6 +160,7 @@ export default function HabitDetailPage() {
   const [dailyNote, setDailyNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Fetch history
   useEffect(() => {
@@ -274,7 +275,6 @@ export default function HabitDetailPage() {
   const effectiveTracking = getEffectiveTrackingType(habit);
   const trackingLabel = isAr ? TRACKING_LABELS[effectiveTracking].ar : TRACKING_LABELS[effectiveTracking].en;
   const hc = resolveHabitColor(habit.color);
-  const [showDetailModal, setShowDetailModal] = useState(false);
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-5 py-5 sm:py-8 space-y-5">
@@ -347,12 +347,34 @@ export default function HabitDetailPage() {
         <StatBox icon={<CheckCircle2 className="h-4 w-4 text-[var(--color-primary)]" />} label={isAr ? 'الإنجازات' : 'Total'} value={`${stats.totalCompletions}`} />
       </motion.div>
 
+      {/* ═══ Habit Notes ═══ */}
+      {habit.notes && habit.notes.trim() && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11, duration: 0.35 }}
+          className={cn(cardBase, 'px-4 sm:px-5 py-3 sm:py-4')}
+          style={{ borderInlineStart: `3px solid ${hc}` }}>
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+              style={{ background: `${hc}15` }}>
+              <Lightbulb className="h-4 w-4 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider mb-1">
+                {isAr ? 'ملاحظات العادة' : 'Habit Notes'}
+              </p>
+              <p className="text-sm text-[var(--foreground)]/70 leading-relaxed whitespace-pre-wrap break-words">
+                {habit.notes.trim()}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* ═══ 3. Main Content — 2 Column Grid ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
         {/* LEFT: Calendar */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.35 }}>
           <HabitCalendar calMonth={calMonth} setCalMonth={setCalMonth} logsByDate={logsByDate}
-            historyByDate={historyByDate} habitLogs={habitLogs} selectedDate={selectedDate}
+            historyByDate={historyByDate} habitLogs={store.habitLogs} selectedDate={selectedDate}
             setSelectedDate={(d) => { setSelectedDate(d); if (d) setViewingDate(d); }}
             isAr={isAr} habitColor={habit.color} habit={habit} today={today} />
         </motion.div>
@@ -602,8 +624,8 @@ function DayLogs({ habitId, viewingDate, viewingDateLogs, store, isAr }: {
           ? daySessions.find(s => Math.abs(s.duration - (log.duration ?? 0)) < 5) : null;
         const startEvent = matchedSession?.events?.find(e => e.action === 'start');
         const finishEvent = matchedSession?.events?.find(e => e.action === 'finish' || e.action === 'cancel');
-        const startTime = startEvent ? new Date(startEvent.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' }) : null;
-        const endTime = finishEvent ? new Date(finishEvent.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' }) : null;
+        const startTime = startEvent ? new Date(startEvent.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null;
+        const endTime = finishEvent ? new Date(finishEvent.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null;
         let computedStart = startTime;
         if (!computedStart && log.time && log.duration && log.duration > 0) {
           const [hh, mm] = log.time.split(':').map(Number);
@@ -642,7 +664,7 @@ function DayLogs({ habitId, viewingDate, viewingDateLogs, store, isAr }: {
               <div className="ps-6 flex flex-wrap gap-1">
                 {matchedSession.events.map((ev, ei) => {
                   const info = EVENT_LABELS[ev.action] || { en: ev.action, ar: ev.action, color: 'text-[var(--foreground)]/50 bg-[var(--foreground)]/[0.05]' };
-                  const time = new Date(ev.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                  const time = new Date(ev.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                   return <span key={ei} className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold', info.color)}>{isAr ? info.ar : info.en} {time}</span>;
                 })}
               </div>
@@ -671,7 +693,7 @@ function DayLogs({ habitId, viewingDate, viewingDateLogs, store, isAr }: {
             <div className="flex flex-wrap gap-1">
               {session.events.map((ev, ei) => {
                 const info = EVENT_LABELS[ev.action] || { en: ev.action, ar: ev.action, color: 'text-[var(--foreground)]/50 bg-[var(--foreground)]/[0.05]' };
-                const time = new Date(ev.at).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const time = new Date(ev.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 return <span key={ei} className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold', info.color)}>{isAr ? info.ar : info.en} {time}</span>;
               })}
             </div>
@@ -702,7 +724,7 @@ function SettingsChanges({ entries, isAr }: { entries: HabitHistoryEntry[]; isAr
                 <div>
                   <p className="text-xs font-bold">{isAr ? info.ar : info.en}</p>
                   <p className="text-[10px] text-[var(--foreground)]/40">
-                    {new Date(entry.timestamp).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
@@ -797,7 +819,8 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
           const logs = logsByDate[dateStr] || [];
           const repCount = getDoneRepCountForDate(habit, habitLogs, dateStr);
           const hasCompletion = repCount > 0;
-          const isMissed = !hasCompletion && dateStr < today && isHabitScheduledForDate(habit, dateStr);
+          const beforeCreatedCheck = habit.createdAt.split('T')[0] > dateStr;
+          const isMissed = !hasCompletion && dateStr < today && !beforeCreatedCheck && isHabitScheduledForDate(habit, dateStr);
           const hasHistory = (historyByDate[dateStr] || []).length > 0;
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;

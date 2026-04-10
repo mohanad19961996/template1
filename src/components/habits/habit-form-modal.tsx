@@ -48,7 +48,7 @@ export type HabitFormData = {
   cueEn: string; cueAr: string; routineEn: string; routineAr: string; rewardEn: string; rewardAr: string;
   placeEn: string; placeAr: string; preferredTime: string; expectedDuration: string | number;
   windowStart: string; windowEnd: string; strictWindow: boolean; maxDailyReps: string | number;
-  completionWindowStart: string; completionWindowEnd: string;
+  completionWindowEnabled: boolean; completionWindowStart: string; completionWindowEnd: string;
   orderNumber: string | number; colSpan: number; rowSpan: number; endDate: string;
   streakGoal: string | number; streakRewardEn: string; streakRewardAr: string;
   streakGoal2: string | number; streakRewardEn2: string; streakRewardAr2: string;
@@ -88,11 +88,12 @@ export default function HabitFormModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-x-2 sm:inset-x-4 top-[2%] sm:top-[10%] z-[var(--z-modal)] sm:w-[540px] sm:inset-x-0 sm:mx-auto max-h-[90vh] sm:max-h-[85vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
+            lang="en"
+            className="fixed inset-x-2 sm:inset-x-[5vw] top-[1%] sm:top-[2%] z-[var(--z-modal)] w-[calc(100%-1rem)] sm:w-[90vw] sm:max-w-[1000px] sm:mx-auto max-h-[96vh] sm:max-h-[95vh] overflow-y-auto rounded-2xl bg-[var(--color-background)] border border-[var(--foreground)]/[0.18] shadow-2xl"
           >
             {/* Modal header */}
-            <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between p-5 border-b border-[var(--foreground)]/[0.1]">
-              <h2 className="text-lg font-semibold">
+            <div className="sticky top-0 z-10 bg-[var(--color-background)] flex items-center justify-between px-5 py-3 border-b border-[var(--foreground)]/[0.1]">
+              <h2 className="text-xl font-bold">
                 {editingHabit
                   ? (isAr ? 'تعديل العادة' : 'Edit Habit')
                   : (isAr ? 'عادة جديدة' : 'New Habit')}
@@ -102,14 +103,14 @@ export default function HabitFormModal({
               </button>
             </div>
 
-            <div className="p-5 space-y-6">
+            <div className="p-5 space-y-4">
               {/* ── Section: Basic Info ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-blue-500/10 flex items-center justify-center"><Edit3 className="h-3 w-3 text-blue-500" /></div>
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'المعلومات الأساسية' : 'Basic Info'}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? 'المعلومات الأساسية' : 'Basic Info'}</span>
                 </div>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
                     {isAr ? 'الاسم (عربي)' : 'Name (Arabic)'}
@@ -118,7 +119,7 @@ export default function HabitFormModal({
                     dir="rtl"
                     value={formData.nameAr}
                     onChange={e => setFormData(f => ({ ...f, nameAr: e.target.value }))}
-                    className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                    className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                     placeholder="مثال: شرب الماء"
                   />
                 </div>
@@ -130,14 +131,14 @@ export default function HabitFormModal({
                     dir="ltr"
                     value={formData.nameEn}
                     onChange={e => setFormData(f => ({ ...f, nameEn: e.target.value }))}
-                    className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                    className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                     placeholder="e.g., Drink Water"
                   />
                 </div>
               </div>
 
               {/* Category & Frequency */}
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
                     {isAr ? 'الفئة' : 'Category'}
@@ -151,7 +152,7 @@ export default function HabitFormModal({
                   <select
                     value={formData.frequency}
                     onChange={e => setFormData(f => ({ ...f, frequency: e.target.value as HabitFrequency }))}
-                    className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                    className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                   >
                     {Object.entries(FREQ_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>{isAr ? v.ar : v.en}</option>
@@ -423,8 +424,8 @@ export default function HabitFormModal({
               )}
 
               {/* ── Completion Method ── */}
-              <div className="space-y-3">
-                <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[var(--foreground)] mb-1 block">
                   {isAr ? 'طريقة الإنجاز' : 'Completion Method'}
                 </label>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -454,29 +455,62 @@ export default function HabitFormModal({
                 {/* Completion Window for boolean habits */}
                 {formData.trackingType === 'boolean' && (
                   <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]/60" />
-                      <span className="text-[10px] font-semibold text-[var(--foreground)]">
-                        {isAr ? 'نافذة التسجيل (متى يمكنك تسجيل الإنجاز؟)' : 'Completion Window (when can you mark it done?)'}
-                      </span>
-                    </div>
-                    <p className="text-[9px] text-[var(--foreground)] mb-2">
-                      {isAr ? 'حدد الفترة الزمنية التي يمكنك فيها تسجيل هذه العادة كمنجزة. اتركها فارغة للسماح في أي وقت.' : 'Set the time range during which you can mark this habit as done. Leave empty to allow anytime.'}
+                    {/* Toggle checkbox + title */}
+                    <label className="flex items-center gap-2.5 cursor-pointer mb-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.completionWindowEnabled}
+                        onChange={e => setFormData(f => ({ ...f, completionWindowEnabled: e.target.checked }))}
+                        className="h-4 w-4 rounded accent-[var(--color-primary)] cursor-pointer"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]/60" />
+                        <span className="text-[10px] font-semibold text-[var(--foreground)]">
+                          {isAr ? 'تحديد وقت تسجيل الإنجاز' : 'Set completion time window'}
+                        </span>
+                      </div>
+                    </label>
+
+                    {/* Info text */}
+                    <p className="text-[9px] text-[var(--foreground)]/60 mb-3 pe-6">
+                      {formData.completionWindowEnabled
+                        ? (isAr
+                          ? 'سيتم تقييد تسجيل هذه العادة كمنجزة فقط خلال الفترة الزمنية المحددة أدناه. خارج هذا الوقت لن تتمكن من تسجيل الإنجاز.'
+                          : 'You can only mark this habit as done during the time range below. Outside this window, completion will be locked.')
+                        : (isAr
+                          ? 'هذه الميزة تسمح لك بتحديد فترة زمنية محددة لتسجيل إنجاز العادة. مثال: يمكنك تسجيل عادة "الاستيقاظ مبكرًا" فقط بين 6:00 ص و 8:00 ص. عند التعطيل، يمكنك تسجيل الإنجاز في أي وقت خلال اليوم.'
+                          : 'This feature lets you restrict when a habit can be marked done. Example: "Wake up early" can only be checked between 6:00 AM and 8:00 AM. When disabled, you can mark it done anytime during the day.')
+                      }
                     </p>
-                    <div className="grid grid-cols-2 gap-3">
+
+                    {/* Time inputs - always visible but disabled when unchecked */}
+                    <div className={cn('grid grid-cols-2 gap-3 transition-opacity', !formData.completionWindowEnabled && 'opacity-40 pointer-events-none')}>
                       <div>
-                        <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'من' : 'From'}</label>
-                        <input type="time" value={formData.completionWindowStart}
+                        <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">
+                          {isAr ? 'أول وقت للتسجيل' : 'Earliest time'}
+                        </label>
+                        <input lang="en" type="time" value={formData.completionWindowStart}
                           onChange={e => setFormData(f => ({ ...f, completionWindowStart: e.target.value }))}
+                          disabled={!formData.completionWindowEnabled}
                           className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'إلى' : 'To'}</label>
-                        <input type="time" value={formData.completionWindowEnd}
+                        <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">
+                          {isAr ? 'آخر وقت للتسجيل' : 'Latest time'}
+                        </label>
+                        <input lang="en" type="time" value={formData.completionWindowEnd}
                           onChange={e => setFormData(f => ({ ...f, completionWindowEnd: e.target.value }))}
+                          disabled={!formData.completionWindowEnabled}
                           className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
                       </div>
                     </div>
+
+                    {/* Default values hint */}
+                    {formData.completionWindowEnabled && (
+                      <p className="text-[8px] text-[var(--foreground)]/35 mt-2">
+                        {isAr ? 'الافتراضي: من 6:00 ص إلى 11:59 م' : 'Default: 6:00 AM to 11:59 PM'}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -573,7 +607,7 @@ export default function HabitFormModal({
                 )}
 
                 {/* Checklist items — available for any tracking type */}
-                {(
+                {formData.trackingType === 'checklist' && (
                   <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15] space-y-2">
                     <label className="text-[10px] font-semibold text-[var(--foreground)] uppercase tracking-wider block">
                       {isAr ? 'عناصر القائمة' : 'Checklist Items'}
@@ -638,29 +672,39 @@ export default function HabitFormModal({
               </div>
 
               {/* Notes */}
-              <div>
-                <label className="text-xs font-medium mb-1.5 block">
-                  {isAr ? 'ملاحظات العادة' : 'Habit Notes'}
-                </label>
+              <div className="rounded-xl overflow-hidden"
+                style={{ border: '1px solid rgba(var(--color-primary-rgb)/0.12)', background: 'rgba(var(--color-primary-rgb)/0.03)' }}>
+                <div className="flex items-center gap-2 px-3.5 pt-3 pb-1.5">
+                  <Lightbulb className="h-4 w-4 text-amber-500 shrink-0" />
+                  <label className="text-sm font-bold text-[var(--foreground)]">
+                    {isAr ? 'ملاحظات العادة' : 'Habit Notes'}
+                  </label>
+                  <span className="text-[9px] text-[var(--foreground)]/35">{isAr ? '(اختياري)' : '(optional)'}</span>
+                </div>
+                <p className="text-[10px] text-[var(--foreground)]/40 px-3.5 mb-1.5">
+                  {isAr
+                    ? 'اكتب لماذا هذه العادة مهمة لك، أو ما الهوية التي تبنيها، أو أي ملاحظة تريد تذكرها. ستظهر هذه الملاحظة في صفحة العادة.'
+                    : 'Write why this habit matters to you, what identity it builds, or any note you want to remember. This will appear on the habit page.'}
+                </p>
                 <textarea
                   value={formData.notes || ''}
                   onChange={e => setFormData(f => ({ ...f, notes: e.target.value }))}
                   dir={isAr ? 'rtl' : 'ltr'}
                   rows={2}
-                  className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm resize-none"
-                  placeholder={isAr ? 'مثال: هذه العادة لبناء هوية رياضي محترف...' : 'e.g., This habit builds my identity as an athlete...'}
+                  className="w-full bg-transparent px-3.5 pb-3 pt-1 text-sm resize-none outline-none placeholder:text-[var(--foreground)]/25"
+                  placeholder={isAr ? 'مثال: هذه العادة تبني هوية رياضي محترف — كل يوم أقترب من النسخة الأفضل مني...' : 'e.g., This habit builds my identity as a professional athlete — every day I become a better version of myself...'}
                 />
               </div>
               </div>
 
               {/* ── Section: Behavior ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-violet-500/10 flex items-center justify-center"><Activity className="h-3 w-3 text-violet-500" /></div>
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'السلوك والتصنيف' : 'Behavior & Settings'}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? 'السلوك والتصنيف' : 'Behavior & Settings'}</span>
                 </div>
               {/* Priority & Difficulty */}
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-medium text-[var(--foreground)] mb-2 block">
                     {isAr ? 'الأولوية' : 'Priority'}
@@ -705,39 +749,39 @@ export default function HabitFormModal({
                 </div>
               </div>
 
-              {/* Type */}
+              {/* Type + Order in one row */}
+              <div className="grid sm:grid-cols-2 gap-2">
               <div>
-                <label className="text-xs font-medium text-[var(--foreground)] mb-2 block">
+                <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
                   {isAr ? 'النوع' : 'Type'}
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {(['positive', 'avoidance'] as HabitType[]).map(t => (
                     <button
                       key={t}
                       onClick={() => setFormData(f => ({ ...f, type: t }))}
                       className={cn(
-                        'app-toggle flex-1 py-2.5 rounded-xl text-xs font-medium',
+                        'app-toggle flex-1 py-1.5 rounded-lg text-xs font-medium',
                         formData.type === t
                           ? 'app-toggle-active'
                           : 'text-[var(--foreground)]'
                       )}
                     >
-                      {isAr ? (t === 'positive' ? '\u2713 عادة إيجابية' : '\u2717 عادة للتجنب') : (t === 'positive' ? '\u2713 Build' : '\u2717 Break')}
+                      {isAr ? (t === 'positive' ? '\u2713 إيجابية' : '\u2717 تجنب') : (t === 'positive' ? '\u2713 Build' : '\u2717 Break')}
                     </button>
                   ))}
                 </div>
               </div>
-              {/* Order Number */}
               <div>
-                <label className="text-xs font-medium text-[var(--foreground)] mb-2 block">
-                  {isAr ? 'رقم الترتيب (اختياري)' : 'Order Number (optional)'}
+                <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
+                  {isAr ? 'رقم الترتيب (اختياري)' : 'Order (optional)'}
                 </label>
                 <input
                   type="number"
                   min="1"
                   value={formData.orderNumber}
                   onChange={e => { const v = e.target.value; if (v !== '' && Number(v) < 1) return; setFormData(f => ({ ...f, orderNumber: v })); }}
-                  className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                  className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                   placeholder={isAr ? 'تلقائي — أو اختر رقمًا' : 'Auto — or choose a number'}
                 />
                 <p className="text-[9px] text-[var(--foreground)] mt-1">
@@ -745,12 +789,13 @@ export default function HabitFormModal({
                 </p>
               </div>
               </div>
+              </div>
 
               {/* ── Section: Customization ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-pink-500/10 flex items-center justify-center"><Palette className="h-3 w-3 text-pink-500" /></div>
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'التخصيص' : 'Customization'}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? 'التخصيص' : 'Customization'}</span>
                 </div>
               {/* Color */}
               <div>
@@ -763,7 +808,7 @@ export default function HabitFormModal({
                       key={c}
                       onClick={() => setFormData(f => ({ ...f, color: c }))}
                       className={cn(
-                        'h-8 w-8 rounded-full transition-all relative',
+                        'h-7 w-7 rounded-full transition-all relative',
                         formData.color === c ? 'ring-2 ring-offset-2 ring-[var(--foreground)]/30 scale-110' : 'hover:scale-110',
                         c === 'theme' && 'bg-[var(--color-primary)]'
                       )}
@@ -792,7 +837,7 @@ export default function HabitFormModal({
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center h-24 rounded-xl border-2 border-dashed border-[var(--foreground)]/[0.18] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.03] cursor-pointer transition-colors">
+                  <label className="flex flex-col items-center justify-center h-16 rounded-xl border-2 border-dashed border-[var(--foreground)]/[0.18] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.03] cursor-pointer transition-colors">
                     <Plus className="h-5 w-5 text-[var(--foreground)] mb-1" />
                     <span className="text-[10px] text-[var(--foreground)]">{isAr ? 'اضغط لإضافة صورة' : 'Click to add image'}</span>
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => {
@@ -810,11 +855,11 @@ export default function HabitFormModal({
 
               {/* ── Section: Place & Time ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-teal-500/10 flex items-center justify-center"><MapPin className="h-3 w-3 text-teal-500" /></div>
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'المكان والزمان' : 'Place & Time'}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? 'المكان والزمان' : 'Place & Time'}</span>
                 </div>
-                <div className="grid sm:grid-cols-3 gap-3">
+                <div className="grid sm:grid-cols-3 gap-2">
                   <div>
                     <label className="text-xs font-medium text-[var(--foreground)] mb-1 block">
                       {isAr ? 'المكان' : 'Place'}
@@ -822,7 +867,7 @@ export default function HabitFormModal({
                     <input
                       value={isAr ? formData.placeAr : formData.placeEn}
                       onChange={e => setFormData(f => isAr ? ({ ...f, placeAr: e.target.value }) : ({ ...f, placeEn: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                       placeholder={isAr ? 'مثال: في النادي الرياضي' : 'e.g., At the gym'}
                       dir={isAr ? 'rtl' : 'ltr'}
                     />
@@ -832,10 +877,11 @@ export default function HabitFormModal({
                       {isAr ? 'الوقت المفضل' : 'Preferred Time'}
                     </label>
                     <input
+                      lang="en"
                       type="time"
                       value={formData.preferredTime}
                       onChange={e => setFormData(f => ({ ...f, preferredTime: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                     />
                   </div>
                   {(() => {
@@ -881,13 +927,13 @@ export default function HabitFormModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'من' : 'From'}</label>
-                      <input type="time" value={formData.windowStart}
+                      <input lang="en" type="time" value={formData.windowStart}
                         onChange={e => setFormData(f => ({ ...f, windowStart: e.target.value }))}
                         className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
                     </div>
                     <div>
                       <label className="text-[10px] font-medium text-[var(--foreground)] mb-1 block">{isAr ? 'إلى' : 'To'}</label>
-                      <input type="time" value={formData.windowEnd}
+                      <input lang="en" type="time" value={formData.windowEnd}
                         onChange={e => setFormData(f => ({ ...f, windowEnd: e.target.value }))}
                         className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
                     </div>
@@ -924,7 +970,7 @@ export default function HabitFormModal({
                     <input type="number" min="1"
                       value={formData.maxDailyReps}
                       onChange={e => setFormData(f => ({ ...f, maxDailyReps: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                       placeholder={isAr ? 'مثال: 3 جلسات دراسة يوميًا' : 'e.g., 3 study sessions per day'} />
                   )}
                   <p className="text-[9px] text-[var(--foreground)] mt-1">
@@ -935,14 +981,14 @@ export default function HabitFormModal({
 
               {/* ── Section: Overall Goal ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-indigo-500/10 flex items-center justify-center"><Target className="h-3 w-3 text-indigo-500" /></div>
-                  <span className="text-xs font-bold">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
+                  <span className="text-sm font-bold">{isAr ? 'الهدف الكلي' : 'Overall Goal'}</span>
                 </div>
-                <p className="text-[11px] text-[var(--foreground)] mb-3">
+                <p className="text-[10px] text-[var(--foreground)] mb-2">
                   {isAr ? 'حدد أهدافاً إجمالية لهذه العادة — يمكنك اختيار أحدهما أو كليهما' : 'Set total goals for this habit — choose one or both'}
                 </p>
-                <div className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-2">
                   {/* Repetitions goal */}
                   <div className="p-3 rounded-xl border border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.02]">
                     <div className="flex items-center gap-2 mb-2">
@@ -984,7 +1030,7 @@ export default function HabitFormModal({
                 <p className="text-[10px] text-[var(--foreground)]/40 mb-2">
                   {isAr ? 'الهدف هو الالتزام بهذه العادة حتى هذا التاريخ. لا يؤثر على أي وظيفة — فقط للعرض.' : 'The goal is to maintain this habit until this date. Display only — no effect on functionality.'}
                 </p>
-                <input type="date" value={formData.endDate} onChange={e => setFormData(f => ({ ...f, endDate: e.target.value }))}
+                <input lang="en" type="date" value={formData.endDate} onChange={e => setFormData(f => ({ ...f, endDate: e.target.value }))}
                   className="w-full sm:w-64 rounded-xl border border-[var(--foreground)]/10 bg-[var(--color-background)] text-[var(--foreground)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)]/40 focus:outline-none" />
                 {formData.endDate && (() => {
                   const diff = Math.ceil((new Date(formData.endDate).getTime() - Date.now()) / 86400000);
@@ -1002,14 +1048,14 @@ export default function HabitFormModal({
 
               {/* ── Section: Streak Challenges (3 tiers) ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-amber-500/10 flex items-center justify-center"><Trophy className="h-3 w-3 text-amber-500" /></div>
-                  <span className="text-xs font-bold">{isAr ? 'تحديات السلسلة' : 'Streak Challenges'}</span>
+                  <span className="text-sm font-bold">{isAr ? 'تحديات السلسلة' : 'Streak Challenges'}</span>
                 </div>
-                <p className="text-[11px] text-[var(--foreground)] mb-3">
+                <p className="text-[10px] text-[var(--foreground)] mb-2">
                   {isAr ? 'حدد أهداف سلسلة متدرجة مع جوائز تحفيزية لكل مستوى' : 'Set tiered streak goals with motivational rewards for each level'}
                 </p>
-                <div className="space-y-4">
+                <div className="grid sm:grid-cols-3 gap-2">
                   {([
                     { tier: 1, icon: '\u{1F949}', label: isAr ? 'المستوى الأول' : 'Tier 1', goalKey: 'streakGoal' as const, rewardEnKey: 'streakRewardEn' as const, rewardArKey: 'streakRewardAr' as const, color: 'text-amber-700 bg-amber-500/10 border-amber-500/20' },
                     { tier: 2, icon: '\u{1F948}', label: isAr ? 'المستوى الثاني' : 'Tier 2', goalKey: 'streakGoal2' as const, rewardEnKey: 'streakRewardEn2' as const, rewardArKey: 'streakRewardAr2' as const, color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' },
@@ -1043,11 +1089,11 @@ export default function HabitFormModal({
 
               {/* ── Section: Habit Loop ── */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-5 w-5 rounded-md bg-orange-500/10 flex items-center justify-center"><Repeat className="h-3 w-3 text-orange-500" /></div>
-                  <span className="text-xs font-bold text-[var(--foreground)]">{isAr ? 'حلقة العادة' : 'Habit Loop'}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{isAr ? 'حلقة العادة' : 'Habit Loop'}</span>
                 </div>
-                <div className="space-y-3">
+                <div className="grid sm:grid-cols-3 gap-2">
                   <div>
                     <label className="text-xs font-medium text-[var(--foreground)] mb-1 flex items-center gap-1.5">
                       <Lightbulb className="h-3 w-3 text-amber-500" />
@@ -1056,7 +1102,7 @@ export default function HabitFormModal({
                     <input
                       value={isAr ? formData.cueAr : formData.cueEn}
                       onChange={e => setFormData(f => isAr ? ({ ...f, cueAr: e.target.value }) : ({ ...f, cueEn: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                       placeholder={isAr ? 'مثال: بعد الاستيقاظ مباشرة' : 'e.g., Right after waking up'}
                       dir={isAr ? 'rtl' : 'ltr'}
                     />
@@ -1069,7 +1115,7 @@ export default function HabitFormModal({
                     <input
                       value={isAr ? formData.routineAr : formData.routineEn}
                       onChange={e => setFormData(f => isAr ? ({ ...f, routineAr: e.target.value }) : ({ ...f, routineEn: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                       placeholder={isAr ? 'مثال: تمارين لمدة 30 دقيقة' : 'e.g., 30 min workout'}
                       dir={isAr ? 'rtl' : 'ltr'}
                     />
@@ -1082,7 +1128,7 @@ export default function HabitFormModal({
                     <input
                       value={isAr ? formData.rewardAr : formData.rewardEn}
                       onChange={e => setFormData(f => isAr ? ({ ...f, rewardAr: e.target.value }) : ({ ...f, rewardEn: e.target.value }))}
-                      className="app-input w-full rounded-xl bg-transparent px-3 py-2.5 text-sm"
+                      className="app-input w-full rounded-lg bg-transparent px-3 py-1.5 text-sm"
                       placeholder={isAr ? 'مثال: سموذي صحي' : 'e.g., Healthy smoothie'}
                       dir={isAr ? 'rtl' : 'ltr'}
                     />
@@ -1092,7 +1138,7 @@ export default function HabitFormModal({
             </div>
 
             {/* Modal footer */}
-            <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-end gap-3 p-5 border-t border-[var(--foreground)]/[0.1]">
+            <div className="sticky bottom-0 bg-[var(--color-background)] flex items-center justify-end gap-3 px-5 py-3 border-t border-[var(--foreground)]/[0.1]">
               {editingHabit && (
                 <button
                   onClick={() => {

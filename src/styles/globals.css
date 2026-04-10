@@ -245,6 +245,15 @@ body {
 [dir="rtl"] body,
 [dir="rtl"] { font-family: var(--font-arabic); }
 
+/* ── Force Western/Latin numerals in all locales ── */
+* { font-variant-numeric: lining-nums tabular-nums; }
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[type="datetime-local"],
+.tabular-nums,
+[data-latin-nums] { font-variant-numeric: lining-nums tabular-nums; }
+
 /* ── Balanced text ── */
 h1, h2, h3, h4, h5, h6 { text-wrap: balance; }
 p { text-wrap: pretty; }

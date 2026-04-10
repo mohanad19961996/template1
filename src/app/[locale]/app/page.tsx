@@ -190,7 +190,7 @@ export default function DashboardPage() {
         </div>
         <p className="text-[var(--foreground)]/60 text-sm mt-1">
           {isAr
-            ? `${new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
+            ? `${new Date().toLocaleDateString('ar-SA-u-nu-latn', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
             : `${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
         </p>
       </motion.div>

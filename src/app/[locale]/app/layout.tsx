@@ -227,6 +227,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Global alarm checker — fires alarms at correct time across all pages
   useGlobalAlarmChecker();
 
+  // Force all date/time/number inputs to use English locale (Western numerals + AM/PM)
+  useEffect(() => {
+    const setLang = () => {
+      document.querySelectorAll('input[type="time"], input[type="date"], input[type="datetime-local"], input[type="number"]').forEach(el => {
+        if (el.getAttribute('lang') !== 'en') el.setAttribute('lang', 'en');
+      });
+    };
+    setLang();
+    const observer = new MutationObserver(setLang);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen app-bg" onClick={() => enableAudio()}>
       <ToastProvider>

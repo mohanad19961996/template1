@@ -890,7 +890,7 @@ export function GalleryContent() {
                           <Heart className="h-3 w-3" /> {img.likes}
                         </span>
                         <span className="flex items-center gap-1 text-xs text-white/50">
-                          <Eye className="h-3 w-3" /> {img.views.toLocaleString()}
+                          <Eye className="h-3 w-3" /> {img.views.toLocaleString('en-US')}
                         </span>
                       </div>
                     </div>
@@ -1216,7 +1216,7 @@ function GalleryCard({
               <Heart className="h-3 w-3" fill={liked ? "currentColor" : "none"} /> {image.likes + (liked ? 1 : 0)}
             </span>
             <span className="flex items-center gap-1 text-xs" style={{ color: "var(--color-foreground)", opacity: 0.35 }}>
-              <Eye className="h-3 w-3" /> {image.views.toLocaleString()}
+              <Eye className="h-3 w-3" /> {image.views.toLocaleString('en-US')}
             </span>
           </div>
         </div>
@@ -1353,7 +1353,7 @@ function GalleryCard({
               <Heart className="h-2.5 w-2.5" /> {image.likes}
             </span>
             <span className="flex items-center gap-1 text-[10px] text-white/40">
-              <Eye className="h-2.5 w-2.5" /> {image.views.toLocaleString()}
+              <Eye className="h-2.5 w-2.5" /> {image.views.toLocaleString('en-US')}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
