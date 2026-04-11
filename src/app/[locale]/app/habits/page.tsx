@@ -557,15 +557,6 @@ export default function HabitsPage() {
             </button>
           );
         })()}
-        {/* Folder Mode Toggle */}
-        <button type="button" onClick={() => setFolderMode(!folderMode)}
-          className={cn('shrink-0 flex items-center gap-1.5 rounded-xl border-2 px-2.5 py-1.5 text-[12px] font-bold cursor-pointer transition-all duration-200 active:scale-95',
-            folderMode
-              ? 'border-[var(--color-primary)] text-white'
-              : 'border-[var(--color-primary)]/25 text-[var(--foreground)]/60 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md')}
-          style={folderMode ? { background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' } : undefined}>
-          <FolderOpen className="h-3.5 w-3.5" /><span className="hidden sm:inline">{isAr ? 'عرض بالفئات' : 'Category View'}</span>
-        </button>
       </motion.div>
 
       {/* Advanced Filters */}
@@ -703,6 +694,31 @@ export default function HabitsPage() {
         </div>
       </div>
 
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-center mb-3">
+        <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg"
+          style={{ background: 'rgba(var(--color-primary-rgb)/0.06)', border: '1px solid rgba(var(--color-primary-rgb)/0.1)' }}>
+          <button type="button" onClick={() => setFolderMode(false)}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150',
+              !folderMode
+                ? 'bg-[var(--color-card)] text-[var(--color-primary)] shadow-sm'
+                : 'text-[var(--foreground)]/40 hover:text-[var(--foreground)]/60')}
+            style={!folderMode ? { boxShadow: '0 1px 4px rgba(var(--color-primary-rgb)/0.1)' } : undefined}>
+            <CalendarDays className="h-3.5 w-3.5" />
+            {isAr ? 'حسب الجدول' : 'By Schedule'}
+          </button>
+          <button type="button" onClick={() => setFolderMode(true)}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150',
+              folderMode
+                ? 'bg-[var(--color-card)] text-[var(--color-primary)] shadow-sm'
+                : 'text-[var(--foreground)]/40 hover:text-[var(--foreground)]/60')}
+            style={folderMode ? { boxShadow: '0 1px 4px rgba(var(--color-primary-rgb)/0.1)' } : undefined}>
+            <FolderOpen className="h-3.5 w-3.5" />
+            {isAr ? 'حسب الفئة' : 'By Category'}
+          </button>
+        </div>
+      </div>
+
       {/* Archive Mode Banner */}
       {showArchived && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="group/archive-banner mb-4 flex items-center gap-4 rounded-2xl border-2 border-amber-500/25 bg-amber-500/[0.06] px-5 py-4 transition-all duration-300 motion-safe:hover:border-amber-500/35 motion-safe:hover:shadow-md">
@@ -721,54 +737,55 @@ export default function HabitsPage() {
 
       {/* ═══ Category Folder Mode ═══ */}
       {folderMode && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 mb-4">
           {habitsByCategory.map((group, gi) => {
             const catLabel = getCategoryLabel(group.category, isAr);
             const doneCount = group.habits.filter(h => isHabitDoneToday(h, store.habitLogs, today)).length;
-            const allDone = doneCount === group.count;
+            const allDone = doneCount === group.count && group.count > 0;
+            const progress = group.count > 0 ? (doneCount / group.count) * 100 : 0;
             return (
               <motion.button
                 key={group.category}
                 type="button"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: gi * 0.04, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, x: isAr ? 12 : -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: gi * 0.03, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => setFolderCategory(group.category)}
                 className={cn(
-                  'group relative flex flex-col items-center gap-2 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200',
-                  'border-2 hover:shadow-lg active:scale-[0.97]',
+                  'group w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 cursor-pointer transition-all duration-200 active:scale-[0.98]',
+                  'border hover:shadow-md',
                   allDone
-                    ? 'border-[var(--color-success)]/30 bg-[var(--color-success)]/5 hover:border-[var(--color-success)]/50'
-                    : 'border-[var(--color-primary)]/20 bg-[var(--color-background)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/[0.04]',
+                    ? 'border-[var(--color-success)]/25 bg-[var(--color-success)]/[0.04] hover:border-[var(--color-success)]/40'
+                    : 'border-[var(--color-primary)]/15 bg-[var(--color-background)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.03]',
                 )}
               >
+                {/* Icon */}
                 <div className={cn(
-                  'h-11 w-11 rounded-xl flex items-center justify-center transition-all duration-200',
+                  'h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200',
                   allDone
-                    ? 'bg-[var(--color-success)]/15 text-[var(--color-success)] group-hover:bg-[var(--color-success)] group-hover:text-white group-hover:shadow-md'
-                    : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] group-hover:bg-[var(--color-primary)] group-hover:text-white group-hover:shadow-md',
+                    ? 'bg-[var(--color-success)]/12 text-[var(--color-success)]'
+                    : 'bg-[var(--color-primary)]/8 text-[var(--color-primary)]',
                 )}>
-                  <FolderOpen className="h-5 w-5" />
+                  <FolderOpen className="h-4 w-4" />
                 </div>
-                <span className="text-sm font-bold text-center leading-tight">{catLabel}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className={cn(
-                    'text-xs font-bold tabular-nums px-2 py-0.5 rounded-full',
-                    allDone
-                      ? 'bg-[var(--color-success)]/15 text-[var(--color-success)]'
-                      : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
-                  )}>
-                    {doneCount}/{group.count}
-                  </span>
+                {/* Label + progress */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-sm font-bold truncate">{catLabel}</span>
+                    <span className={cn(
+                      'text-[11px] font-bold tabular-nums shrink-0',
+                      allDone ? 'text-[var(--color-success)]' : 'text-[var(--foreground)]/40',
+                    )}>
+                      {doneCount}/{group.count}
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${progress}%`, background: allDone ? 'var(--color-success)' : 'var(--color-primary)' }} />
+                  </div>
                 </div>
-                {/* Progress bar */}
-                <div className="w-full h-1 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${group.count > 0 ? (doneCount / group.count) * 100 : 0}%`,
-                      background: allDone ? 'var(--color-success)' : 'var(--color-primary)',
-                    }} />
-                </div>
+                {/* Chevron */}
+                <ChevronDown className={cn('h-4 w-4 shrink-0 text-[var(--foreground)]/20 transition-transform', isAr ? 'rotate-90' : '-rotate-90')} />
               </motion.button>
             );
           })}
