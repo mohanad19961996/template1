@@ -816,31 +816,48 @@ export default function TimersPage() {
 
                   {/* Volume slider */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-medium text-[var(--foreground)]/30 uppercase tracking-wider">
                         {isAr ? 'مستوى الصوت' : 'Volume'}
                       </span>
-                      <span className="text-[10px] font-bold tabular-nums text-[var(--foreground)]/40">
+                      <span className="text-xs font-bold tabular-nums text-[var(--color-primary)]">
                         {alarmVolume}%
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={alarmVolume}
-                      onChange={(e) => setAlarmVolume(Number(e.target.value))}
-                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer
-                        bg-[var(--foreground)]/[0.08]
-                        accent-[var(--color-primary)]
-                        [&::-webkit-slider-thumb]:appearance-none
-                        [&::-webkit-slider-thumb]:w-4
-                        [&::-webkit-slider-thumb]:h-4
-                        [&::-webkit-slider-thumb]:rounded-full
-                        [&::-webkit-slider-thumb]:bg-[var(--color-primary)]
-                        [&::-webkit-slider-thumb]:shadow-[0_2px_6px_rgba(var(--color-primary-rgb)/0.3)]
-                        [&::-webkit-slider-thumb]:cursor-pointer"
-                    />
+                    {/* Custom volume slider */}
+                    <div className="relative h-8 flex items-center">
+                      <div className="absolute inset-x-0 h-2 rounded-full bg-[var(--foreground)]/[0.08] overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-100"
+                          style={{ width: `${alarmVolume}%`, background: 'var(--color-primary)' }} />
+                      </div>
+                      <input
+                        lang="en"
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={alarmVolume}
+                        onChange={(e) => setAlarmVolume(Number(e.target.value))}
+                        className="absolute inset-x-0 w-full h-8 opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="absolute h-5 w-5 rounded-full border-2 border-white pointer-events-none transition-all duration-100"
+                        style={{
+                          insetInlineStart: `calc(${alarmVolume}% - 10px)`,
+                          background: 'var(--color-primary)',
+                          boxShadow: '0 2px 8px rgba(var(--color-primary-rgb)/0.35)',
+                        }} />
+                    </div>
+                    {/* Quick volume presets */}
+                    <div className="flex items-center gap-1.5 mt-2">
+                      {[0, 25, 50, 75, 100].map(v => (
+                        <button key={v} type="button" onClick={() => setAlarmVolume(v)}
+                          className={cn('flex-1 py-1 rounded-md text-[10px] font-bold transition-all',
+                            alarmVolume === v
+                              ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                              : 'text-[var(--foreground)]/25 hover:text-[var(--foreground)]/50')}>
+                          {v === 0 ? (isAr ? 'صامت' : 'Mute') : `${v}%`}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </SectionBox>
 

@@ -213,10 +213,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const isAr = locale === 'ar';
 
+  const store = useAppStore();
   const handleTimerComplete = useCallback((label: string) => {
     setTimerAlarm(label);
-    startAlarmSound(TIMER_ALARM_ID, 'classic', 80, false);
-  }, []);
+    const settings = store.settings;
+    const sound = settings.timerAlarmSound ?? 'classic';
+    const volume = settings.soundEnabled ? (settings.timerAlarmVolume ?? 80) : 0;
+    startAlarmSound(TIMER_ALARM_ID, sound, volume, false);
+  }, [store.settings]);
 
   const dismissTimerAlarm = useCallback(() => {
     stopAlarmSound(TIMER_ALARM_ID);
