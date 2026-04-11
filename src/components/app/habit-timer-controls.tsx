@@ -89,6 +89,7 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
         duration: elapsed,
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
+        habitExpectedDuration: habit.expectedDuration || undefined,
       });
     }
     store.cancelTimer();
@@ -104,6 +105,7 @@ export function useHabitTimer(habit: Habit, store: ReturnType<typeof useAppStore
         duration: secs,
         note: '', reminderUsed: false, perceivedDifficulty: 'medium', completed: isCompleted,
         source: 'timer',
+        habitExpectedDuration: habit.expectedDuration || undefined,
       });
     }
     store.completeTimer(currentSession.id);

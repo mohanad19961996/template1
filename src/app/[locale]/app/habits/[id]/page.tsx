@@ -171,12 +171,15 @@ export default function HabitDetailPage() {
       .catch(() => {}).finally(() => setLoadingHistory(false));
   }, [habitId]);
 
-  // Deduplicated logs
+  // Deduplicated logs — for timer logs, ignore time field (can differ by minutes between start/end)
   const habitLogs = useMemo(() => {
     const raw = store.habitLogs.filter(l => l.habitId === habitId);
     const seen = new Set<string>();
     return raw.filter(l => {
-      const key = `${l.date}|${l.time}|${l.duration ?? 0}|${l.completed}|${l.source ?? ''}`;
+      const isTimer = l.source === 'timer';
+      const key = isTimer
+        ? `${l.date}|${l.duration ?? 0}|timer`
+        : `${l.date}|${l.time}|${l.duration ?? 0}|${l.completed}|${l.source ?? ''}`;
       if (seen.has(key)) return false; seen.add(key); return true;
     });
   }, [store.habitLogs, habitId]);

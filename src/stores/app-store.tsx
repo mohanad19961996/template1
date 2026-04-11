@@ -293,6 +293,7 @@ function recoverTimer(state: AppState, recoveredTimerKeys?: Set<string>): AppSta
         perceivedDifficulty: 'medium' as const,
         completed: isCompleted,
         source: 'timer' as const,
+        habitExpectedDuration: habitTarget || undefined,
       };
       habitLogs = [...habitLogs, newLog];
       // Sync recovered log to DB (this is the critical fix — ensures cross-device persistence)
@@ -467,10 +468,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             // Keep all local logs + any DB logs not in local (by id)
             const dbOnly = logs.filter(l => !localLogIds.has(l.id));
             const combined = [...prev.habitLogs, ...dbOnly];
-            // Deduplicate: same habitId+date+time+duration+source = same log (keep first)
+            // Deduplicate: for timer logs, same habitId+date+duration+source = same log (time can differ by a few minutes)
+            // For non-timer logs, include time in the key for more precise dedup
             const seen = new Set<string>();
             mergedLogs = combined.filter(l => {
-              const key = `${l.habitId}|${l.date}|${l.time}|${l.duration ?? 0}|${l.source ?? ''}`;
+              const isTimer = l.source === 'timer';
+              const key = isTimer
+                ? `${l.habitId}|${l.date}|${l.duration ?? 0}|timer`
+                : `${l.habitId}|${l.date}|${l.time}|${l.duration ?? 0}|${l.source ?? ''}`;
               if (seen.has(key)) return false;
               seen.add(key);
               return true;

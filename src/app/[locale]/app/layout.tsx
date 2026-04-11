@@ -66,6 +66,7 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
           note: '', reminderUsed: false, perceivedDifficulty: 'medium',
           completed: isCompleted,
           source: 'timer',
+          habitExpectedDuration: habitTarget || undefined,
         });
       };
 

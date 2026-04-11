@@ -6,11 +6,26 @@ export function sumLoggedDurationSecsOnDate(habitId: string, logs: HabitLog[], d
     .reduce((sum, l) => sum + (l.duration ?? 0), 0);
 }
 
+/**
+ * Get the effective expectedDuration for a specific date.
+ * Uses the snapshotted value from logs if available (to prevent mid-day setting changes from affecting today's count).
+ * Falls back to the current habit setting.
+ */
+function getEffectiveDurationForDate(habit: Habit, logs: HabitLog[], dateStr: string): number {
+  const dayLogs = logs.filter(l => l.habitId === habit.id && l.date === dateStr && l.habitExpectedDuration);
+  if (dayLogs.length > 0) {
+    // Use the duration that was active when the first log was created
+    return dayLogs[0].habitExpectedDuration!;
+  }
+  return habit.expectedDuration || 0;
+}
+
 /** Full timer targets earned on a date from summed duration (capped by maxDailyReps). */
 export function getTimerCompletionCount(habit: Habit, logs: HabitLog[], dateStr: string): number {
-  if (!habit.expectedDuration) return 0;
+  const effectiveDuration = getEffectiveDurationForDate(habit, logs, dateStr);
+  if (!effectiveDuration) return 0;
   const totalSecs = sumLoggedDurationSecsOnDate(habit.id, logs, dateStr);
-  const earned = Math.floor(totalSecs / habit.expectedDuration);
+  const earned = Math.floor(totalSecs / effectiveDuration);
   const maxReps = habit.maxDailyReps ?? Infinity;
   return maxReps === Infinity ? earned : Math.min(earned, maxReps);
 }
@@ -20,7 +35,7 @@ export function getTimerCompletionCount(habit: Habit, logs: HabitLog[], dateStr:
  * Boolean (and default) habits: at most one rep per calendar day even if multiple completed rows exist.
  */
 export function getDoneRepCountForDate(habit: Habit, logs: HabitLog[], dateStr: string): number {
-  if (habit.expectedDuration) {
+  if (habit.expectedDuration || logs.some(l => l.habitId === habit.id && l.date === dateStr && l.habitExpectedDuration)) {
     return getTimerCompletionCount(habit, logs, dateStr);
   }
   if (habit.trackingType === 'count') {

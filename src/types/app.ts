@@ -162,6 +162,7 @@ export interface HabitLog {
   value?: number;                  // actual value achieved (e.g. 6 cups out of 8)
   checklistState?: Record<string, boolean | { done: boolean; time: string | null }>; // for checklist type: { itemId: { done, time } }
   source?: 'manual' | 'timer' | 'auto'; // how this log was created (default: manual)
+  habitExpectedDuration?: number; // seconds — snapshot of habit.expectedDuration at log creation time (for stable completion calc)
 }
 
 export type HabitChangeType = 'created' | 'edited' | 'archived' | 'restored';
