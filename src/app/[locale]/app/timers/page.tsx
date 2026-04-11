@@ -64,7 +64,14 @@ export default function TimersPage() {
   const [customS, setCustomS] = useState(0);
   const [labelEn, setLabelEn] = useState('Focus Session');
   const [labelAr, setLabelAr] = useState('جلسة تركيز');
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  // Sound settings from store (persisted to DB)
+  const soundEnabled = store.settings.soundEnabled;
+  const setSoundEnabled = (v: boolean) => store.updateSettings({ soundEnabled: v });
+  const alarmSound = store.settings.timerAlarmSound ?? 'classic';
+  const setAlarmSound = (v: AlarmSound) => store.updateSettings({ timerAlarmSound: v });
+  const alarmVolume = store.settings.timerAlarmVolume ?? 70;
+  const setAlarmVolume = (v: number) => store.updateSettings({ timerAlarmVolume: v });
+
   const [fullscreen, setFullscreen] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [completionNote, setCompletionNote] = useState('');
@@ -74,9 +81,6 @@ export default function TimersPage() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Sound controls state
-  const [alarmSound, setAlarmSound] = useState<AlarmSound>('classic');
-  const [alarmVolume, setAlarmVolume] = useState(70);
   const previewStopRef = useRef<(() => void) | null>(null);
 
   const active = store.activeTimer;

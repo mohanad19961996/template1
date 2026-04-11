@@ -444,6 +444,8 @@ export interface UserSettings {
   dailyReminderEnabled: boolean;
   dailyReminderTime: string;
   soundEnabled: boolean;
+  timerAlarmSound: AlarmSound;
+  timerAlarmVolume: number;   // 0-100
   hydrationTarget: number;
   sleepTarget: number;
   focusTarget: number;       // minutes per day
@@ -655,6 +657,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   dailyReminderEnabled: false,
   dailyReminderTime: '08:00',
   soundEnabled: true,
+  timerAlarmSound: 'classic',
+  timerAlarmVolume: 70,
   hydrationTarget: 8,
   sleepTarget: 8,
   focusTarget: 120,
