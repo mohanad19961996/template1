@@ -737,55 +737,37 @@ export default function HabitsPage() {
 
       {/* ═══ Category Folder Mode ═══ */}
       {folderMode && (
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 mb-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap gap-2 mb-4">
           {habitsByCategory.map((group, gi) => {
             const catLabel = getCategoryLabel(group.category, isAr);
             const doneCount = group.habits.filter(h => isHabitDoneToday(h, store.habitLogs, today)).length;
             const allDone = doneCount === group.count && group.count > 0;
-            const progress = group.count > 0 ? (doneCount / group.count) * 100 : 0;
             return (
               <motion.button
                 key={group.category}
                 type="button"
-                initial={{ opacity: 0, x: isAr ? 12 : -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: gi * 0.03, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: gi * 0.03, duration: 0.2 }}
                 onClick={() => setFolderCategory(group.category)}
                 className={cn(
-                  'group w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 cursor-pointer transition-all duration-200 active:scale-[0.98]',
+                  'flex items-center gap-2 rounded-xl px-3 py-2 cursor-pointer transition-all duration-150 active:scale-95',
                   'border hover:shadow-md',
                   allDone
-                    ? 'border-[var(--color-success)]/25 bg-[var(--color-success)]/[0.04] hover:border-[var(--color-success)]/40'
-                    : 'border-[var(--color-primary)]/15 bg-[var(--color-background)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/[0.03]',
+                    ? 'border-[var(--color-success)]/30 bg-[var(--color-success)]/5 hover:border-[var(--color-success)]/50'
+                    : 'border-[var(--color-primary)]/15 bg-[var(--color-background)] hover:border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/[0.04]',
                 )}
               >
-                {/* Icon */}
-                <div className={cn(
-                  'h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200',
+                <FolderOpen className={cn('h-4 w-4 shrink-0', allDone ? 'text-[var(--color-success)]' : 'text-[var(--color-primary)]')} />
+                <span className="text-xs font-bold whitespace-nowrap">{catLabel}</span>
+                <span className={cn(
+                  'text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full',
                   allDone
-                    ? 'bg-[var(--color-success)]/12 text-[var(--color-success)]'
-                    : 'bg-[var(--color-primary)]/8 text-[var(--color-primary)]',
+                    ? 'bg-[var(--color-success)]/15 text-[var(--color-success)]'
+                    : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
                 )}>
-                  <FolderOpen className="h-4 w-4" />
-                </div>
-                {/* Label + progress */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-sm font-bold truncate">{catLabel}</span>
-                    <span className={cn(
-                      'text-[11px] font-bold tabular-nums shrink-0',
-                      allDone ? 'text-[var(--color-success)]' : 'text-[var(--foreground)]/40',
-                    )}>
-                      {doneCount}/{group.count}
-                    </span>
-                  </div>
-                  <div className="h-1 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${progress}%`, background: allDone ? 'var(--color-success)' : 'var(--color-primary)' }} />
-                  </div>
-                </div>
-                {/* Chevron */}
-                <ChevronDown className={cn('h-4 w-4 shrink-0 text-[var(--foreground)]/20 transition-transform', isAr ? 'rotate-90' : '-rotate-90')} />
+                  {doneCount}/{group.count}
+                </span>
               </motion.button>
             );
           })}
