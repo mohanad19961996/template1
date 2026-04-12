@@ -27,6 +27,7 @@ import {
 import { useAppStore } from '@/stores/app-store';
 import { HabitTimerControls } from '@/components/app/habit-timer-controls';
 import { useToast } from '@/components/app/toast-notifications';
+import DayDetailsTooltip from '@/components/habits/day-details-tooltip';
 
 export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onNavigate, onArchive, onDelete }: { habit: Habit; onClose: () => void; onEdit: () => void; onViewFull: () => void; allHabits: Habit[]; onNavigate: (h: Habit) => void; onArchive?: () => void; onDelete?: () => void }) {
   const locale = useLocale();
@@ -1359,7 +1360,8 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                     const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                     const isTodayCal = day.date === todayString();
                     return (
-                      <div key={i} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
+                      <DayDetailsTooltip key={i} habit={habit} dateStr={day.date} logs={store.habitLogs} isAr={isAr}>
+                      <div
                         className={cn('h-6 sm:h-8 rounded-md flex items-center justify-center text-[10px] sm:text-sm font-bold cursor-default relative overflow-visible',
                           !day.inMonth && 'invisible',
                           isOff && 'bg-red-500/8 text-red-400/50',
@@ -1375,6 +1377,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                           <span className="absolute -top-1.5 -end-1.5 z-10 h-4.5 min-w-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                         )}
                       </div>
+                      </DayDetailsTooltip>
                     );
                   })}
                 </div>

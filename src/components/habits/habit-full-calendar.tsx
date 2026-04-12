@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/app-store';
 import { Habit, todayString, resolveHabitColor } from '@/types/app';
 import { X, ChevronLeft, ArrowRight } from 'lucide-react';
 import { DAY_LABELS, MONTH_LABELS, getCompletionColor, isHabitScheduledForDate, CompletionColor } from '@/components/habits/habit-constants';
+import DayDetailsTooltip from '@/components/habits/day-details-tooltip';
 
 function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Habit; isAr: boolean; store: ReturnType<typeof useAppStore>; onClose: () => void; onBack?: () => void }) {
   const today = todayString();
@@ -237,7 +238,8 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                       const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                       const isToday = day.date === today;
                       return (
-                        <div key={di} title={day.sessionCount > 1 ? `${day.date} (${day.sessionCount}x)` : day.date}
+                        <DayDetailsTooltip key={di} habit={habit} dateStr={day.date} logs={store.habitLogs} isAr={isAr}>
+                        <div
                           className={cn(
                             'h-6 rounded-md flex items-center justify-center text-[9px] font-extrabold transition-colors duration-100 relative overflow-visible',
                             !day.inMonth && 'invisible',
@@ -255,6 +257,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                             <span className="absolute -top-1.5 -end-1.5 z-10 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[7px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                           )}
                         </div>
+                        </DayDetailsTooltip>
                       );
                     })}
                   </div>

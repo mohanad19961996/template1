@@ -22,6 +22,7 @@ import {
 import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/app/toast-notifications';
 import { HabitDetail } from '@/components/habits/habit-detail';
+import DayDetailsTooltip from '@/components/habits/day-details-tooltip';
 
 // ── Labels ──
 const DAY_NAMES = {
@@ -837,28 +838,20 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
           const beforeCreated = habit.createdAt.split('T')[0] > dateStr;
 
           return (
-            <button type="button" key={day}
+            <DayDetailsTooltip key={day} habit={habit} dateStr={dateStr} logs={habitLogs} isAr={isAr}>
+            <button type="button"
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
               disabled={beforeCreated}
               className={cn(
-                'relative h-9 sm:h-10 rounded-md flex items-center justify-center text-[11px] sm:text-sm font-bold transition-all duration-150 cursor-pointer',
-                // Selected = solid theme
+                'relative h-9 sm:h-10 w-full rounded-md flex items-center justify-center text-[11px] sm:text-sm font-bold transition-all duration-150 cursor-pointer',
                 isSelected && 'text-white shadow-md ring-2 ring-offset-1',
-                // Done = solid green
                 !isSelected && hasCompletion && !hasLateCompletion && 'bg-emerald-500 text-white',
-                // Done late = solid amber
                 !isSelected && hasCompletion && hasLateCompletion && 'bg-amber-500 text-white',
-                // Missed = solid red
                 !isSelected && isMissed && 'bg-red-500 text-white',
-                // Not scheduled = red X
                 !isSelected && isNotScheduled && !beforeCreated && !hasCompletion && 'bg-red-500/15 text-red-500 font-black',
-                // Future = gray
                 !isSelected && isFuture && isScheduled && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
-                // Before created = invisible-ish
                 beforeCreated && 'opacity-20 cursor-default',
-                // Today ring
                 isToday && !isSelected && 'ring-2 ring-offset-1 font-black',
-                // Default hover
                 !isSelected && !hasCompletion && !isMissed && !isFuture && !isNotScheduled && !beforeCreated && 'text-[var(--foreground)]/70 hover:bg-[rgba(var(--color-primary-rgb)/0.08)]',
               )}
               style={{
@@ -866,15 +859,14 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
                 ...(isToday && !isSelected ? { ['--tw-ring-color' as string]: hc } : {}),
               }}>
               {isNotScheduled && !beforeCreated && !hasCompletion ? '✕' : day}
-              {/* Settings modified indicator */}
               {hasHistory && (
                 <span className="absolute bottom-0 start-0.5 h-2.5 w-2.5 rounded-full bg-violet-500 z-[2] border border-white dark:border-gray-900" />
               )}
-              {/* Multi-rep badge */}
               {repCount > 1 && (
                 <span className="absolute -top-1 -end-1 min-w-[16px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black text-center z-[2] shadow-sm ring-1 ring-white dark:ring-gray-900">{repCount}x</span>
               )}
             </button>
+            </DayDetailsTooltip>
           );
         })}
       </div>
