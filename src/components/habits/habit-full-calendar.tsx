@@ -241,8 +241,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                           className={cn(
                             'h-6 rounded-md flex items-center justify-center text-[9px] font-extrabold transition-colors duration-100 relative overflow-visible',
                             !day.inMonth && 'invisible',
-                            isOff && day.beforeCreated && 'bg-gray-200/50 dark:bg-gray-700/30 text-[var(--foreground)]/15',
-                            isOff && !day.beforeCreated && 'bg-red-500/8 text-red-400/50',
+                            isOff && 'bg-red-500/8 text-red-400/50',
                             !isOff && day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
                             isApplicable && day.color === 'green' && 'bg-emerald-500 text-white',
                             isApplicable && day.color === 'orange' && 'bg-amber-500 text-white',
@@ -251,7 +250,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                             isToday && 'ring-2 ring-offset-1 font-black shadow-sm',
                           )}
                           style={isToday ? { ['--tw-ring-color' as string]: hc } : undefined}>
-                          {day.inMonth ? (isOff && !day.beforeCreated ? '✕' : day.day) : ''}
+                          {day.inMonth ? (isOff ? '✕' : day.day) : ''}
                           {day.sessionCount > 1 && (
                             <span className="absolute -top-1.5 -end-1.5 z-10 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[7px] font-black flex items-center justify-center shadow-sm ring-1 ring-white dark:ring-gray-900">{day.sessionCount}x</span>
                           )}
