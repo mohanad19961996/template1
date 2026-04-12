@@ -172,10 +172,12 @@ export default function HabitDetailPage() {
   }, [habitId]);
 
   // Deduplicated logs — for timer logs, ignore time field (can differ by minutes between start/end)
+  // Sort completed=true first so dedup keeps completed version over incomplete
   const habitLogs = useMemo(() => {
     const raw = store.habitLogs.filter(l => l.habitId === habitId);
+    const sorted = [...raw].sort((a, b) => (b.completed ? 1 : 0) - (a.completed ? 1 : 0));
     const seen = new Set<string>();
-    return raw.filter(l => {
+    return sorted.filter(l => {
       const isTimer = l.source === 'timer';
       const key = isTimer
         ? `${l.date}|${l.duration ?? 0}|timer`

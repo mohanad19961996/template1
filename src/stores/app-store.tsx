@@ -470,6 +470,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             const combined = [...prev.habitLogs, ...dbOnly];
             // Deduplicate: for timer logs, same habitId+date+duration+source = same log (time can differ by a few minutes)
             // For non-timer logs, include time in the key for more precise dedup
+            // Sort completed=true first so dedup keeps the completed version over incomplete
+            combined.sort((a, b) => (b.completed ? 1 : 0) - (a.completed ? 1 : 0));
             const seen = new Set<string>();
             mergedLogs = combined.filter(l => {
               const isTimer = l.source === 'timer';
