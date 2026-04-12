@@ -44,7 +44,7 @@ export default function CategoryHabitsModal({
           />
 
           {/* Modal */}
-          <div className="flex min-h-full items-start justify-center p-4 pt-[6vh]">
+          <div className="flex min-h-full items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
