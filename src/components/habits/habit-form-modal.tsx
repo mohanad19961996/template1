@@ -428,13 +428,12 @@ export default function HabitFormModal({
                 <label className="text-sm font-bold text-[var(--foreground)] mb-1 block">
                   {isAr ? 'طريقة الإنجاز' : 'Completion Method'}
                 </label>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-4 gap-1.5">
                   {([
                     { type: 'boolean' as const, en: 'Yes/No', ar: 'نعم/لا', desc: isAr ? 'تم أو لم يتم' : 'Done or not' },
                     { type: 'count' as const, en: 'Count', ar: 'عداد', desc: isAr ? 'عدد محدد' : 'Reach a number' },
                     { type: 'timer' as const, en: 'Timer', ar: 'مؤقت', desc: isAr ? 'تتبع بالوقت' : 'Track by time' },
                     { type: 'checklist' as const, en: 'Checklist', ar: 'قائمة', desc: isAr ? 'خطوات متعددة' : 'Multi-step' },
-                    { type: 'duration' as const, en: 'Duration', ar: 'مدة', desc: isAr ? 'سجل الدقائق' : 'Log minutes' },
                   ]).map(t => (
                     <button
                       key={t.type}
@@ -592,21 +591,7 @@ export default function HabitFormModal({
                   );
                 })()}
 
-                {/* Duration settings */}
-                {formData.trackingType === 'duration' && (
-                  <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15]">
-                    <label className="text-[10px] font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1 block">
-                      {isAr ? 'الهدف اليومي (دقائق)' : 'Daily Target (minutes)'}
-                    </label>
-                    <input type="number" min={1} value={formData.targetValue}
-                      onChange={e => setFormData(f => ({ ...f, targetValue: Number(e.target.value) || 1 }))}
-                      className="w-full rounded-lg app-input px-3 py-2 text-sm"
-                      placeholder={isAr ? 'مثال: 30 دقيقة' : 'e.g., 30 minutes'}
-                    />
-                  </div>
-                )}
-
-                {/* Checklist items — available for any tracking type */}
+                {/* Checklist items — available for checklist tracking type */}
                 {formData.trackingType === 'checklist' && (
                   <div className="p-3 rounded-xl bg-[var(--foreground)]/[0.03] border border-[var(--foreground)]/[0.15] space-y-2">
                     <label className="text-[10px] font-semibold text-[var(--foreground)] uppercase tracking-wider block">
@@ -1006,7 +991,7 @@ export default function HabitFormModal({
                     />
                   </div>
                   {/* Hours goal — only for habits that track time */}
-                  {(formData.trackingType === 'timer' || formData.trackingType === 'duration') && (
+                  {formData.trackingType === 'timer' && (
                     <div className="p-3 rounded-xl border border-[var(--foreground)]/[0.18] bg-[var(--foreground)]/[0.02]">
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className="h-3.5 w-3.5 text-violet-500" />
