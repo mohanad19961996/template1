@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Target, Clock, BarChart3, ListChecks, Hash,
   Trophy, Activity, ArrowRight, Play, Pause, Square, Timer,
   MapPin, Repeat, Gift, Lightbulb, Maximize2, Hourglass, AlertCircle, Bell,
-  CalendarDays, Check, Calendar as CalendarIcon, Award, Minus,
+  CalendarDays, Check, Calendar as CalendarIcon, Award,
 } from 'lucide-react';
 import {
   getCompletionColor, getCategoryLabel, FREQ_LABELS, CUSTOM_SCHEDULE_LABELS, CATEGORY_LABELS, DAY_LABELS,
@@ -43,7 +43,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
   const dCountTarget = isCountHabit ? (habit.targetValue ?? 1) : 1;
   const dCountUnit = isCountHabit ? (habit.targetUnit ?? 'times') : 'times';
   const dCountValue = isCountHabit
-    ? store.habitLogs.filter(l => l.habitId === habit.id && l.date === today).reduce((s, l) => s + (l.value ?? (l.completed ? 1 : 0)), 0)
+    ? store.habitLogs.filter(l => l.habitId === habit.id && l.date === today).reduce((max, l) => Math.max(max, l.value ?? 0), 0)
     : 0;
   const dCountProgress = isCountHabit && dCountTarget > 0 ? Math.min(1, dCountValue / dCountTarget) : 0;
   const hc = resolveHabitColor(habit.color);
@@ -708,16 +708,18 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
             })()}
             {isCountHabit && !habit.archived && (
               <div className="flex items-center gap-3">
-                <button onClick={() => { if (dCountValue <= 0) return; store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: Math.max(0, dCountValue - 1) >= dCountTarget, value: Math.max(0, dCountValue - 1), source: 'manual' }); }}
-                  className={cn('h-10 w-10 rounded-xl flex items-center justify-center font-bold border border-[var(--foreground)]/10 hover:bg-[var(--foreground)]/5', dCountValue <= 0 && 'opacity-20')}>
-                  <Minus className="h-4 w-4" />
-                </button>
                 <div className="flex-1 text-center">
                   <span className="text-2xl font-black tabular-nums" style={{ color: dCountProgress >= 1 ? '#22c55e' : hc }}>{dCountValue}</span>
                   <span className="text-sm text-[var(--foreground)] font-semibold"> / {dCountTarget}</span>
                   <p className="text-xs text-[var(--foreground)]">{dCountUnit}</p>
                 </div>
-                <button onClick={() => { store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: (dCountValue + 1) >= dCountTarget, value: dCountValue + 1, source: 'manual' }); }}
+                <button onClick={() => {
+                  const newVal = dCountValue + 1;
+                  // Remove existing count logs for today, then add updated one (upsert)
+                  const todayCountLogs = store.habitLogs.filter(l => l.habitId === habit.id && l.date === today && l.value !== undefined);
+                  todayCountLogs.forEach(l => store.deleteHabitLog(l.id));
+                  store.logHabit({ habitId: habit.id, date: today, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), note: '', reminderUsed: false, perceivedDifficulty: habit.difficulty, completed: newVal >= dCountTarget, value: newVal, source: 'manual' });
+                }}
                   className="h-10 w-10 rounded-xl flex items-center justify-center font-bold border transition-all"
                   style={{ background: `${dCountProgress < 1 ? hc : '#22c55e'}12`, color: dCountProgress < 1 ? hc : '#22c55e', borderColor: `${dCountProgress < 1 ? hc : '#22c55e'}25` }}>
                   <Plus className="h-4 w-4" />
