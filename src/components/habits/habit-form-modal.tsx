@@ -686,14 +686,17 @@ export default function HabitFormModal({
                     ? 'اكتب لماذا هذه العادة مهمة لك، أو ما الهوية التي تبنيها، أو أي ملاحظة تريد تذكرها. ستظهر هذه الملاحظة في صفحة العادة.'
                     : 'Write why this habit matters to you, what identity it builds, or any note you want to remember. This will appear on the habit page.'}
                 </p>
+                <div className="px-3.5 pb-3">
                 <textarea
                   value={formData.notes || ''}
                   onChange={e => setFormData(f => ({ ...f, notes: e.target.value }))}
                   dir={isAr ? 'rtl' : 'ltr'}
                   rows={2}
-                  className="w-full bg-transparent px-3.5 pb-3 pt-1 text-sm resize-none outline-none placeholder:text-[var(--foreground)]/25"
+                  className="w-full bg-[var(--color-background)] px-3 py-2 text-sm resize-none outline-none rounded-lg placeholder:text-[var(--foreground)]/25 focus:border-[var(--color-primary)]/30 transition-colors"
+                  style={{ border: '1px solid rgba(var(--color-primary-rgb)/0.15)' }}
                   placeholder={isAr ? 'مثال: هذه العادة تبني هوية رياضي محترف — كل يوم أقترب من النسخة الأفضل مني...' : 'e.g., This habit builds my identity as a professional athlete — every day I become a better version of myself...'}
                 />
+                </div>
               </div>
               </div>
 
