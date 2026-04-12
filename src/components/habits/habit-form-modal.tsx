@@ -926,9 +926,8 @@ export default function HabitFormModal({
                         className="app-input w-full rounded-lg bg-transparent px-2.5 py-2 text-sm" />
                     </div>
                   </div>
-                  {/* Strict window checkbox */}
-                  {(formData.windowStart || formData.windowEnd) && (
-                    <label className="flex items-center gap-2 mt-2.5 cursor-pointer">
+                  {/* Strict window checkbox — always visible */}
+                  <label className="flex items-center gap-2 mt-2.5 cursor-pointer">
                       <input type="checkbox" checked={formData.strictWindow || false}
                         onChange={e => setFormData(f => ({ ...f, strictWindow: e.target.checked }))}
                         className="h-4 w-4 rounded accent-[var(--color-primary)]" />
@@ -941,7 +940,6 @@ export default function HabitFormModal({
                         </p>
                       </div>
                     </label>
-                  )}
                 </div>
 
                 {/* Max daily repetitions */}
