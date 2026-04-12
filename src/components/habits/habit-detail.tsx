@@ -573,6 +573,21 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
 
                 <HabitTimerControls habit={habit} isAr={isAr} store={store} today={today} done={done} size="sm" dense customDurationSecs={customTimerSecs !== exp ? customTimerSecs : undefined} />
 
+                {/* Strict window alert inside timer section */}
+                {habit.strictWindow && habit.windowStart && habit.windowEnd && (
+                  <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-red-500/8 border border-red-500/20">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-red-600 dark:text-red-400">
+                        {isAr ? 'نافذة إجبارية' : 'Strict Window'}: {to12h(habit.windowStart)} – {to12h(habit.windowEnd)}
+                      </p>
+                      <p className="text-[9px] text-red-500/70">
+                        {isAr ? 'يجب إنجاز العادة داخل النافذة — وإلا تُحسب فائتة تلقائيًا' : 'Must complete inside window — otherwise counts as missed'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-lg border overflow-hidden" style={{ borderColor: `${hc}28`, background: `${hc}06` }}>
                   <button
                     type="button"
