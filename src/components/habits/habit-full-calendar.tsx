@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { HabitHistoryEntry } from '@/types/app';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getDoneRepCountForDate, getTotalCompletionUnits } from '@/lib/habit-completion';
@@ -17,7 +18,15 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
   const currentYear = todayDate.getFullYear();
   const currentMonthIdx = todayDate.getMonth();
   const [monthRange, setMonthRange] = useState<1 | 3 | 6 | 12>(12);
+  const [habitHistory, setHabitHistory] = useState<HabitHistoryEntry[]>([]);
   const hc = resolveHabitColor(habit.color);
+
+  useEffect(() => {
+    fetch(`/api/habits/${habit.id}/history`)
+      .then(r => r.json())
+      .then(data => { if (data.data) setHabitHistory(data.data); })
+      .catch(() => {});
+  }, [habit.id]);
 
   // Build months: Jan–Dec for 12M, or subset centered on current month
   const allMonths = useMemo(() => {
@@ -143,6 +152,13 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                 <div className="h-2.5 w-2.5 rounded-sm bg-red-500/8 text-red-400/50 text-[7px] font-black flex items-center justify-center">✕</div>
                 <span className="text-[9px] text-[var(--foreground)] font-semibold">{isAr ? 'غير مجدول' : 'N/A'}</span>
               </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2.5 w-2.5 rounded-full bg-violet-500" />
+                <span className="text-[9px] text-[var(--foreground)] font-semibold">{isAr ? 'تم تعديل الإعدادات' : 'Settings edited'}</span>
+              </div>
+              <span className="text-sm text-[var(--color-primary)] font-bold">
+                {isAr ? '📅 اضغط على أي يوم لعرض تفاصيل الجلسة والإنجاز' : '📅 Click any day to view session details'}
+              </span>
             </div>
             <button onClick={handleDismiss}
               className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 hover:bg-red-500/10 hover:text-red-500 text-[var(--foreground)]">
@@ -174,7 +190,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
               return (
                 <div key={`${year}-${month}`}
                   className={cn(
-                    'rounded-2xl p-3 transition-all duration-300 cursor-default hover:scale-[1.07] hover:z-10 overflow-visible',
+                    'rounded-2xl p-3 transition-all duration-300 cursor-pointer hover:scale-[1.07] hover:z-10 overflow-visible',
                     isCurrent
                       ? 'shadow-lg'
                       : isFutureMonth
@@ -238,7 +254,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
                       const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                       const isToday = day.date === today;
                       return (
-                        <DayDetailsTooltip key={di} habit={habit} dateStr={day.date} logs={store.habitLogs} isAr={isAr}>
+                        <DayDetailsTooltip key={di} habit={habit} dateStr={day.date} logs={store.habitLogs} timerSessions={store.timerSessions} habitHistory={habitHistory} isAr={isAr}>
                         <div
                           className={cn(
                             'h-6 rounded-md flex items-center justify-center text-[9px] font-extrabold transition-colors duration-100 relative overflow-visible',

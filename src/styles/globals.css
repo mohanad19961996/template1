@@ -53,13 +53,13 @@
   --radius-3xl: 1.25rem;
   --radius-full: 9999px;
 
-  /* ── Shadows — refined depth system ── */
-  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
-  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06), 0 1px 4px rgb(0 0 0 / 0.03);
-  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.07), 0 2px 8px rgb(0 0 0 / 0.04);
-  --shadow-xl: 0 16px 40px rgb(0 0 0 / 0.09), 0 4px 12px rgb(0 0 0 / 0.04);
-  --shadow-2xl: 0 24px 56px rgb(0 0 0 / 0.12), 0 8px 16px rgb(0 0 0 / 0.05);
+  /* ── Shadows — refined depth system with primary tint ── */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.03);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.04);
+  --shadow-md: 0 4px 14px rgb(0 0 0 / 0.07), 0 1px 4px rgb(0 0 0 / 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.05);
+  --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.08), 0 2px 8px rgb(0 0 0 / 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.06);
+  --shadow-xl: 0 16px 44px rgb(0 0 0 / 0.1), 0 4px 14px rgb(0 0 0 / 0.05), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.06);
+  --shadow-2xl: 0 24px 60px rgb(0 0 0 / 0.14), 0 8px 18px rgb(0 0 0 / 0.06), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.06);
 
   /* ── Animations ── */
   --animate-fade-in: fade-in 0.4s ease-out;
@@ -158,16 +158,17 @@
   --dur-slower: 500ms;
 
   /* ── Border tokens ── */
-  --border-subtle: 1px solid rgba(var(--color-primary-rgb) / 0.15);
-  --border-interactive: 1px solid rgba(var(--color-primary-rgb) / 0.25);
-  --border-strong: 1px solid rgba(var(--color-primary-rgb) / 0.35);
+  --border-subtle: 1.5px solid rgba(var(--color-primary-rgb) / 0.12);
+  --border-interactive: 2px solid rgba(var(--color-primary-rgb) / 0.2);
+  --border-strong: 2px solid rgba(var(--color-primary-rgb) / 0.35);
 
   /* ── Surface tokens — layered depth ── */
   --surface-ground: var(--color-background);
-  --surface-tint: rgba(var(--color-primary-rgb) / 0.02);
-  --surface-elevated: rgba(var(--color-primary-rgb) / 0.04);
-  --surface-overlay: rgba(var(--color-primary-rgb) / 0.06);
-  --surface-sunken: rgba(var(--color-primary-rgb) / 0.03);
+  --surface-tint: rgba(var(--color-primary-rgb) / 0.025);
+  --surface-elevated: rgba(var(--color-primary-rgb) / 0.05);
+  --surface-overlay: rgba(var(--color-primary-rgb) / 0.07);
+  --surface-sunken: rgba(var(--color-primary-rgb) / 0.035);
+  --surface-glass: rgba(var(--color-background-rgb) / 0.7);
 
   /* ── Section spacing — fluid ── */
   --section-y: clamp(2.5rem, 5vw, 4.5rem);
@@ -964,14 +965,14 @@ h3 {
 
 /* ── App background — distinct from sidebar/navbar ── */
 .app-bg {
-  --app-surface: color-mix(in srgb, var(--color-background) 96%, var(--color-foreground));
+  --app-surface: color-mix(in srgb, var(--color-background) 97%, var(--color-foreground));
   background-color: var(--app-surface);
   background-image:
-    radial-gradient(rgba(var(--color-primary-rgb) / 0.025) 1px, transparent 1px),
-    radial-gradient(circle at 80% 20%, rgba(var(--color-primary-rgb) / 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 20% 80%, rgba(var(--color-primary-rgb) / 0.02) 0%, transparent 50%);
+    radial-gradient(rgba(var(--color-primary-rgb) / 0.02) 1px, transparent 1px),
+    radial-gradient(circle at 75% 15%, rgba(var(--color-primary-rgb) / 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 25% 85%, rgba(var(--color-primary-rgb) / 0.025) 0%, transparent 45%);
   background-size:
-    20px 20px,
+    18px 18px,
     100% 100%,
     100% 100%;
   background-position: 0 0, 0 0, 0 0;
@@ -1043,92 +1044,103 @@ h3 {
 .app-btn-primary {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 85%, black) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 80%, black) 100%);
   color: white;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb) / 0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 10px rgba(var(--color-primary-rgb) / 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 .app-btn-primary::after {
   content: "";
   position: absolute;
   inset: -50%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
   transform: translateX(-100%) skewX(-15deg);
-  transition: transform 0.5s ease;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(var(--color-primary-rgb) / 0.35), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb) / 0.4), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.15), inset 0 1px 0 rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.2);
 }
 .app-btn-primary:hover::after {
   transform: translateX(100%) skewX(-15deg);
 }
 .app-btn-primary:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 1px 4px rgba(var(--color-primary-rgb) / 0.2);
-  transition-duration: 0.1s;
+  box-shadow: 0 1px 4px rgba(var(--color-primary-rgb) / 0.25);
+  transition-duration: 0.08s;
+}
+.app-btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb) / 0.3), 0 2px 10px rgba(var(--color-primary-rgb) / 0.3);
 }
 
 /* ── App: Secondary / outline button ── */
 .app-btn-secondary {
   background: rgba(var(--color-primary-rgb) / 0.06);
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.12);
+  border: 2px solid rgba(var(--color-primary-rgb) / 0.15);
   color: var(--color-primary);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-btn-secondary:hover {
-  background: rgba(var(--color-primary-rgb) / 0.12);
+  background: rgba(var(--color-primary-rgb) / 0.1);
   border-color: rgba(var(--color-primary-rgb) / 0.3);
   box-shadow: 0 4px 16px rgba(var(--color-primary-rgb) / 0.12);
   transform: translateY(-1px);
 }
 .app-btn-secondary:active {
   transform: translateY(0);
-  transition-duration: 0.1s;
+  transition-duration: 0.08s;
+}
+.app-btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb) / 0.15);
 }
 
 /* ── App: Card with theme-aware hover ── */
 .app-card {
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.18);
-  background: linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.02) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid rgba(var(--color-primary-rgb) / 0.12);
+  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.025) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-card:hover {
-  border-color: rgba(var(--color-primary-rgb) / 0.35);
-  background: linear-gradient(135deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-primary-rgb) / 0.02) 100%);
+  border-color: rgba(var(--color-primary-rgb) / 0.3);
+  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.05) 0%, rgba(var(--color-primary-rgb) / 0.015) 100%);
   box-shadow:
-    0 12px 40px rgba(var(--color-primary-rgb) / 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 10px 36px rgba(var(--color-primary-rgb) / 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 .app-card:active {
   transform: translateY(-1px);
   box-shadow:
     0 4px 16px rgba(var(--color-primary-rgb) / 0.08),
     0 2px 6px rgba(0, 0, 0, 0.04);
+  transition-duration: 0.08s;
 }
 
 /* ── App: Stat card ── */
 .app-stat-card {
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.18);
+  border: 2px solid rgba(var(--color-primary-rgb) / 0.12);
   background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.035) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-stat-card:hover {
-  border-color: rgba(var(--color-primary-rgb) / 0.35);
-  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.07) 0%, rgba(var(--color-primary-rgb) / 0.02) 100%);
+  border-color: rgba(var(--color-primary-rgb) / 0.3);
+  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-primary-rgb) / 0.015) 100%);
   box-shadow:
-    0 12px 40px rgba(var(--color-primary-rgb) / 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.04),
+    0 8px 30px rgba(var(--color-primary-rgb) / 0.1),
+    0 3px 10px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
 /* ── App: Flip card hover ── */
@@ -1313,24 +1325,24 @@ h3 {
 
 /* ── App: Input with theme focus ── */
 .app-input {
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.2);
-  background: rgba(var(--color-primary-rgb) / 0.015);
+  border: 2px solid rgba(var(--color-primary-rgb) / 0.15);
+  background: rgba(var(--color-primary-rgb) / 0.02);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-input:hover:not(:focus) {
-  border-color: rgba(var(--color-primary-rgb) / 0.28);
-  background: rgba(var(--color-primary-rgb) / 0.028);
+  border-color: rgba(var(--color-primary-rgb) / 0.25);
+  background: rgba(var(--color-primary-rgb) / 0.03);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.03),
-    0 2px 12px rgba(var(--color-primary-rgb) / 0.06);
+    0 2px 10px rgba(var(--color-primary-rgb) / 0.06);
 }
 .app-input:focus {
   outline: none;
   border-color: rgba(var(--color-primary-rgb) / 0.4);
   box-shadow:
-    0 0 0 3px rgba(var(--color-primary-rgb) / 0.1),
-    0 0 20px rgba(var(--color-primary-rgb) / 0.06),
+    0 0 0 3px rgba(var(--color-primary-rgb) / 0.12),
+    0 0 16px rgba(var(--color-primary-rgb) / 0.06),
     inset 0 1px 2px rgba(0, 0, 0, 0.02);
   background: rgba(var(--color-primary-rgb) / 0.025);
 }
@@ -1341,7 +1353,8 @@ select.app-input option {
 
 /* ── App: Nav link in sidebar ── */
 .app-nav-link {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1.5px solid transparent;
 }
 .app-nav-link svg {
   max-width: none;
@@ -1350,12 +1363,13 @@ select.app-input option {
 .app-nav-link:hover {
   background: rgba(var(--color-primary-rgb) / 0.08);
   color: var(--color-primary);
-  transform: translateX(4px);
-  box-shadow: inset 3px 0 0 rgba(var(--color-primary-rgb) / 0.35);
+  transform: translateX(3px);
+  border-color: rgba(var(--color-primary-rgb) / 0.15);
+  box-shadow: inset 3px 0 0 rgba(var(--color-primary-rgb) / 0.4), 0 2px 8px rgba(var(--color-primary-rgb) / 0.06);
 }
 [dir="rtl"] .app-nav-link:hover {
-  transform: translateX(-4px);
-  box-shadow: inset -3px 0 0 rgba(var(--color-primary-rgb) / 0.35);
+  transform: translateX(-3px);
+  box-shadow: inset -3px 0 0 rgba(var(--color-primary-rgb) / 0.4), 0 2px 8px rgba(var(--color-primary-rgb) / 0.06);
 }
 
 /* ── Subtle lift on list rows / panels (opt-in) ── */
@@ -1403,18 +1417,24 @@ select.app-input option {
 
 /* ── App: Toggle / chip selectable ── */
 .app-toggle {
-  border: 1px solid rgba(var(--color-primary-rgb) / 0.18);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid rgba(var(--color-primary-rgb) / 0.15);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-toggle:hover {
-  border-color: rgba(var(--color-primary-rgb) / 0.35);
+  border-color: rgba(var(--color-primary-rgb) / 0.3);
   background: rgba(var(--color-primary-rgb) / 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb) / 0.08);
+}
+.app-toggle:active {
+  transform: translateY(0);
+  transition-duration: 0.08s;
 }
 .app-toggle-active {
-  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 85%, black)) !important;
+  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 80%, black)) !important;
   border-color: var(--color-primary) !important;
   color: white !important;
-  box-shadow: 0 2px 10px rgba(var(--color-primary-rgb) / 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  box-shadow: 0 3px 12px rgba(var(--color-primary-rgb) / 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 /* ── Link patterns ── */

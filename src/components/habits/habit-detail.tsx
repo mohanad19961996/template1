@@ -51,8 +51,13 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
 
   // Habit details — collapsible, click only (default closed)
   const [habitDetailsOpen, setHabitDetailsOpen] = useState(false);
+  const [modalHabitHistory, setModalHabitHistory] = useState<import('@/types/app').HabitHistoryEntry[]>([]);
   useEffect(() => {
     setHabitDetailsOpen(false);
+    fetch(`/api/habits/${habit.id}/history`)
+      .then(r => r.json())
+      .then(data => { if (data.data) setModalHabitHistory(data.data); })
+      .catch(() => {});
   }, [habit.id]);
 
   const [timerDetailsOpen, setTimerDetailsOpen] = useState(false);
@@ -440,7 +445,8 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                   const isNotScheduled = d.color === 'not-scheduled';
                   const dayRepCount = getDoneRepCountForDate(habit, store.habitLogs, d.date);
                   return (
-                    <div key={d.date} className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-md py-0.5 transition-all relative min-w-0',
+                    <DayDetailsTooltip key={d.date} habit={habit} dateStr={d.date} logs={store.habitLogs} timerSessions={store.timerSessions} habitHistory={modalHabitHistory} isAr={isAr}>
+                    <div className={cn('flex-1 flex flex-col items-center gap-0.5 rounded-md py-0.5 transition-all relative min-w-0',
                       isToday && 'bg-[var(--color-primary)]/[0.08]')}
                       style={isToday ? { border: '1px solid var(--color-primary)' } : { border: '1px solid transparent' }}>
                       <span className={cn('text-[9px] sm:text-[11px] font-bold leading-none', isNotScheduled ? 'text-[var(--foreground)]/30' : isToday ? 'text-[var(--color-primary)]' : 'text-[var(--foreground)]')}>{dayLabel}</span>
@@ -460,6 +466,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                         <span className="absolute -top-0.5 end-0 h-3.5 min-w-[14px] px-0.5 rounded-full bg-blue-500 text-white text-[8px] font-black flex items-center justify-center shadow-sm">{dayRepCount}x</span>
                       )}
                     </div>
+                    </DayDetailsTooltip>
                   );
                 })}
               </div>
@@ -481,6 +488,10 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                   </div>
                 ))}
               </div>
+              {/* Click hint for calendar */}
+              <p className="text-center text-[11px] text-[var(--color-primary)] font-semibold mt-1.5">
+                {isAr ? '📅 اضغط على أي يوم في التقويم لعرض تفاصيل الجلسة والإنجاز' : '📅 Click any day in the calendar to view session details'}
+              </p>
             </div>
           </div>
 
@@ -1360,9 +1371,9 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                     const isOff = day.inMonth && (day.beforeCreated || day.color === 'not-scheduled');
                     const isTodayCal = day.date === todayString();
                     return (
-                      <DayDetailsTooltip key={i} habit={habit} dateStr={day.date} logs={store.habitLogs} isAr={isAr}>
+                      <DayDetailsTooltip key={i} habit={habit} dateStr={day.date} logs={store.habitLogs} timerSessions={store.timerSessions} habitHistory={modalHabitHistory} isAr={isAr}>
                       <div
-                        className={cn('h-6 sm:h-8 rounded-md flex items-center justify-center text-[10px] sm:text-sm font-bold cursor-default relative overflow-visible',
+                        className={cn('h-6 sm:h-8 rounded-md flex items-center justify-center text-[10px] sm:text-sm font-bold cursor-pointer relative overflow-visible',
                           !day.inMonth && 'invisible',
                           isOff && 'bg-red-500/8 text-red-400/50',
                           !isOff && day.isFuture && day.inMonth && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/50',
@@ -1398,7 +1409,15 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
                     <div className="h-2 w-2 rounded-sm bg-red-500/8 text-red-400/50 text-[6px] font-black flex items-center justify-center">✕</div>
                     <span className="text-[9px] sm:text-sm text-[var(--foreground)] font-semibold">{isAr ? 'غير مجدول' : 'N/A'}</span>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-violet-500" />
+                    <span className="text-[9px] sm:text-sm text-[var(--foreground)] font-semibold">{isAr ? 'تم تعديل الإعدادات' : 'Settings edited'}</span>
+                  </div>
                 </div>
+                {/* Click hint */}
+                <p className="text-center text-sm text-[var(--color-primary)] font-bold mt-3">
+                  {isAr ? '📅 اضغط على أي يوم لعرض تفاصيل الجلسة والإنجاز' : '📅 Click any day to view session details'}
+                </p>
                 {/* First done + buttons */}
                 <div className="flex gap-1.5 mt-2">
                   <button onClick={onViewFull}

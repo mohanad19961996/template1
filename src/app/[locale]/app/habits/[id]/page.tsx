@@ -162,6 +162,7 @@ export default function HabitDetailPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
 
   // Fetch history
   useEffect(() => {
@@ -282,257 +283,174 @@ export default function HabitDetailPage() {
   const trackingLabel = isAr ? TRACKING_LABELS[effectiveTracking].ar : TRACKING_LABELS[effectiveTracking].en;
   const hc = resolveHabitColor(habit.color);
 
+  const DAY_ABBRS = isAr
+    ? ['أ', 'إ', 'ث', 'أر', 'خ', 'ج', 'س']
+    : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const MONTH_NAMES = Array.from({ length: 12 }, (_, i) =>
+    new Date(2026, i).toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'long' })
+  );
+
+  const createdDateStr = habit.createdAt.split('T')[0];
+
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-5 py-5 sm:py-8 space-y-5">
+    <div className="max-w-7xl mx-auto px-3 sm:px-5 py-4 sm:py-6 space-y-4">
+
       {/* ═══ 1. Header ═══ */}
-      <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-        className={cn(cardBase, 'px-4 sm:px-6 py-4 sm:py-5')}>
-        <div className="flex items-start gap-3">
-          <Link href="/app/habits" className={cn(btnBase, 'shrink-0 h-10 w-10')}>
-            <ArrowLeft className="h-[18px] w-[18px] text-[var(--foreground)]/70 rtl:rotate-180" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2.5 mb-1.5">
-              <span className="h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/30 shadow" style={{ background: habit.color }} />
-              <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-[var(--foreground)] truncate">{name}</h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className={cn(badge, 'bg-[rgba(var(--color-primary-rgb)/0.1)] text-[var(--color-primary)] border-[rgba(var(--color-primary-rgb)/0.2)]')}>{catLabel}</span>
-              <span className={cn(badge, 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60 border-[var(--foreground)]/[0.1]')}>{freqLabel}</span>
-              <span className={cn(badge, 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 border-[var(--foreground)]/[0.08]')}>{trackingLabel}</span>
-              {habit.archived && (
-                <span className={cn(badge, 'bg-amber-500/10 text-amber-600 border-amber-500/20')}>{isAr ? 'مؤرشفة' : 'Archived'}</span>
-              )}
-            </div>
-            {description && <p className="text-xs sm:text-sm text-[var(--foreground)]/50 mt-2 leading-relaxed line-clamp-2">{description}</p>}
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3">
+        <Link href="/app/habits" className={cn(btnBase, 'shrink-0 h-10 w-10')}>
+          <ArrowLeft className="h-[18px] w-[18px] text-[var(--foreground)]/70 rtl:rotate-180" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5">
+            <span className="h-3.5 w-3.5 rounded-full shrink-0 ring-2 ring-white/30 shadow" style={{ background: hc }} />
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">{name}</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            <span className={cn(badge, 'bg-[rgba(var(--color-primary-rgb)/0.1)] text-[var(--color-primary)] border-[rgba(var(--color-primary-rgb)/0.2)]')}>{catLabel}</span>
+            <span className={cn(badge, 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/60 border-[var(--foreground)]/[0.1]')}>{freqLabel}</span>
+            <span className={cn(badge, 'bg-[var(--foreground)]/[0.05] text-[var(--foreground)]/50 border-[var(--foreground)]/[0.08]')}>{trackingLabel}</span>
+            {habit.archived && <span className={cn(badge, 'bg-amber-500/10 text-amber-600 border-amber-500/20')}>{isAr ? 'مؤرشفة' : 'Archived'}</span>}
           </div>
         </div>
-      </motion.header>
+      </motion.div>
 
-      {/* ═══ Action Buttons ═══ */}
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-        className="flex flex-wrap items-center gap-2">
-        {/* Open Detail Modal */}
-        <button type="button" onClick={() => setShowDetailModal(true)}
-          className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
-          <Eye className="h-3.5 w-3.5" /> {isAr ? 'عرض سريع' : 'Quick View'}
-        </button>
-        {/* Edit */}
+      {/* ═══ 2. Action buttons + Stats ═══ */}
+      <div className="flex flex-wrap items-center gap-2">
         <Link href={`/app/habits?openHabit=${habit.id}`}
           className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
           <Edit3 className="h-3.5 w-3.5" /> {isAr ? 'تعديل' : 'Edit'}
         </Link>
-        {/* Timer (for timer habits) */}
         {effectiveTracking === 'timer' && (
           <Link href={`/app/timers?habitId=${habit.id}`}
             className="flex items-center gap-1.5 rounded-xl border-2 border-[var(--color-primary)]/25 px-3 py-2 text-[12px] font-bold text-[var(--foreground)]/60 transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-md active:scale-95">
             <Play className="h-3.5 w-3.5" /> {isAr ? 'بدء المؤقت' : 'Start Timer'}
           </Link>
         )}
-        {/* Mark Done (boolean, today only) */}
-        {effectiveTracking === 'boolean' && !viewingDateDone && isViewingToday && (
-          <button type="button" onClick={handleToggleDay}
-            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-bold text-white transition-all duration-200 hover:shadow-md active:scale-95"
-            style={{ background: 'linear-gradient(135deg, var(--color-primary), rgba(var(--color-primary-rgb) / 0.8))' }}>
-            <CheckCircle2 className="h-3.5 w-3.5" /> {isAr ? 'إنجاز اليوم' : 'Mark Done'}
-          </button>
-        )}
-        {/* Archive / Restore */}
         <button type="button" onClick={() => { store.toggleHabitArchive(habit.id); toast.notifySuccess(isAr ? (habit.archived ? 'تم الاستعادة' : 'تم الأرشفة') : (habit.archived ? 'Restored' : 'Archived')); }}
           className="flex items-center gap-1.5 rounded-xl border-2 border-amber-500/25 px-3 py-2 text-[12px] font-bold text-amber-600 transition-all duration-200 hover:border-amber-500 hover:bg-amber-500 hover:text-white hover:shadow-md active:scale-95">
           <Archive className="h-3.5 w-3.5" /> {habit.archived ? (isAr ? 'استعادة' : 'Restore') : (isAr ? 'أرشفة' : 'Archive')}
         </button>
-      </motion.div>
-
-      {/* ═══ 2. Stats Row ═══ */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.35 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatBox icon={<Flame className="h-4 w-4 text-orange-500" />} label={isAr ? 'السلسلة' : 'Streak'} value={`${streak.current}`} sub={isAr ? 'أيام' : 'days'} />
-        <StatBox icon={<Star className="h-4 w-4 text-yellow-500" />} label={isAr ? 'أفضل' : 'Best'} value={`${streak.best}`} sub={isAr ? 'أيام' : 'days'} />
-        <StatBox icon={<Target className="h-4 w-4 text-emerald-500" />} label={isAr ? 'الالتزام' : 'Rate'} value={`${stats.completionRate}%`} />
-        <StatBox icon={<CheckCircle2 className="h-4 w-4 text-[var(--color-primary)]" />} label={isAr ? 'الإنجازات' : 'Total'} value={`${stats.totalCompletions}`} />
-      </motion.div>
-
-      {/* ═══ Habit Notes ═══ */}
-      {habit.notes && habit.notes.trim() && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11, duration: 0.35 }}
-          className={cn(cardBase, 'px-4 sm:px-5 py-3 sm:py-4')}
-          style={{ borderInlineStart: `3px solid ${hc}` }}>
-          <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-              style={{ background: `${hc}15` }}>
-              <Lightbulb className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider mb-1">
-                {isAr ? 'ملاحظات العادة' : 'Habit Notes'}
-              </p>
-              <p className="text-sm text-[var(--foreground)]/70 leading-relaxed whitespace-pre-wrap break-words">
-                {habit.notes.trim()}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ═══ 3. Main Content — 2 Column Grid ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5">
-        {/* LEFT: Calendar */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.35 }}>
-          <HabitCalendar calMonth={calMonth} setCalMonth={setCalMonth} logsByDate={logsByDate}
-            historyByDate={historyByDate} habitLogs={store.habitLogs} selectedDate={selectedDate}
-            setSelectedDate={(d) => { setSelectedDate(d); if (d) setViewingDate(d); }}
-            isAr={isAr} habitColor={habit.color} habit={habit} today={today} />
-        </motion.div>
-
-        {/* RIGHT: Day Detail Panel */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.35 }}
-          className={cn(cardBase, 'p-4 sm:p-5 space-y-4 self-start')}>
-          {/* Date nav */}
-          <div className="flex items-center justify-between">
-            <button type="button" onClick={() => navigateDay(-1)} className={cn(btnBase, 'h-8 w-8')}>
-              <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-            </button>
-            <div className="text-center">
-              <h3 className="text-sm font-bold flex items-center gap-1.5 justify-center">
-                <CalendarIcon className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                {formatViewingDate(viewingDate)}
-              </h3>
-              <p className="text-[10px] text-[var(--foreground)]/35 mt-0.5 tabular-nums">{viewingDate}</p>
-            </div>
-            <button type="button" onClick={() => navigateDay(1)} disabled={isViewingToday}
-              className={cn(btnBase, 'h-8 w-8', isViewingToday && 'opacity-30 cursor-not-allowed hover:bg-transparent')}>
-              <ChevronRight className="h-4 w-4 rtl:rotate-180" />
-            </button>
-          </div>
-
-          {!isViewingToday && (
-            <button onClick={() => setViewingDate(today)}
-              className="w-full text-center text-[10px] font-semibold text-[var(--color-primary)] hover:underline py-0.5">
-              {isAr ? '← الذهاب لليوم' : '← Jump to Today'}
-            </button>
-          )}
-
-          {/* Completion status + mark done */}
-          <CompletionAction habit={habit} effectiveTracking={effectiveTracking} isViewingToday={isViewingToday}
-            viewingDateDone={viewingDateDone} viewingDate={viewingDate} handleToggleDay={handleToggleDay}
-            isAr={isAr} toast={toast} dailyNote={dailyNote} />
-
-          {/* Logs for this day */}
-          <DayLogs habitId={habitId} viewingDate={viewingDate} viewingDateLogs={viewingDateLogs}
-            store={store} isAr={isAr} />
-
-          {/* Settings changes */}
-          {viewingDateHistory.length > 0 && (
-            <SettingsChanges entries={viewingDateHistory} isAr={isAr} />
-          )}
-
-          {/* Daily note */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="h-3.5 w-3.5 text-[var(--foreground)]/35" />
-              <span className="text-xs font-medium text-[var(--foreground)]/45">{isAr ? 'ملاحظة اليوم' : 'Daily Note'}</span>
-            </div>
-            <div className="flex gap-2">
-              <textarea value={dailyNote} onChange={e => setDailyNote(e.target.value)}
-                placeholder={isAr ? 'اكتب ملاحظة عن هذا اليوم...' : 'Write a note about this day...'}
-                className="flex-1 rounded-xl px-3 py-2 text-sm resize-none bg-[var(--foreground)]/[0.03] border-2 border-[var(--color-primary)]/20 placeholder:text-[var(--foreground)]/25 focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-                rows={2} />
-              <button onClick={handleSaveNote} disabled={savingNote}
-                className={cn(btnBase, 'shrink-0 h-10 w-10 self-end',
-                  dailyNote.trim() ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] hover:opacity-90' : 'text-[var(--foreground)]/30')}>
-                {savingNote ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          {!isViewingToday && viewingDateLogs.length === 0 && viewingDateHistory.length === 0 && !dailyNote.trim() && (
-            <p className="text-xs text-[var(--foreground)]/35 italic text-center py-2">{isAr ? 'لا توجد بيانات لهذا اليوم' : 'No data for this day'}</p>
-          )}
-        </motion.div>
+        <div className="flex-1" />
+        {/* Inline stats */}
+        <div className="flex items-center gap-3 text-xs">
+          <span className="flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-orange-500" /><b>{streak.current}</b> {isAr ? 'يوم' : 'days'}</span>
+          <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 text-yellow-500" /><b>{streak.best}</b> {isAr ? 'أفضل' : 'best'}</span>
+          <span className="flex items-center gap-1"><Target className="h-3.5 w-3.5 text-emerald-500" /><b>{stats.completionRate}%</b></span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-primary)]" /><b>{stats.totalCompletions}</b></span>
+        </div>
       </div>
 
-      {/* ═══ 4. Habit Info (collapsible) ═══ */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-        className={cn(cardBase, 'overflow-hidden')}>
-        <button type="button" onClick={() => setInfoOpen(!infoOpen)}
-          className="w-full flex items-center justify-between px-4 sm:px-6 py-3.5 hover:bg-[rgba(var(--color-primary-rgb)/0.04)] transition-colors">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-[var(--color-primary)]" />
-            <span className="text-sm font-bold">{isAr ? 'معلومات العادة' : 'Habit Info'}</span>
-          </div>
-          <ChevronDown className={cn('h-4 w-4 text-[var(--foreground)]/40 transition-transform duration-200', infoOpen && 'rotate-180')} />
-        </button>
-        {infoOpen && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} transition={{ duration: 0.25 }}
-            className="px-4 sm:px-6 pb-4 sm:pb-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-[rgba(var(--color-primary-rgb)/0.1)]">
-              <InfoItem label={isAr ? 'نوع التتبع' : 'Tracking'} value={trackingLabel} icon={
-                effectiveTracking === 'timer' || effectiveTracking === 'duration' ? <Timer className="h-3.5 w-3.5" /> :
-                effectiveTracking === 'count' ? <Hash className="h-3.5 w-3.5" /> :
-                effectiveTracking === 'checklist' ? <ListChecks className="h-3.5 w-3.5" /> :
-                <CheckCircle2 className="h-3.5 w-3.5" />} />
-              <InfoItem label={isAr ? 'الهدف' : 'Target'} value={`${habit.targetValue ?? 1} ${habit.targetUnit ?? 'times'}`} icon={<Target className="h-3.5 w-3.5" />} />
-              <InfoItem label={isAr ? 'الأولوية' : 'Priority'} value={habit.priority} icon={<Star className="h-3.5 w-3.5" />} />
-              <InfoItem label={isAr ? 'الصعوبة' : 'Difficulty'} value={habit.difficulty} icon={<Activity className="h-3.5 w-3.5" />} />
-              {habit.preferredTime && <InfoItem label={isAr ? 'الوقت المفضل' : 'Preferred Time'} value={habit.preferredTime} icon={<Clock className="h-3.5 w-3.5" />} />}
-              {habitUsesTimerToLog(habit) && habit.expectedDuration && (
-                <InfoItem label={isAr ? 'جلسة المؤقت' : 'Timer target'} value={formatDurationSecs(habit.expectedDuration)} icon={<Timer className="h-3.5 w-3.5" />} />
-              )}
-              {(habit.placeEn || habit.placeAr) && (
-                <InfoItem label={isAr ? 'المكان' : 'Place'} value={isAr ? habit.placeAr || habit.placeEn || '' : habit.placeEn || habit.placeAr || ''} icon={<MapPin className="h-3.5 w-3.5" />} />
-              )}
-              {(habit.windowStart || habit.windowEnd) && (
-                <InfoItem label={isAr ? 'نافذة الوقت' : 'Time Window'}
-                  value={`${habit.windowStart ? to12h(habit.windowStart) : '—'} - ${habit.windowEnd ? to12h(habit.windowEnd) : '—'}`}
-                  icon={<Clock className="h-3.5 w-3.5" />} />
-              )}
-              <InfoItem label={isAr ? 'تاريخ الإنشاء' : 'Created'}
-                value={new Date(habit.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })}
-                icon={<CalendarIcon className="h-3.5 w-3.5" />} />
-              {habit.endDate && (
-                <InfoItem label={isAr ? 'ينتهي في' : 'Ends on'}
-                  value={new Date(habit.endDate + 'T00:00:00').toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  icon={<Target className="h-3.5 w-3.5" />} />
-              )}
-            </div>
-          </motion.div>
-        )}
+      {/* ═══ 3. Year Calendar ═══ */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+        className={cn(cardBase, 'p-4 sm:p-6')}>
+        {/* Year selector */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => setCalYear(y => y - 1)} className={cn(btnBase, 'h-9 w-9')}>
+            <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+          </button>
+          <h2 className="text-2xl font-black tracking-tight" style={{ color: hc }}>{calYear}</h2>
+          <button onClick={() => setCalYear(y => y + 1)}
+            disabled={calYear >= new Date().getFullYear()}
+            className={cn(btnBase, 'h-9 w-9', calYear >= new Date().getFullYear() && 'opacity-30')}>
+            <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+          </button>
+        </div>
+
+        {/* Legend + hint */}
+        <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-sm bg-emerald-500" /><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'مكتمل' : 'Done'}</span></div>
+          <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-sm bg-amber-500" /><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'متأخر' : 'Late'}</span></div>
+          <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-sm bg-red-500" /><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'فائت' : 'Missed'}</span></div>
+          <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-sm bg-gray-300 dark:bg-gray-600" /><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'قادم' : 'Upcoming'}</span></div>
+          <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-sm bg-red-500/15 text-red-400 text-[7px] font-black flex items-center justify-center">✕</div><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'غير مجدول' : 'N/A'}</span></div>
+          <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-full bg-violet-500" /><span className="text-xs font-semibold text-[var(--foreground)]/60">{isAr ? 'تم تعديل الإعدادات' : 'Settings edited'}</span></div>
+        </div>
+        <p className="text-center text-sm text-[var(--color-primary)] font-bold mb-4">
+          {isAr ? '📅 اضغط على أي يوم لعرض تفاصيل الجلسة والإنجاز' : '📅 Click any day to view session details'}
+        </p>
+
+        {/* 12-month grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 12 }, (_, mi) => {
+            const daysInMonth = new Date(calYear, mi + 1, 0).getDate();
+            const firstDow = new Date(calYear, mi, 1).getDay();
+            const monthName = MONTH_NAMES[mi];
+            return (
+              <div key={mi} className="rounded-xl p-3 transition-all"
+                style={{ border: `1.5px solid ${hc}20`, background: `${hc}04` }}>
+                <p className="text-sm font-bold text-center mb-2" style={{ color: hc }}>{monthName}</p>
+                <div className="grid grid-cols-7 gap-px text-center">
+                  {DAY_ABBRS.map(d => (
+                    <div key={d} className="text-[8px] font-bold text-[var(--foreground)]/30 py-0.5">{d}</div>
+                  ))}
+                  {Array.from({ length: firstDow }, (_, i) => <div key={`e${i}`} />)}
+                  {Array.from({ length: daysInMonth }, (_, di) => {
+                    const day = di + 1;
+                    const dateStr = `${calYear}-${String(mi + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const beforeCreated = dateStr < createdDateStr;
+                    const isFutureDay = dateStr > today;
+                    const isScheduledForDay = !beforeCreated && isHabitScheduledForDate(habit, dateStr);
+                    const repCount = !beforeCreated && !isFutureDay ? getDoneRepCountForDate(habit, store.habitLogs, dateStr) : 0;
+                    const hasCompletedLog = !beforeCreated && !isFutureDay && store.habitLogs.some(l => l.habitId === habit.id && l.date === dateStr && l.completed);
+                    const isDone = repCount > 0 || hasCompletedLog;
+                    const isMissed = !isDone && !isFutureDay && !beforeCreated && isScheduledForDay;
+                    const isNotScheduled = !isScheduledForDay && !isFutureDay;
+                    const isTodayCell = dateStr === today;
+                    const hasEdits = history.some(h => h.date === dateStr);
+
+                    return (
+                      <DayDetailsTooltip key={day} habit={habit} dateStr={dateStr} logs={store.habitLogs}
+                        timerSessions={store.timerSessions} habitHistory={history} isAr={isAr}>
+                        <div className={cn(
+                          'h-6 rounded text-[9px] font-bold flex items-center justify-center relative',
+                          isDone && 'bg-emerald-500 text-white',
+                          isMissed && 'bg-red-500 text-white',
+                          isNotScheduled && 'bg-red-500/10 text-red-400/50',
+                          isFutureDay && isScheduledForDay && 'bg-gray-200 dark:bg-gray-700 text-[var(--foreground)]/40',
+                          isFutureDay && !isScheduledForDay && 'text-[var(--foreground)]/20',
+                          !isDone && !isMissed && !isFutureDay && !isNotScheduled && 'text-[var(--foreground)]/50',
+                          isTodayCell && 'ring-2 ring-offset-1 font-black',
+                        )}
+                        style={isTodayCell ? { ['--tw-ring-color' as string]: hc } : undefined}>
+                          {isNotScheduled ? '✕' : day}
+                          {hasEdits && <span className="absolute bottom-0 start-0.5 h-1.5 w-1.5 rounded-full bg-violet-500 z-[2]" />}
+                        </div>
+                      </DayDetailsTooltip>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
       </motion.div>
+
+      {/* ═══ 4. Habit Notes ═══ */}
+      {habit.notes && habit.notes.trim() && (
+        <div className={cn(cardBase, 'px-4 sm:px-5 py-3 sm:py-4')} style={{ borderInlineStart: `3px solid ${hc}` }}>
+          <div className="flex items-start gap-3">
+            <Lightbulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[10px] font-bold text-[var(--foreground)]/40 uppercase tracking-wider mb-1">{isAr ? 'ملاحظات العادة' : 'Habit Notes'}</p>
+              <p className="text-sm text-[var(--foreground)]/70 leading-relaxed whitespace-pre-wrap">{habit.notes.trim()}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ 5. Habit Loop ═══ */}
       {(habit.cueEn || habit.cueAr || habit.routineEn || habit.routineAr || habit.rewardEn || habit.rewardAr) && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-          className={cn(cardBase, 'p-4 sm:p-6 space-y-3')}>
-          <h3 className="text-sm font-bold flex items-center gap-2">
-            <Repeat className="h-4 w-4 text-violet-500" />
-            {isAr ? 'حلقة العادة' : 'Habit Loop'}
-          </h3>
+        <div className={cn(cardBase, 'p-4 sm:p-6 space-y-3')}>
+          <h3 className="text-sm font-bold flex items-center gap-2"><Repeat className="h-4 w-4 text-violet-500" /> {isAr ? 'حلقة العادة' : 'Habit Loop'}</h3>
           <div className="grid gap-2 sm:grid-cols-3">
             {(habit.cueEn || habit.cueAr) && <LoopItem emoji="🔔" label={isAr ? 'الإشارة' : 'Cue'} value={isAr ? habit.cueAr || habit.cueEn || '' : habit.cueEn || habit.cueAr || ''} />}
             {(habit.routineEn || habit.routineAr) && <LoopItem emoji="⚡" label={isAr ? 'الروتين' : 'Routine'} value={isAr ? habit.routineAr || habit.routineEn || '' : habit.routineEn || habit.routineAr || ''} />}
             {(habit.rewardEn || habit.rewardAr) && <LoopItem emoji="🎁" label={isAr ? 'المكافأة' : 'Reward'} value={isAr ? habit.rewardAr || habit.rewardEn || '' : habit.rewardEn || habit.rewardAr || ''} />}
           </div>
-        </motion.div>
+        </div>
       )}
-
-      {/* ═══ Detail Modal ═══ */}
-      <AnimatePresence>
-        {showDetailModal && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowDetailModal(false)} className="fixed inset-0 z-[var(--z-overlay)] bg-black/60" />
-            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-x-0 sm:inset-x-2 md:inset-x-4 top-0 sm:top-[2%] md:top-[3%] z-[var(--z-modal)] md:w-[min(960px,calc(100vw-2rem))] lg:w-[1100px] md:inset-x-0 md:mx-auto max-h-[100vh] sm:max-h-[96vh] md:max-h-[95vh] overflow-y-auto rounded-none sm:rounded-2xl md:rounded-3xl bg-[var(--color-background)] border-0 sm:border border-[var(--foreground)]/[0.18] shadow-2xl">
-              <HabitDetail habit={habit} onClose={() => setShowDetailModal(false)} onEdit={() => {}} onViewFull={() => {}}
-                allHabits={store.habits.filter(h => !h.archived)} onNavigate={() => {}}
-                onArchive={() => { store.toggleHabitArchive(habit.id); setShowDetailModal(false); }}
-                onDelete={() => { store.deleteHabit(habit.id); setShowDetailModal(false); }} />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -767,6 +685,7 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
   habitLogs: HabitLog[]; selectedDate: string | null; setSelectedDate: (d: string | null) => void;
   isAr: boolean; habitColor: string; habit: Habit; today: string;
 }) {
+  const calStore = useAppStore();
   const hc = resolveHabitColor(habitColor);
   const daysInMonth = new Date(calMonth.year, calMonth.month + 1, 0).getDate();
   const firstDayOfWeek = new Date(calMonth.year, calMonth.month, 1).getDay();
@@ -838,7 +757,7 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
           const beforeCreated = habit.createdAt.split('T')[0] > dateStr;
 
           return (
-            <DayDetailsTooltip key={day} habit={habit} dateStr={dateStr} logs={habitLogs} isAr={isAr}>
+            <DayDetailsTooltip key={day} habit={habit} dateStr={dateStr} logs={habitLogs} timerSessions={calStore.timerSessions} habitHistory={historyByDate[dateStr] || []} isAr={isAr}>
             <button type="button"
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
               disabled={beforeCreated}
@@ -880,6 +799,10 @@ function HabitCalendar({ calMonth, setCalMonth, logsByDate, historyByDate, habit
         {habit.strictWindow && <div className="flex items-center gap-1"><div className="h-2.5 w-2.5 rounded-sm bg-amber-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'متأخر' : 'Late'}</span></div>}
         <div className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-violet-500" /><span className="text-[9px] font-semibold text-[var(--foreground)]/50">{isAr ? 'تعديل' : 'Edit'}</span></div>
       </div>
+      {/* Click hint */}
+      <p className="text-center text-sm text-[var(--color-primary)] font-bold mt-3">
+        {isAr ? '📅 اضغط على أي يوم لعرض تفاصيل الجلسة والإنجاز' : '📅 Click any day to view session details'}
+      </p>
     </div>
   );
 }
