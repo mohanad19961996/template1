@@ -33,7 +33,7 @@ async function fetchWithTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
 ) {
-  const { signal, cleanup } = createTimeoutSignal(init?.signal);
+  const { signal, cleanup } = createTimeoutSignal(init?.signal ?? undefined);
 
   try {
     return await fetch(input, { ...init, signal });

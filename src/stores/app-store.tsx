@@ -61,26 +61,82 @@ function normalizeState(state: AppState): AppState {
     allowSkip: h.allowSkip ?? false,
   }));
 
-  // Fix timer habit log completion flags: recalculate based on cumulative per-rep logic
-  const needsLogFix = !(state as any)._timerLogsCumulativeFixed2;
   let habitLogs = state.habitLogs.map(l => ({
     ...l,
     status: l.status ?? (l.completed ? 'completed' : 'missed'),
     source: l.source ?? 'manual',
   }));
 
-  if (needsLogFix) {
-    // Build a map of timer habits by id
-    const timerHabits = new Map<string, { expectedDuration: number; maxDailyReps: number }>();
-    for (const h of habits) {
-      if (h.expectedDuration) {
-        timerHabits.set(h.id, { expectedDuration: h.expectedDuration, maxDailyReps: h.maxDailyReps || Infinity });
-      }
+  // Build a map of timer habits by id
+  const timerHabits = new Map<string, { expectedDuration: number; maxDailyReps: number }>();
+  for (const h of habits) {
+    if (h.expectedDuration) {
+      timerHabits.set(h.id, { expectedDuration: h.expectedDuration, maxDailyReps: h.maxDailyReps || Infinity });
     }
-    // Group ALL logs for timer habits by habitId + date (regardless of source)
+  }
+
+  // ── Fix log durations: the habit expectedDuration migration (min→sec, ×60) did NOT
+  // migrate log.duration values. Old timer logs store minutes-as-seconds (e.g. 30 for
+  // 30 min) while habit.expectedDuration is now 1800. Fix by matching logs to their
+  // timer sessions (which always stored correct absolute-timestamp-based seconds).
+  const needsLogDurationFix = !(state as any)._logDurationsMigrated;
+  if (needsLogDurationFix) {
+    // Build session lookup: habitId+date → sessions
+    const sessionsByKey = new Map<string, typeof state.timerSessions>();
+    for (const session of state.timerSessions) {
+      if (!session.habitId || !session.duration || session.duration <= 0) continue;
+      const endDate = session.endedAt
+        ? formatLocalDate(new Date(session.endedAt))
+        : session.startedAt ? formatLocalDate(new Date(session.startedAt)) : null;
+      if (!endDate) continue;
+      const key = `${session.habitId}|${endDate}`;
+      if (!sessionsByKey.has(key)) sessionsByKey.set(key, []);
+      sessionsByKey.get(key)!.push(session);
+    }
+
+    habitLogs = habitLogs.map(log => {
+      if (!timerHabits.has(log.habitId) || !log.duration || log.duration <= 0) return log;
+      const h = timerHabits.get(log.habitId)!;
+      // If log.duration is already >= expectedDuration, it's likely already in seconds
+      if (log.duration >= h.expectedDuration) return log;
+      // If log.duration * 60 would be a reasonable value (close to expectedDuration or a session),
+      // then the log is in the old minutes format
+      const sessions = sessionsByKey.get(`${log.habitId}|${log.date}`) ?? [];
+      // Check if any session has duration ≈ log.duration * 60 (within 10% tolerance)
+      const scaledDur = log.duration * 60;
+      const hasMatchingSession = sessions.some(s =>
+        Math.abs(s.duration - scaledDur) <= Math.max(s.duration * 0.1, 60)
+      );
+      // Also check if log.duration looks like old minutes format: it's much smaller than target
+      // and multiplying by 60 brings it to a plausible range
+      const looksLikeMinutes = log.duration < h.expectedDuration / 10
+        && scaledDur <= h.expectedDuration * 3;
+      if (hasMatchingSession || looksLikeMinutes) {
+        return { ...log, duration: scaledDur };
+      }
+      return log;
+    });
+  }
+
+  // Fix timer habit log completion flags: recalculate based on cumulative per-rep logic
+  // v3: Skip manual logs without duration — those are valid manual completions that should not be recalculated
+  const needsLogFix = !(state as any)._timerLogsCumulativeFixed3;
+
+  if (needsLogFix) {
+    // Restore manual completions that were incorrectly set to completed:false by previous migration (v2).
+    habitLogs = habitLogs.map(l => {
+      if (timerHabits.has(l.habitId) && l.source === 'manual' && (!l.duration || l.duration <= 0) && !l.completed) {
+        return { ...l, completed: true, status: 'completed' as const };
+      }
+      return l;
+    });
+
+    // Group only timer-source logs for timer habits by habitId + date
     const timerLogsByKey = new Map<string, typeof habitLogs>();
     for (const log of habitLogs) {
       if (!timerHabits.has(log.habitId)) continue;
+      // Skip manual logs without duration — they are valid manual completions
+      if (log.source === 'manual' && (!log.duration || log.duration <= 0)) continue;
       const key = `${log.habitId}|${log.date}`;
       if (!timerLogsByKey.has(key)) timerLogsByKey.set(key, []);
       timerLogsByKey.get(key)!.push(log);
@@ -110,7 +166,8 @@ function normalizeState(state: AppState): AppState {
   return {
     ...state,
     _durationMigratedToSecs: true,
-    _timerLogsCumulativeFixed2: true,
+    _logDurationsMigrated: true,
+    _timerLogsCumulativeFixed3: true,
     habits,
     habitLogs,
     categoryOrder: state.categoryOrder ?? [],
@@ -388,73 +445,11 @@ function syncDeletedHabitLogs(logs: HabitLog[]) {
   });
 }
 
+// Disabled: this cleanup was too aggressive — it matched logs across different dates
+// by duration alone, causing valid logs to be permanently deleted when the same habit
+// produced the same duration on consecutive days (e.g., 30-min countdown timers).
 function cleanupOvernightTimerDuplicateLogs(state: AppState): TimerLogCleanupResult {
-  if (state.habitLogs.length === 0 || state.timerSessions.length === 0) {
-    return { state, removedLogs: [] };
-  }
-
-  const sessionCounts = new Map<string, number>();
-  for (const session of state.timerSessions) {
-    if (session.type !== 'habit-linked' || session.mode === 'pomodoro') continue;
-    if (!session.habitId || !session.endedAt || !session.duration || session.duration <= 0) continue;
-
-    const endedDate = formatLocalDate(new Date(session.endedAt));
-    const key = buildTimerLogKey(session.habitId, endedDate, session.duration);
-    sessionCounts.set(key, (sessionCounts.get(key) ?? 0) + 1);
-  }
-
-  const timerLogGroups = new Map<string, HabitLog[]>();
-  for (const log of state.habitLogs) {
-    if (log.source !== 'timer' || !log.duration || log.duration <= 0) continue;
-    const key = buildTimerLogKey(log.habitId, log.date, log.duration);
-    const existing = timerLogGroups.get(key);
-    if (existing) existing.push(log);
-    else timerLogGroups.set(key, [log]);
-  }
-
-  const removeIds = new Set<string>();
-  const removedLogs: HabitLog[] = [];
-
-  for (const [key, logs] of timerLogGroups) {
-    const [habitId, date, durationStr] = key.split('|');
-    const sessionCount = sessionCounts.get(key) ?? 0;
-    if (sessionCount > 0) continue;
-
-    const duration = Number(durationStr);
-    if (!Number.isFinite(duration) || duration <= 0) continue;
-
-    let hasMatchingPriorSession = false;
-    for (let daysBack = 1; daysBack <= 3; daysBack++) {
-      const previousDateObj = parseLocalDate(date);
-      previousDateObj.setDate(previousDateObj.getDate() - daysBack);
-      const previousDate = formatLocalDate(previousDateObj);
-      const previousKey = buildTimerLogKey(habitId, previousDate, duration);
-
-      if ((sessionCounts.get(previousKey) ?? 0) > 0 && (timerLogGroups.get(previousKey)?.length ?? 0) > 0) {
-        hasMatchingPriorSession = true;
-        break;
-      }
-    }
-
-    if (!hasMatchingPriorSession) continue;
-
-    logs.forEach(log => {
-      if (!removeIds.has(log.id)) {
-        removeIds.add(log.id);
-        removedLogs.push(log);
-      }
-    });
-  }
-
-  if (removedLogs.length === 0) return { state, removedLogs: [] };
-
-  return {
-    state: {
-      ...state,
-      habitLogs: state.habitLogs.filter(log => !removeIds.has(log.id)),
-    },
-    removedLogs,
-  };
+  return { state, removedLogs: [] };
 }
 
 interface AppStore extends AppState {

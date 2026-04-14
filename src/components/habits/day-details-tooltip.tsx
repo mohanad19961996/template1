@@ -125,7 +125,10 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
 
   const completedLogs = dayLogs.filter(l => l.completed);
   const timerLogs = dayLogs.filter(l => l.source === 'timer' && (l.duration ?? 0) > 0);
-  const totalDuration = dayLogs.reduce((s, l) => s + (l.duration ?? 0), 0);
+  // Prefer session durations (always correct absolute-timestamp-based seconds) over log durations
+  const totalDuration = daySessions.length > 0
+    ? daySessions.reduce((s, session) => s + (session.duration ?? 0), 0)
+    : dayLogs.reduce((s, l) => s + (l.duration ?? 0), 0);
   const trackingType = habit.trackingType ?? (habit.expectedDuration ? 'timer' : 'boolean');
   const isToday = dateStr === today;
 

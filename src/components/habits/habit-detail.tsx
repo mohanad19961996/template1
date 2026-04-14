@@ -128,7 +128,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
       const rep = getDoneRepCountForDate(habit, store.habitLogs, ds);
       const log = store.habitLogs.find(l => l.habitId === habit.id && l.date === ds && l.completed)
         ?? store.habitLogs.find(l => l.habitId === habit.id && l.date === ds);
-      days.push({ date: ds, done: rep > 0 || !!log?.completed, color: getCompletionColor(habit, log, ds) });
+      days.push({ date: ds, done: rep > 0 || !!log?.completed, color: getCompletionColor(habit, log, ds, store.habitLogs) });
     }
     return days;
   }, [habit, store.habitLogs, habit.windowStart, habit.windowEnd]);
@@ -192,7 +192,7 @@ export function HabitDetail({ habit, onClose, onEdit, onViewFull, allHabits, onN
       const log = dayLogs.find(l => l.completed) ?? dayLogs[0];
       days.push({
         date: dateStr, day: d, inMonth: true, completed: repCount > 0 || !!log?.completed, sessionCount: repCount, isFuture, beforeCreated,
-        color: !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
+        color: !beforeCreated ? getCompletionColor(habit, log, dateStr, store.habitLogs) : 'none',
       });
     }
     return days;

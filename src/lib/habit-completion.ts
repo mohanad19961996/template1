@@ -36,7 +36,11 @@ export function getTimerCompletionCount(habit: Habit, logs: HabitLog[], dateStr:
  */
 export function getDoneRepCountForDate(habit: Habit, logs: HabitLog[], dateStr: string): number {
   if (habit.expectedDuration || logs.some(l => l.habitId === habit.id && l.date === dateStr && l.habitExpectedDuration)) {
-    return getTimerCompletionCount(habit, logs, dateStr);
+    const timerReps = getTimerCompletionCount(habit, logs, dateStr);
+    if (timerReps > 0) return timerReps;
+    // Manual completions for timer habits (no duration) still count as 1 rep
+    if (logs.some(l => l.habitId === habit.id && l.date === dateStr && l.completed)) return 1;
+    return 0;
   }
   if (habit.trackingType === 'count') {
     const target = habit.targetValue ?? 1;

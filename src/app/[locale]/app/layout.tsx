@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AppSidebar } from '@/components/app/sidebar';
 import { AppNavbar } from '@/components/app/app-navbar';
 import { useAppStore } from '@/stores/app-store';
@@ -12,6 +12,7 @@ import type { WeekDay } from '@/types/app';
 import { formatLocalDate, DEFAULT_POMODORO } from '@/types/app';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Moon } from 'lucide-react';
 
 // Global timer checker — polls every second to detect when a countdown reaches zero.
 // Pomodoro: advances work → break → work … and only completes after the long break; work segments log habit time.
@@ -113,7 +114,7 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
           return;
         }
         if (session) {
-          s.completeTimer(session.id, undefined, undefined, t.endsAt ?? nowISO);
+          s.completeTimer(session.id, undefined, undefined, nowISO);
         } else {
           s.updateActiveTimer({
             state: 'completed',
@@ -131,7 +132,7 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
         logWorkSegmentForHabit(elapsed);
       }
       if (session) {
-        s.completeTimer(session.id, undefined, undefined, t.endsAt ?? timerEndedAt.toISOString());
+        s.completeTimer(session.id, undefined, undefined, timerEndedAt.toISOString());
       } else {
         s.updateActiveTimer({
           state: 'completed',
@@ -214,12 +215,73 @@ function useGlobalAlarmChecker() {
 
 const TIMER_ALARM_ID = '__timer_alarm__';
 
+// Sleep lockdown hook — checks sleep status every 30 seconds
+function useSleepLockdown() {
+  const [sleeping, setSleeping] = useState(false);
+  const [sleepLog, setSleepLog] = useState<{ id: string; sleep_button_at: string } | null>(null);
+  const [sleepConfig, setSleepConfig] = useState<{ bedtime: string; wake_time: string } | null>(null);
+  const [inSleepWindow, setInSleepWindow] = useState(false);
+
+  const checkSleep = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sleep/status');
+      const json = await res.json();
+      const d = json.data;
+      if (d) {
+        setSleeping(!!d.sleeping);
+        setSleepLog(d.sleepLog || null);
+        setSleepConfig(d.config || null);
+        setInSleepWindow(!!d.inSleepWindow);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    checkSleep();
+    const id = setInterval(checkSleep, 30000);
+    return () => clearInterval(id);
+  }, [checkSleep]);
+
+  const wakeUp = useCallback(async () => {
+    if (!sleepLog?.id) return;
+    try {
+      await fetch(`/api/sleep/logs/${sleepLog.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wake_button_at: new Date().toISOString() }),
+      });
+      setSleeping(false);
+      setSleepLog(null);
+    } catch { /* ignore */ }
+  }, [sleepLog]);
+
+  return { sleeping, sleepLog, sleepConfig, inSleepWindow, wakeUp, refresh: checkSleep };
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [timerAlarm, setTimerAlarm] = useState<string | null>(null);
   const locale = useLocale();
   const isAr = locale === 'ar';
+
+  // Sleep lockdown
+  const sleep = useSleepLockdown();
+  const [sleepElapsed, setSleepElapsed] = useState('');
+  useEffect(() => {
+    if (!sleep.sleeping || !sleep.sleepLog?.sleep_button_at) return;
+    const tick = () => {
+      const start = new Date(sleep.sleepLog!.sleep_button_at).getTime();
+      const diff = Math.max(0, Date.now() - start);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setSleepElapsed(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sleep.sleeping, sleep.sleepLog]);
 
   const store = useAppStore();
   const handleTimerComplete = useCallback((label: string) => {
@@ -275,6 +337,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Sleep mode banner — read-only mode, app stays visible */}
+      <AnimatePresence>
+        {sleep.sleeping && (
+          <motion.div
+            initial={{ y: -60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -60, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="fixed top-0 start-0 end-0 z-[99999] flex items-center justify-center gap-4 px-4 py-2.5"
+            style={{
+              background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb)/0.95), color-mix(in srgb, var(--color-primary) 85%, black))',
+              boxShadow: '0 4px 20px rgba(var(--color-primary-rgb) / 0.3)',
+            }}
+          >
+            <Moon className="w-4 h-4 text-white/80 shrink-0" />
+            <div className="flex items-center gap-3 text-white">
+              <span className="text-xs font-medium text-white/70">
+                {isAr ? 'وضع النوم' : 'Sleep Mode'}
+              </span>
+              <span className="text-sm font-extrabold tabular-nums">{sleepElapsed || '0:00'}</span>
+              <span className="text-[10px] text-white/50">
+                {isAr ? '• الموقع للقراءة فقط' : '• Read-only mode'}
+              </span>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={sleep.wakeUp}
+              className="h-7 px-4 rounded-lg text-xs font-bold cursor-pointer shrink-0"
+              style={{ background: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)' }}
+            >
+              {isAr ? '☀️ استيقاظ' : '☀️ Wake Up'}
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sleep mode interaction blocker — prevents clicks on interactive elements */}
+      {sleep.sleeping && (
+        <div
+          className="fixed inset-0 z-[9998] cursor-not-allowed"
+          style={{ background: 'transparent' }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            // Allow clicking the wake-up banner (z-99999) but block everything else
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        />
+      )}
 
       {/* Timer alarm overlay */}
       <AnimatePresence>

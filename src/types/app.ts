@@ -473,8 +473,10 @@ export interface AppState {
   settings: UserSettings;
   activeTimer: ActiveTimer | null;
   _durationMigratedToSecs?: boolean;
+  _logDurationsMigrated?: boolean;
   _timerLogsCumulativeFixed?: boolean;
   _timerLogsCumulativeFixed2?: boolean;
+  _timerLogsCumulativeFixed3?: boolean;
 }
 
 export interface ActiveTimer {

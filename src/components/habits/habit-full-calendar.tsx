@@ -66,7 +66,7 @@ function HabitFullCalendar({ habit, isAr, store, onClose, onBack }: { habit: Hab
         date: dateStr, day: d, inMonth: true, isFuture, beforeCreated,
         completed: repCount > 0 || !!log?.completed,
         sessionCount: repCount,
-        color: !beforeCreated ? getCompletionColor(habit, log, dateStr) : 'none',
+        color: !beforeCreated ? getCompletionColor(habit, log, dateStr, store.habitLogs) : 'none',
       });
     }
     return days;

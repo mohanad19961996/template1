@@ -231,8 +231,13 @@ export function isHabitScheduledForDate(habit: Habit, dateStr: string): boolean 
 
 export type CompletionColor = 'green' | 'orange' | 'red' | 'none' | 'not-scheduled';
 
-export function getCompletionColor(habit: Habit, log: HabitLog | undefined, dateStr?: string): CompletionColor {
-  if (!log || !log.completed) {
+export function getCompletionColor(habit: Habit, log: HabitLog | undefined, dateStr?: string, allLogs?: HabitLog[]): CompletionColor {
+  // For timer habits, check cumulative duration across all logs for the date
+  const isTimerDone = habit.expectedDuration && dateStr && allLogs
+    ? sumLoggedDurationSecsOnDate(habit.id, allLogs, dateStr) >= habit.expectedDuration
+    : false;
+
+  if ((!log || !log.completed) && !isTimerDone) {
     const today = todayString();
     const checkDate = dateStr || '';
     if (checkDate && !isHabitScheduledForDate(habit, checkDate)) return 'not-scheduled';
@@ -253,7 +258,7 @@ export function getCompletionColor(habit: Habit, log: HabitLog | undefined, date
     return 'red';
   }
   if (habit.expectedDuration) return 'green';
-  if (habit.strictWindow && habit.windowStart && habit.windowEnd && log.time) {
+  if (habit.strictWindow && habit.windowStart && habit.windowEnd && log?.time) {
     const logTime = log.time;
     if (logTime < habit.windowStart || logTime > habit.windowEnd) return 'orange';
   }

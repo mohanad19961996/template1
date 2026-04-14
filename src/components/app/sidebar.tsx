@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ListChecks, Timer,
   Settings, Sparkles, X, ClipboardList, Library,
+  Moon,
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,6 +35,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/app/habits', labelEn: "Today's Habits", labelAr: 'عادات اليوم', icon: ListChecks },
       { href: '/app/habits/all', labelEn: 'All Habits', labelAr: 'كل العادات', icon: Library },
       { href: '/app/timers', labelEn: 'Timers', labelAr: 'المؤقتات', icon: Timer },
+      { href: '/app/sleep', labelEn: 'Sleep', labelAr: 'النوم', icon: Moon },
     ],
   },
 ];
