@@ -5,6 +5,7 @@ import {
   AppState, DEFAULT_APP_STATE, Habit, HabitLog, Skill, SkillSession,
   TimerSession, Reminder, Alarm, AlarmStatus, HormoneLog, NutritionLog, HydrationLog,
   Task, Goal, MoodEntry, UserSettings, ActiveTimer, generateId, todayString, parseLocalDate,
+  formatLocalDate,
   StreakInfo, HabitStats, SkillStats, DateString,
   HabitHistoryEntry, HabitChangeType,
   computeTimerElapsed, computeTimerRemaining,
@@ -119,37 +120,53 @@ function normalizeState(state: AppState): AppState {
 
 // ── API Helpers (per-collection) ─────────────────────────
 
-async function fetchHabitsFromAPI(): Promise<Habit[] | null> {
+const API_FETCH_TIMEOUT_MS = 4000;
+
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+  timeoutMs: number = API_FETCH_TIMEOUT_MS,
+): Promise<Response | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const res = await fetch('/api/habits');
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return Array.isArray(data) ? data : null;
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function fetchJSONWithTimeout<T>(
+  url: string,
+  init?: RequestInit,
+  timeoutMs: number = API_FETCH_TIMEOUT_MS,
+): Promise<T | null> {
+  const res = await fetchWithTimeout(url, init, timeoutMs);
+  if (!res?.ok) return null;
+
+  try {
+    return await res.json() as T;
   } catch {
     return null;
   }
+}
+
+async function fetchHabitsFromAPI(): Promise<Habit[] | null> {
+  const res = await fetchJSONWithTimeout<{ data: Habit[] }>('/api/habits');
+  return Array.isArray(res?.data) ? res.data : null;
 }
 
 async function fetchLogsFromAPI(): Promise<HabitLog[] | null> {
-  try {
-    const res = await fetch('/api/logs');
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return Array.isArray(data) ? data : null;
-  } catch {
-    return null;
-  }
+  const res = await fetchJSONWithTimeout<{ data: HabitLog[] }>('/api/logs');
+  return Array.isArray(res?.data) ? res.data : null;
 }
 
 async function fetchTasksFromAPI(): Promise<Task[] | null> {
-  try {
-    const res = await fetch('/api/tasks');
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return Array.isArray(data) ? data : null;
-  } catch {
-    return null;
-  }
+  const res = await fetchJSONWithTimeout<{ data: Task[] }>('/api/tasks');
+  return Array.isArray(res?.data) ? res.data : null;
 }
 
 // ── Offline-safe API calls with retry queue ──────────────
@@ -260,11 +277,10 @@ function recoverTimer(state: AppState, recoveredTimerKeys?: Set<string>): AppSta
     }
     if (recoveryKey) recoveredTimerKeys?.add(recoveryKey);
 
-    const session = state.timerSessions.find(s => s.id === t.sessionId);
-    const endedAt = new Date().toISOString();
-
     // Determine when the timer actually ended (endsAt time, not now)
     const actualEndTime = new Date(t.endsAt);
+    const session = state.timerSessions.find(s => s.id === t.sessionId);
+    const endedAt = actualEndTime.toISOString();
     const endDate = `${actualEndTime.getFullYear()}-${String(actualEndTime.getMonth() + 1).padStart(2, '0')}-${String(actualEndTime.getDate()).padStart(2, '0')}`;
     const endTime = actualEndTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
@@ -320,6 +336,127 @@ function recoverTimer(state: AppState, recoveredTimerKeys?: Set<string>): AppSta
 
 // ── Context ────────────────────────────────────────────────
 
+function getExpectedCompletedCountdownEnd(session: TimerSession): string | null {
+  if (session.mode !== 'countdown' || !session.startedAt || !session.completed) return null;
+  if (!session.duration || session.duration <= 0) return null;
+
+  const startMs = new Date(session.startedAt).getTime();
+  if (!Number.isFinite(startMs)) return null;
+
+  const pausedMs = (session.totalPausedTime ?? 0) * 1000;
+  return new Date(startMs + session.duration * 1000 + pausedMs).toISOString();
+}
+
+function repairCompletedCountdownSessionTimings(state: AppState): AppState {
+  let changed = false;
+
+  const timerSessions = state.timerSessions.map(session => {
+    const expectedEndedAt = getExpectedCompletedCountdownEnd(session);
+    if (!expectedEndedAt) return session;
+
+    const expectedMs = new Date(expectedEndedAt).getTime();
+    const currentMs = session.endedAt ? new Date(session.endedAt).getTime() : NaN;
+    const needsRepair = !Number.isFinite(currentMs) || Math.abs(currentMs - expectedMs) > 60 * 1000;
+
+    if (!needsRepair) return session;
+
+    changed = true;
+    return {
+      ...session,
+      endedAt: expectedEndedAt,
+      events: session.events?.map(event =>
+        event.action === 'finish' ? { ...event, at: expectedEndedAt } : event
+      ) ?? session.events,
+    };
+  });
+
+  return changed ? { ...state, timerSessions } : state;
+}
+
+interface TimerLogCleanupResult {
+  state: AppState;
+  removedLogs: HabitLog[];
+}
+
+function buildTimerLogKey(habitId: string, date: string, duration: number): string {
+  return `${habitId}|${date}|${duration}`;
+}
+
+function syncDeletedHabitLogs(logs: HabitLog[]) {
+  logs.forEach(log => {
+    apiDelete(`/api/habits/${log.habitId}/logs?logId=${log.id}`);
+  });
+}
+
+function cleanupOvernightTimerDuplicateLogs(state: AppState): TimerLogCleanupResult {
+  if (state.habitLogs.length === 0 || state.timerSessions.length === 0) {
+    return { state, removedLogs: [] };
+  }
+
+  const sessionCounts = new Map<string, number>();
+  for (const session of state.timerSessions) {
+    if (session.type !== 'habit-linked' || session.mode === 'pomodoro') continue;
+    if (!session.habitId || !session.endedAt || !session.duration || session.duration <= 0) continue;
+
+    const endedDate = formatLocalDate(new Date(session.endedAt));
+    const key = buildTimerLogKey(session.habitId, endedDate, session.duration);
+    sessionCounts.set(key, (sessionCounts.get(key) ?? 0) + 1);
+  }
+
+  const timerLogGroups = new Map<string, HabitLog[]>();
+  for (const log of state.habitLogs) {
+    if (log.source !== 'timer' || !log.duration || log.duration <= 0) continue;
+    const key = buildTimerLogKey(log.habitId, log.date, log.duration);
+    const existing = timerLogGroups.get(key);
+    if (existing) existing.push(log);
+    else timerLogGroups.set(key, [log]);
+  }
+
+  const removeIds = new Set<string>();
+  const removedLogs: HabitLog[] = [];
+
+  for (const [key, logs] of timerLogGroups) {
+    const [habitId, date, durationStr] = key.split('|');
+    const sessionCount = sessionCounts.get(key) ?? 0;
+    if (sessionCount > 0) continue;
+
+    const duration = Number(durationStr);
+    if (!Number.isFinite(duration) || duration <= 0) continue;
+
+    let hasMatchingPriorSession = false;
+    for (let daysBack = 1; daysBack <= 3; daysBack++) {
+      const previousDateObj = parseLocalDate(date);
+      previousDateObj.setDate(previousDateObj.getDate() - daysBack);
+      const previousDate = formatLocalDate(previousDateObj);
+      const previousKey = buildTimerLogKey(habitId, previousDate, duration);
+
+      if ((sessionCounts.get(previousKey) ?? 0) > 0 && (timerLogGroups.get(previousKey)?.length ?? 0) > 0) {
+        hasMatchingPriorSession = true;
+        break;
+      }
+    }
+
+    if (!hasMatchingPriorSession) continue;
+
+    logs.forEach(log => {
+      if (!removeIds.has(log.id)) {
+        removeIds.add(log.id);
+        removedLogs.push(log);
+      }
+    });
+  }
+
+  if (removedLogs.length === 0) return { state, removedLogs: [] };
+
+  return {
+    state: {
+      ...state,
+      habitLogs: state.habitLogs.filter(log => !removeIds.has(log.id)),
+    },
+    removedLogs,
+  };
+}
+
 interface AppStore extends AppState {
   // Habits
   addHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'archived' | 'order'> & { order?: number }) => Habit;
@@ -349,7 +486,7 @@ interface AppStore extends AppState {
   updateActiveTimer: (updates: Partial<ActiveTimer>) => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
-  completeTimer: (sessionId: string, note?: string, productivityRating?: number) => void;
+  completeTimer: (sessionId: string, note?: string, productivityRating?: number, completedAt?: string) => void;
   cancelTimer: () => void;
   addDistraction: () => void;
 
@@ -428,15 +565,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Load localStorage immediately for fast first paint
-    const local = loadState();
-    const recovered = recoverTimer(local, recoveredTimerKeysRef.current);
-    setState(recovered);
+    const local = repairCompletedCountdownSessionTimings(loadState());
+    const cleanedLocal = cleanupOvernightTimerDuplicateLogs(local);
+    const recovered = recoverTimer(cleanedLocal.state, recoveredTimerKeysRef.current);
+    const cleanedRecovered = cleanupOvernightTimerDuplicateLogs(repairCompletedCountdownSessionTimings(recovered));
+    if (cleanedLocal.removedLogs.length > 0) syncDeletedHabitLogs(cleanedLocal.removedLogs);
+    if (cleanedRecovered.removedLogs.length > 0) syncDeletedHabitLogs(cleanedRecovered.removedLogs);
+    setState(cleanedRecovered.state);
     setMounted(true);
 
     // Fetch active timer from DB (source of truth for timers)
-    fetch('/api/timer').then(r => r.json()).then(res => {
+    fetchJSONWithTimeout<{ data: ActiveTimer | null }>('/api/timer').then(res => {
+      if (!res) return;
       setState(prev => {
         if (res.data) {
+          const recoveryKey = getTimerRecoveryKey(res.data);
+          if (recoveryKey && recoveredTimerKeysRef.current.has(recoveryKey)) {
+            // Local recovery already logged and cleared this expired timer.
+            // Ignore the stale DB copy so it cannot be processed a second time.
+            apiDelete('/api/timer');
+            return { ...prev, activeTimer: null };
+          }
           // DB has an active timer — use it directly as source of truth.
           // Do NOT run recoverTimer here — let the global timer completion
           // check in layout.tsx handle expired timers properly (with sound + UI).
@@ -451,7 +600,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           return prev;
         }
       });
-    }).catch(() => { /* use local state */ });
+    });
 
     // Flush any pending API calls that failed while offline
     flushPendingSync();
@@ -499,9 +648,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             habitLogs: mergedLogs,
             ...(tasks && tasks.length > 0 ? { tasks } : {}),
           };
-          const normalized = normalizeState(updated);
-          saveState(normalized);
-          return normalized;
+          const normalized = repairCompletedCountdownSessionTimings(normalizeState(updated));
+          const cleaned = cleanupOvernightTimerDuplicateLogs(normalized);
+          if (cleaned.removedLogs.length > 0) syncDeletedHabitLogs(cleaned.removedLogs);
+          saveState(cleaned.state);
+          return cleaned.state;
         });
       } else if (recovered.habits.length > 0 || recovered.habitLogs.length > 0 || recovered.tasks.length > 0) {
         // DB is empty but localStorage has data — sync it up
@@ -1002,10 +1153,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, [update]);
 
-  const completeTimer = useCallback((sessionId: string, note?: string, productivityRating?: number) => {
-    const now = new Date().toISOString();
+  const completeTimer = useCallback((sessionId: string, note?: string, productivityRating?: number, completedAt?: string) => {
+    const now = completedAt ?? new Date().toISOString();
     update(s => {
-      const elapsed = computeTimerElapsed(s.activeTimer);
+      const elapsed = computeTimerElapsed(s.activeTimer, new Date(now).getTime());
       return {
         ...s,
         timerSessions: s.timerSessions.map(t => t.id === sessionId ? {

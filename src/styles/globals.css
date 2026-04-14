@@ -1100,20 +1100,29 @@ h3 {
 
 /* ── App: Card with theme-aware hover ── */
 .app-card {
-  border: 2px solid rgba(var(--color-primary-rgb) / 0.12);
-  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.025) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.03);
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid rgba(var(--color-primary-rgb) / 0.13);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.08) 0%, transparent 40%),
+    linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.03) 0%, rgba(var(--color-primary-rgb) / 0.006) 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(var(--color-primary-rgb) / 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-card:hover {
-  border-color: rgba(var(--color-primary-rgb) / 0.3);
-  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.05) 0%, rgba(var(--color-primary-rgb) / 0.015) 100%);
+  border-color: rgba(var(--color-primary-rgb) / 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.12) 0%, transparent 44%),
+    linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.055) 0%, rgba(var(--color-primary-rgb) / 0.016) 100%);
   box-shadow:
-    0 10px 36px rgba(var(--color-primary-rgb) / 0.1),
+    0 14px 40px rgba(var(--color-primary-rgb) / 0.12),
     0 4px 12px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0 0 1px rgba(var(--color-primary-rgb) / 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 .app-card:active {
@@ -1126,20 +1135,29 @@ h3 {
 
 /* ── App: Stat card ── */
 .app-stat-card {
-  border: 2px solid rgba(var(--color-primary-rgb) / 0.12);
-  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.035) 0%, rgba(var(--color-primary-rgb) / 0.005) 100%);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid rgba(var(--color-primary-rgb) / 0.13);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.09) 0%, transparent 42%),
+    linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.04) 0%, rgba(var(--color-primary-rgb) / 0.006) 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .app-stat-card:hover {
   border-color: rgba(var(--color-primary-rgb) / 0.3);
-  background: linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-primary-rgb) / 0.015) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.12) 0%, transparent 46%),
+    linear-gradient(145deg, rgba(var(--color-primary-rgb) / 0.065) 0%, rgba(var(--color-primary-rgb) / 0.016) 100%);
   box-shadow:
-    0 8px 30px rgba(var(--color-primary-rgb) / 0.1),
+    0 12px 32px rgba(var(--color-primary-rgb) / 0.12),
     0 3px 10px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0 0 1px rgba(var(--color-primary-rgb) / 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 
@@ -1353,12 +1371,28 @@ select.app-input option {
 
 /* ── App: Nav link in sidebar ── */
 .app-nav-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1.5px solid transparent;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.app-nav-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 0.55s var(--ease-out-expo), opacity 0.22s ease;
 }
 .app-nav-link svg {
   max-width: none;
   height: unset;
+  transition: transform var(--dur-base) var(--ease-out-expo);
 }
 .app-nav-link:hover {
   background: rgba(var(--color-primary-rgb) / 0.08);
@@ -1367,9 +1401,19 @@ select.app-input option {
   border-color: rgba(var(--color-primary-rgb) / 0.15);
   box-shadow: inset 3px 0 0 rgba(var(--color-primary-rgb) / 0.4), 0 2px 8px rgba(var(--color-primary-rgb) / 0.06);
 }
+.app-nav-link:hover::before {
+  transform: translateX(100%);
+  opacity: 0.55;
+}
+.app-nav-link:hover svg {
+  transform: translateX(1px) scale(1.04);
+}
 [dir="rtl"] .app-nav-link:hover {
   transform: translateX(-3px);
   box-shadow: inset -3px 0 0 rgba(var(--color-primary-rgb) / 0.4), 0 2px 8px rgba(var(--color-primary-rgb) / 0.06);
+}
+[dir="rtl"] .app-nav-link:hover svg {
+  transform: translateX(-1px) scale(1.04);
 }
 
 /* ── Subtle lift on list rows / panels (opt-in) ── */
@@ -3297,10 +3341,15 @@ main > div > section:not(:first-child) {
 
 /* ── Dashboard: Section container ── */
 .dash-section {
+  position: relative;
+  overflow: hidden;
   border: 1.5px solid rgba(var(--color-primary-rgb) / 0.15);
-  background: linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.03) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 18%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.09) 0%, transparent 42%),
+    linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.03) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.06),
     0 0 0 1px rgba(var(--color-primary-rgb) / 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
@@ -3309,19 +3358,26 @@ main > div > section:not(:first-child) {
 }
 .dark .dash-section {
   border-color: rgba(var(--color-primary-rgb) / 0.20);
-  background: linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-background-rgb) / 0.90) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 16%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.1) 0%, transparent 40%),
+    linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-background-rgb) / 0.90) 100%);
 }
 .dash-section:hover {
   border-color: rgba(var(--color-primary-rgb) / 0.28);
   box-shadow:
-    0 8px 32px rgba(var(--color-primary-rgb) / 0.10),
+    0 12px 36px rgba(var(--color-primary-rgb) / 0.12),
     0 2px 8px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(var(--color-primary-rgb) / 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transform: translateY(-1px);
 }
 
 /* ── Dashboard: Section header ── */
 .dash-section-header {
-  background: linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.05) 0%, rgba(var(--color-primary-rgb) / 0.01) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 36%),
+    linear-gradient(180deg, rgba(var(--color-primary-rgb) / 0.05) 0%, rgba(var(--color-primary-rgb) / 0.01) 100%);
   border-bottom: 1.5px solid rgba(var(--color-primary-rgb) / 0.12);
 }
 .dark .dash-section-header {
@@ -3331,7 +3387,9 @@ main > div > section:not(:first-child) {
 
 /* ── Dashboard: Section footer ── */
 .dash-section-footer {
-  background: linear-gradient(0deg, rgba(var(--color-primary-rgb) / 0.04) 0%, transparent 100%);
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.12) 0%, transparent 32%),
+    linear-gradient(0deg, rgba(var(--color-primary-rgb) / 0.04) 0%, transparent 100%);
   border-top: 1.5px solid rgba(var(--color-primary-rgb) / 0.12);
 }
 .dark .dash-section-footer {
@@ -3341,9 +3399,12 @@ main > div > section:not(:first-child) {
 /* ── Dashboard: Stat card ── */
 .dash-stat {
   border: 1.5px solid rgba(var(--color-primary-rgb) / 0.14);
-  background: linear-gradient(150deg, rgba(var(--color-primary-rgb) / 0.045) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 20%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.1) 0%, transparent 42%),
+    linear-gradient(150deg, rgba(var(--color-primary-rgb) / 0.045) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -3368,7 +3429,7 @@ main > div > section:not(:first-child) {
   border-color: rgba(var(--color-primary-rgb) / 0.30);
   transform: translateY(-2px);
   box-shadow:
-    0 8px 28px rgba(var(--color-primary-rgb) / 0.12),
+    0 12px 32px rgba(var(--color-primary-rgb) / 0.14),
     0 2px 8px rgba(0, 0, 0, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
@@ -3413,10 +3474,15 @@ main > div > section:not(:first-child) {
 
 /* ── Dashboard: Sidebar card ── */
 .dash-sidebar-card {
+  position: relative;
+  overflow: hidden;
   border: 1.5px solid rgba(var(--color-primary-rgb) / 0.14);
-  background: linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.03) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, transparent 18%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.08) 0%, transparent 42%),
+    linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.03) 0%, rgba(var(--color-background-rgb) / 0.95) 100%);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -3424,14 +3490,18 @@ main > div > section:not(:first-child) {
 }
 .dark .dash-sidebar-card {
   border-color: rgba(var(--color-primary-rgb) / 0.22);
-  background: linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-background-rgb) / 0.88) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 16%),
+    radial-gradient(circle at 100% 0%, rgba(var(--color-primary-rgb) / 0.1) 0%, transparent 40%),
+    linear-gradient(160deg, rgba(var(--color-primary-rgb) / 0.06) 0%, rgba(var(--color-background-rgb) / 0.88) 100%);
 }
 .dash-sidebar-card:hover {
   border-color: rgba(var(--color-primary-rgb) / 0.26);
   box-shadow:
-    0 6px 24px rgba(var(--color-primary-rgb) / 0.08),
+    0 10px 28px rgba(var(--color-primary-rgb) / 0.1),
     0 2px 6px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
 }
 
 /* ── Dashboard: Motivational card ── */
@@ -3439,7 +3509,7 @@ main > div > section:not(:first-child) {
   position: relative;
   overflow: hidden;
   box-shadow:
-    0 4px 20px rgba(var(--color-primary-rgb) / 0.25),
+    0 8px 26px rgba(var(--color-primary-rgb) / 0.26),
     0 1px 4px rgba(0, 0, 0, 0.08);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -3452,10 +3522,17 @@ main > div > section:not(:first-child) {
   height: 100%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
 }
+.dash-motivational::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 22%);
+}
 .dash-motivational:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 8px 32px rgba(var(--color-primary-rgb) / 0.30),
+    0 12px 36px rgba(var(--color-primary-rgb) / 0.32),
     0 2px 8px rgba(0, 0, 0, 0.10);
 }
 

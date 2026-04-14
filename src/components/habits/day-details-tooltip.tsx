@@ -116,7 +116,11 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
 
   const habitHistory = (externalHistory && externalHistory.length > 0) ? externalHistory : fetchedHistory;
   const dayLogs = logs.filter(l => l.habitId === habit.id && l.date === dateStr);
-  const daySessions = timerSessions.filter(s => s.habitId === habit.id && s.startedAt?.startsWith(dateStr));
+  const daySessions = timerSessions.filter(session => {
+    if (session.habitId !== habit.id) return false;
+    if (session.endedAt) return session.endedAt.startsWith(dateStr);
+    return session.startedAt?.startsWith(dateStr);
+  });
   const hasData = dayLogs.length > 0 || daySessions.length > 0;
 
   const completedLogs = dayLogs.filter(l => l.completed);
@@ -297,13 +301,14 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
                     </div>
                   )) : timerLogs.map((log, i) => {
                     const durSec = log.duration ?? 0;
-                    let endTimeStr = '';
+                    let startTimeStr = '';
                     if (log.time && durSec > 0) {
                       const [hh, mm] = log.time.split(':').map(Number);
-                      const endMin = hh * 60 + mm + Math.round(durSec / 60);
-                      const eH = Math.floor(endMin / 60) % 24;
-                      const eM = endMin % 60;
-                      endTimeStr = to12h(`${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}`);
+                      const startMin = hh * 60 + mm - Math.round(durSec / 60);
+                      const normalizedStartMin = ((startMin % 1440) + 1440) % 1440;
+                      const sH = Math.floor(normalizedStartMin / 60);
+                      const sM = normalizedStartMin % 60;
+                      startTimeStr = to12h(`${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`);
                     }
                     return (
                       <div key={log.id || i} className="mb-3 last:mb-0 rounded-xl p-3"
@@ -316,13 +321,13 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
                           <div className="flex items-center gap-2.5">
                             <Play className="h-3.5 w-3.5 text-emerald-500" />
                             <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'بدأ المؤقت' : 'Timer started'}</span>
-                            <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{log.time ? to12h(log.time) : '—'}</span>
+                            <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{startTimeStr || '—'}</span>
                           </div>
-                          {endTimeStr && (
+                          {log.time && (
                             <div className="flex items-center gap-2.5">
                               <Square className="h-3.5 w-3.5 text-emerald-600" />
                               <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'اكتمل المؤقت' : 'Timer finished'}</span>
-                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{endTimeStr}</span>
+                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{to12h(log.time)}</span>
                             </div>
                           )}
                         </div>

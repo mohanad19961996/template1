@@ -537,7 +537,11 @@ function DayLogs({ habitId, viewingDate, viewingDateLogs, store, isAr }: {
   habitId: string; viewingDate: string; viewingDateLogs: HabitLog[];
   store: ReturnType<typeof useAppStore>; isAr: boolean;
 }) {
-  const daySessions = store.timerSessions.filter(s => s.habitId === habitId && s.startedAt?.startsWith(viewingDate));
+  const daySessions = store.timerSessions.filter(session => {
+    if (session.habitId !== habitId) return false;
+    if (session.endedAt) return session.endedAt.startsWith(viewingDate);
+    return session.startedAt?.startsWith(viewingDate);
+  });
   if (viewingDateLogs.length === 0 && daySessions.length === 0) return null;
 
   return (

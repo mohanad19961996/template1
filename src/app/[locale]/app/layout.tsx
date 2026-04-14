@@ -9,7 +9,7 @@ import { GlobalTimerBanner } from '@/components/app/global-timer-banner';
 import { enableAudio } from '@/lib/sounds';
 import { startAlarmSound, stopAlarmSound } from '@/lib/alarm-sounds';
 import type { WeekDay } from '@/types/app';
-import { formatLocalDate, todayString, DEFAULT_POMODORO } from '@/types/app';
+import { formatLocalDate, DEFAULT_POMODORO } from '@/types/app';
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -47,21 +47,28 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
       const habit = linkedHabitId ? s.habits.find(h => h.id === linkedHabitId) : null;
       const label = habit ? (habit.nameEn || habit.nameAr) : (t.labelEn || t.labelAr || 'Timer');
 
+      const timerEndedAt = t.endsAt ? new Date(t.endsAt) : new Date();
+      const timerEndedDate = formatLocalDate(timerEndedAt);
+      const timerEndedTime = timerEndedAt.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
       const logWorkSegmentForHabit = (elapsed: number) => {
         if (!linkedHabitId || elapsed <= 0 || !habit || habit.archived) return;
-        const today = todayString();
         const habitTarget = habit.expectedDuration || 0;
         const maxReps = habit.maxDailyReps || Infinity;
         const prevTotal = s.habitLogs
-          .filter(l => l.habitId === linkedHabitId && l.date === today)
+          .filter(l => l.habitId === linkedHabitId && l.date === timerEndedDate)
           .reduce((sum, l) => sum + (l.duration ?? 0), 0);
         const prevReps = habitTarget > 0 ? Math.floor(prevTotal / habitTarget) : 0;
         const newReps = habitTarget > 0 ? Math.floor((prevTotal + elapsed) / habitTarget) : 0;
         const isCompleted = newReps > prevReps && (maxReps === Infinity || newReps <= maxReps);
         s.logHabit({
           habitId: linkedHabitId,
-          date: today,
-          time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+          date: timerEndedDate,
+          time: timerEndedTime,
           duration: elapsed,
           note: '', reminderUsed: false, perceivedDifficulty: 'medium',
           completed: isCompleted,
@@ -105,7 +112,7 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
           return;
         }
         if (session) {
-          s.completeTimer(session.id);
+          s.completeTimer(session.id, undefined, undefined, t.endsAt ?? nowISO);
         } else {
           s.updateActiveTimer({
             state: 'completed',
@@ -123,7 +130,7 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
         logWorkSegmentForHabit(elapsed);
       }
       if (session) {
-        s.completeTimer(session.id);
+        s.completeTimer(session.id, undefined, undefined, t.endsAt ?? timerEndedAt.toISOString());
       } else {
         s.updateActiveTimer({
           state: 'completed',
