@@ -33,7 +33,7 @@ import HabitFormModal, { type HabitFormData } from '@/components/habits/habit-fo
 
 import { HabitDetail } from '@/components/habits/habit-detail';
 import CategoryHabitsModal from '@/components/habits/category-habits-modal';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Eye } from 'lucide-react';
 
 const SCHEDULE_GROUP_ORDER: HabitFrequency[] = ['daily', 'weekly', 'monthly', 'custom'];
 const SCHEDULE_SECTION_LABELS: Record<HabitFrequency, { en: string; ar: string }> = {
@@ -84,8 +84,10 @@ export default function HabitsPage() {
     const fromHabits = store.habits.filter(h => !h.archived).map(h => h.category).filter(c => c);
     const fromStore = store.customCategories ?? [];
     const deleted = new Set(store.deletedCategories ?? []);
+    // Categories actively used by non-archived habits are ALWAYS included (never deleted)
+    const inUse = new Set(fromHabits);
     const all = new Set([...defaults, ...fromStore, ...fromHabits]);
-    return Array.from(all).filter(c => !deleted.has(c));
+    return Array.from(all).filter(c => !deleted.has(c) || inUse.has(c));
   }, [store.habits, store.customCategories, store.deletedCategories]);
 
   const [showForm, setShowForm] = useState(false);
@@ -96,7 +98,7 @@ export default function HabitsPage() {
   const [detailHabit, setDetailHabit] = useState<Habit | null>(null);
 
   // Category folder mode
-  const [folderMode, setFolderMode] = useState(false);
+  const [folderMode, setFolderMode] = useState(true);
   const [folderCategory, setFolderCategory] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const openHabitId = searchParams.get('openHabit');
@@ -360,16 +362,21 @@ export default function HabitsPage() {
       if (!map[cat]) map[cat] = [];
       map[cat].push(h);
     }
+    // Include all custom categories even if empty
+    for (const cat of (store.customCategories || [])) {
+      if (!map[cat]) map[cat] = [];
+    }
     // Sort categories: use categoryOrder if available, then alphabetical
+    const allCats = Object.keys(map);
     const ordered = store.categoryOrder?.length > 0
-      ? [...new Set([...store.categoryOrder, ...Object.keys(map)])]
-      : Object.keys(map);
-    return ordered.filter(c => map[c] && map[c].length > 0).map(cat => ({
+      ? [...new Set([...store.categoryOrder, ...allCats])]
+      : allCats;
+    return ordered.filter(c => map[c] !== undefined).map(cat => ({
       category: cat,
-      habits: map[cat],
-      count: map[cat].length,
+      habits: map[cat] || [],
+      count: (map[cat] || []).length,
     }));
-  }, [filteredHabits, store.categoryOrder]);
+  }, [filteredHabits, store.categoryOrder, store.customCategories]);
 
   const activeHabitsCount = store.habits.filter(h => !h.archived).length;
   const todayScheduledCount = store.habits.filter(h => !h.archived && isHabitScheduledForDate(h, today)).length;
@@ -387,6 +394,18 @@ export default function HabitsPage() {
     store.reorderHabits(reordered.map(h => h.id));
   }, [habitsForDnd, store]);
   const isDragMode = true;
+
+  // Category folder drag
+  const categoryIds = useMemo(() => habitsByCategory.map(g => g.category), [habitsByCategory]);
+  const handleCategoryDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = categoryIds.indexOf(active.id as string);
+    const newIndex = categoryIds.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(categoryIds, oldIndex, newIndex);
+    store.reorderCategories(reordered);
+  }, [categoryIds, store]);
 
   // ═══════════════════════════════════════════════════════
   // JSX
@@ -737,41 +756,58 @@ export default function HabitsPage() {
 
       {/* ═══ Category Folder Mode ═══ */}
       {folderMode && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap gap-2 mb-4">
-          {habitsByCategory.map((group, gi) => {
-            const catLabel = getCategoryLabel(group.category, isAr);
-            const doneCount = group.habits.filter(h => isHabitDoneToday(h, store.habitLogs, today)).length;
-            const allDone = doneCount === group.count && group.count > 0;
-            return (
-              <motion.button
-                key={group.category}
-                type="button"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: gi * 0.03, duration: 0.2 }}
-                onClick={() => setFolderCategory(group.category)}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl px-3 py-2 cursor-pointer transition-all duration-150 active:scale-95',
-                  'border hover:shadow-md',
-                  allDone
-                    ? 'border-[var(--color-success)]/30 bg-[var(--color-success)]/5 hover:border-[var(--color-success)]/50'
-                    : 'border-[var(--color-primary)]/15 bg-[var(--color-background)] hover:border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/[0.04]',
-                )}
-              >
-                <FolderOpen className={cn('h-4 w-4 shrink-0', allDone ? 'text-[var(--color-success)]' : 'text-[var(--color-primary)]')} />
-                <span className="text-xs font-bold whitespace-nowrap">{catLabel}</span>
-                <span className={cn(
-                  'text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full',
-                  allDone
-                    ? 'bg-[var(--color-success)]/15 text-[var(--color-success)]'
-                    : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
-                )}>
-                  {doneCount}/{group.count}
-                </span>
-              </motion.button>
-            );
-          })}
-        </motion.div>
+        <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
+          <SortableContext items={categoryIds} strategy={rectSortingStrategy}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-5">
+              {habitsByCategory.map((group, gi) => {
+                const catLabel = getCategoryLabel(group.category, isAr);
+                const doneCount = group.habits.filter(h => isHabitDoneToday(h, store.habitLogs, today)).length;
+                return (
+                  <SortableItem key={group.category} id={group.category}>
+                    <motion.button
+                      type="button"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: gi * 0.04, duration: 0.25 }}
+                      onClick={() => setFolderCategory(group.category)}
+                      className="app-card rounded-2xl p-4 ps-10 cursor-pointer text-start transition-all duration-200 active:scale-[0.97] w-full"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                          style={{ background: 'rgba(var(--color-primary-rgb)/0.1)' }}>
+                          <FolderOpen className="h-4.5 w-4.5 text-[var(--color-primary)]" />
+                        </div>
+                        <span className="text-[11px] font-bold tabular-nums text-[var(--color-primary)] bg-[rgba(var(--color-primary-rgb)/0.08)] px-2 py-0.5 rounded-full">
+                          {doneCount}/{group.count}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-[var(--foreground)] truncate">{catLabel}</p>
+                      <p className="text-[11px] text-[var(--foreground)]/40 mt-0.5">
+                        {group.count} {isAr ? 'عادة' : group.count === 1 ? 'habit' : 'habits'}
+                      </p>
+                      <div className="mt-3 h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${group.count > 0 ? (doneCount / group.count) * 100 : 0}%`,
+                            background: 'var(--color-primary)',
+                          }}
+                        />
+                      </div>
+                      {/* View habits button */}
+                      <div className="mt-3 pt-3 border-t border-[var(--foreground)]/[0.05]">
+                        <span className="group/btn flex items-center justify-center gap-1.5 w-full h-7 rounded-lg text-[11px] font-semibold text-[var(--color-primary)] bg-[rgba(var(--color-primary-rgb)/0.06)] transition-all duration-200 hover:bg-[rgba(var(--color-primary-rgb)/0.14)] hover:shadow-sm active:scale-[0.97]">
+                          <Eye className="w-3 h-3 transition-transform duration-200 group-hover/btn:scale-110" />
+                          {isAr ? 'عرض العادات' : 'View Habits'}
+                        </span>
+                      </div>
+                    </motion.button>
+                  </SortableItem>
+                );
+              })}
+            </motion.div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Category Habits Modal */}
@@ -785,6 +821,13 @@ export default function HabitsPage() {
         today={today}
         onEdit={(habit) => { setFolderCategory(null); openEdit(habit); }}
         onDetail={(habit) => { setFolderCategory(null); setDetailHabit(habit); }}
+        onCreateHabit={() => {
+          const cat = folderCategory;
+          setFolderCategory(null);
+          resetForm();
+          setFormData(prev => ({ ...prev, category: cat || 'health' }));
+          setShowForm(true);
+        }}
         themeTick={themeTick}
       />
 

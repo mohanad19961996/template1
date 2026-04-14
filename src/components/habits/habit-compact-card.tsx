@@ -108,18 +108,27 @@ function HabitCompactRow({ habit, index, isAr, store, today, onEdit, onArchive, 
         )}
       </div>
 
-      {/* Row 2: Tracking type + timer info + Details button */}
+      {/* Row 2: Frequency + timer duration + tracking type + Details button */}
       <div className="flex items-center gap-1.5">
-        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-[var(--foreground)]/45">
+        {/* Frequency badge */}
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[var(--foreground)]/[0.04] text-[var(--foreground)]/35">
+          {isAr
+            ? (habit.frequency === 'daily' ? 'يومي' : habit.frequency === 'weekly' ? 'أسبوعي' : habit.frequency === 'monthly' ? 'شهري' : 'مخصص')
+            : (habit.frequency === 'daily' ? 'Daily' : habit.frequency === 'weekly' ? 'Weekly' : habit.frequency === 'monthly' ? 'Monthly' : 'Custom')}
+        </span>
+        {/* Tracking type */}
+        <span className="flex items-center gap-0.5 text-[9px] font-semibold text-[var(--foreground)]/35">
           {tt === 'timer' && <Clock className="h-2.5 w-2.5" />}
           {tt === 'count' && <Hash className="h-2.5 w-2.5" />}
           {tt === 'checklist' && <ListChecks className="h-2.5 w-2.5" />}
           {tt === 'boolean' && <CheckCircle2 className="h-2.5 w-2.5" />}
           {isAr ? TRACKING_LABELS[tt]?.ar : TRACKING_LABELS[tt]?.en}
         </span>
-        {hasDuration && cumulativeSecsToday > 0 && (
-          <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--foreground)]/40">
-            {formatDurationSecs(cumulativeSecsToday)}
+        {/* Default timer duration (not today's progress) */}
+        {hasDuration && (
+          <span className="text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md text-[var(--foreground)]/40" style={{ background: `${hc}08`, color: hc }}>
+            <Timer className="h-2.5 w-2.5 inline-block me-0.5 -mt-px" />
+            {formatDurationSecs(habit.expectedDuration!)}
           </span>
         )}
         {/* Timer controls inline */}

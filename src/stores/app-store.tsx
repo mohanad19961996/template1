@@ -1451,13 +1451,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const renameCategory = useCallback((oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName) return;
-    update(s => ({
-      ...s,
-      habits: s.habits.map(h => h.category === oldName ? { ...h, category: newName } : h),
-      customCategories: s.customCategories.map(c => c === oldName ? newName : c),
-      categoryOrder: (s.categoryOrder ?? []).map(c => c === oldName ? newName : c),
-      deletedCategories: (s.deletedCategories ?? []).filter(c => c !== oldName),
-    }));
+    update(s => {
+      const updatedHabits = s.habits.map(h => h.category === oldName ? { ...h, category: newName } : h);
+      // Sync each affected habit's category to the API
+      updatedHabits.filter(h => h.category === newName).forEach(h => {
+        apiPatch(`/api/habits/${h.id}`, { category: newName });
+      });
+      // Ensure new name is in customCategories
+      const newCustom = s.customCategories.includes(oldName)
+        ? s.customCategories.map(c => c === oldName ? newName : c)
+        : [...s.customCategories.filter(c => c !== newName), newName];
+      // Mark old name as deleted (removes it from defaults if it was a default)
+      const newDeleted = [...(s.deletedCategories ?? []).filter(c => c !== newName), oldName];
+      return {
+        ...s,
+        habits: updatedHabits,
+        customCategories: newCustom,
+        categoryOrder: (s.categoryOrder ?? []).map(c => c === oldName ? newName : c),
+        deletedCategories: newDeleted,
+      };
+    });
   }, [update]);
 
   const reorderCategories = useCallback((orderedCategories: string[]) => {

@@ -3,7 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FolderOpen } from 'lucide-react';
+import { X, FolderOpen, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types/app';
 import { CATEGORY_LABELS } from './habit-constants';
@@ -19,11 +19,12 @@ interface CategoryHabitsModalProps {
   today: string;
   onEdit: (habit: Habit) => void;
   onDetail: (habit: Habit) => void;
+  onCreateHabit?: () => void;
   themeTick?: number;
 }
 
 export default function CategoryHabitsModal({
-  open, onClose, category, habits, isAr, store, today, onEdit, onDetail, themeTick,
+  open, onClose, category, habits, isAr, store, today, onEdit, onDetail, onCreateHabit, themeTick,
 }: CategoryHabitsModalProps) {
   const catLabel = isAr
     ? (CATEGORY_LABELS[category]?.ar ?? category)
@@ -77,13 +78,24 @@ export default function CategoryHabitsModal({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70 hover:bg-[rgba(var(--color-primary-rgb)/0.06)] transition-all shrink-0"
-                  style={{ border: '1px solid rgba(var(--color-primary-rgb)/0.08)' }}
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {onCreateHabit && (
+                    <button
+                      onClick={onCreateHabit}
+                      className="app-btn-primary h-8 px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {isAr ? 'عادة جديدة' : 'New Habit'}
+                    </button>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="h-9 w-9 rounded-xl flex items-center justify-center text-[var(--foreground)]/40 hover:text-[var(--foreground)]/70 hover:bg-[rgba(var(--color-primary-rgb)/0.06)] transition-all shrink-0"
+                    style={{ border: '1px solid rgba(var(--color-primary-rgb)/0.08)' }}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Habit cards */}
