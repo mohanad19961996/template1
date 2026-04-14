@@ -47,12 +47,13 @@ function useGlobalTimerCompletionCheck(onComplete: (label: string) => void) {
       const habit = linkedHabitId ? s.habits.find(h => h.id === linkedHabitId) : null;
       const label = habit ? (habit.nameEn || habit.nameAr) : (t.labelEn || t.labelAr || 'Timer');
 
-      const timerEndedAt = t.endsAt ? new Date(t.endsAt) : new Date();
+      const timerEndedAt = new Date(); // always use current time, not endsAt
       const timerEndedDate = formatLocalDate(timerEndedAt);
-      const timerEndedTime = timerEndedAt.toLocaleTimeString('en-US', {
+      const timerEndedTime = new Date().toLocaleTimeString('en-US', {
         hour12: false,
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
 
       const logWorkSegmentForHabit = (elapsed: number) => {

@@ -130,9 +130,10 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
   const isToday = dateStr === today;
 
   const dateLabel = (() => {
-    if (isToday) return isAr ? 'اليوم' : 'Today';
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const fullDate = d.toLocaleDateString(isAr ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (isToday) return isAr ? `اليوم — ${fullDate}` : `Today — ${fullDate}`;
+    return fullDate;
   })();
 
   const formatTime = (iso: string) => {
@@ -277,22 +278,32 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <div className="space-y-1.5 ps-1">
-                          <div className="flex items-center gap-2.5">
-                            <Play className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'بدأ المؤقت' : 'Timer started'}</span>
-                            <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{formatTime(session.startedAt)}</span>
-                          </div>
-                          {session.endedAt && (
+                      ) : (() => {
+                        const startStr = session.startedAt ? formatTime(session.startedAt) : '—';
+                        let endStr = '';
+                        if (session.endedAt) {
+                          endStr = formatTime(session.endedAt);
+                        } else if (session.startedAt && session.duration > 0) {
+                          const endMs = new Date(session.startedAt).getTime() + session.duration * 1000;
+                          endStr = formatTime(new Date(endMs).toISOString());
+                        }
+                        return (
+                          <div className="space-y-1.5 ps-1">
                             <div className="flex items-center gap-2.5">
-                              <Square className="h-3.5 w-3.5 text-emerald-600" />
-                              <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'اكتمل المؤقت' : 'Timer finished'}</span>
-                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{formatTime(session.endedAt)}</span>
+                              <Play className="h-3.5 w-3.5 text-emerald-500" />
+                              <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'بدأ المؤقت' : 'Timer started'}</span>
+                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{startStr}</span>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {endStr && (
+                              <div className="flex items-center gap-2.5">
+                                <Square className="h-3.5 w-3.5 text-emerald-600" />
+                                <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'اكتمل المؤقت' : 'Timer finished'}</span>
+                                <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{endStr}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <div className="flex items-center gap-1.5 mt-2 pt-2" style={{ borderTop: '1px solid rgba(var(--color-primary-rgb)/0.06)' }}>
                         {session.completed
                           ? <><Check className="h-3.5 w-3.5 text-emerald-500" /><span className="text-xs text-emerald-600 font-semibold">{isAr ? 'اكتمل بنجاح' : 'Completed successfully'}</span></>
@@ -302,13 +313,24 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
                   )) : timerLogs.map((log, i) => {
                     const durSec = log.duration ?? 0;
                     let startTimeStr = '';
+                    let endTimeStr = '';
                     if (log.time && durSec > 0) {
+                      // log.time = when the log was recorded (end time)
+                      // Calculate start = end - duration
                       const [hh, mm] = log.time.split(':').map(Number);
-                      const startMin = hh * 60 + mm - Math.round(durSec / 60);
+                      const endMin = hh * 60 + mm;
+                      const startMin = endMin - Math.round(durSec / 60);
                       const normalizedStartMin = ((startMin % 1440) + 1440) % 1440;
                       const sH = Math.floor(normalizedStartMin / 60);
                       const sM = normalizedStartMin % 60;
                       startTimeStr = to12h(`${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}`);
+                      endTimeStr = to12h(log.time);
+                    } else if (log.time) {
+                      // Has time but no duration — show time as end
+                      endTimeStr = to12h(log.time);
+                    } else if (durSec > 0) {
+                      // Has duration but no time — can't calculate, just show duration
+                      startTimeStr = '—';
                     }
                     return (
                       <div key={log.id || i} className="mb-3 last:mb-0 rounded-xl p-3"
@@ -318,16 +340,18 @@ export default function DayDetailsTooltip({ habit, dateStr, logs, timerSessions 
                           <span className="text-sm font-bold tabular-nums text-[var(--color-primary)]">{formatDurationSecs(durSec)}</span>
                         </div>
                         <div className="space-y-1.5 ps-1">
-                          <div className="flex items-center gap-2.5">
-                            <Play className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'بدأ المؤقت' : 'Timer started'}</span>
-                            <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{startTimeStr || '—'}</span>
-                          </div>
-                          {log.time && (
+                          {(startTimeStr || endTimeStr) && (
+                            <div className="flex items-center gap-2.5">
+                              <Play className="h-3.5 w-3.5 text-emerald-500" />
+                              <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'بدأ المؤقت' : 'Timer started'}</span>
+                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{startTimeStr || '—'}</span>
+                            </div>
+                          )}
+                          {endTimeStr && (
                             <div className="flex items-center gap-2.5">
                               <Square className="h-3.5 w-3.5 text-emerald-600" />
                               <span className="text-xs font-medium text-[var(--foreground)]/60">{isAr ? 'اكتمل المؤقت' : 'Timer finished'}</span>
-                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{to12h(log.time)}</span>
+                              <span className="text-xs font-bold tabular-nums text-[var(--foreground)]/70 ms-auto">{endTimeStr}</span>
                             </div>
                           )}
                         </div>
