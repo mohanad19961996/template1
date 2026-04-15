@@ -109,6 +109,10 @@ export default function HabitsPage() {
     if (habit) {
       setDetailHabit(habit);
       openHabitHandled.current = true;
+      // Clear the URL param so refresh doesn't reopen the modal
+      const url = new URL(window.location.href);
+      url.searchParams.delete('openHabit');
+      window.history.replaceState({}, '', url.pathname);
     }
   }, [openHabitId, store.habits]);
   const [showFullTable, setShowFullTable] = useState(false);
@@ -758,7 +762,7 @@ export default function HabitsPage() {
       {folderMode && (
         <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
           <SortableContext items={categoryIds} strategy={rectSortingStrategy}>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-5">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 mb-5">
               {habitsByCategory.map((group, gi) => {
                 const catLabel = getCategoryLabel(group.category, isAr);
                 const doneCount = group.habits.filter(h => isHabitDoneToday(h, store.habitLogs, today)).length;
@@ -766,41 +770,52 @@ export default function HabitsPage() {
                   <SortableItem key={group.category} id={group.category}>
                     <motion.button
                       type="button"
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: gi * 0.04, duration: 0.25 }}
+                      transition={{ delay: gi * 0.03, duration: 0.2 }}
                       onClick={() => setFolderCategory(group.category)}
-                      className="app-card rounded-2xl p-4 ps-10 cursor-pointer text-start transition-all duration-200 active:scale-[0.97] w-full"
+                      className="app-card rounded-xl p-3 ps-9 cursor-pointer text-start w-full group/folder"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                          style={{ background: 'rgba(var(--color-primary-rgb)/0.1)' }}>
-                          <FolderOpen className="h-4.5 w-4.5 text-[var(--color-primary)]" />
-                        </div>
-                        <span className="text-[11px] font-bold tabular-nums text-[var(--color-primary)] bg-[rgba(var(--color-primary-rgb)/0.08)] px-2 py-0.5 rounded-full">
+                      {/* Title + count */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[13px] font-bold text-[var(--foreground)] truncate flex-1">{catLabel}</p>
+                        <span className="text-[10px] font-bold tabular-nums text-[var(--foreground)]/50 ms-2 shrink-0">
                           {doneCount}/{group.count}
                         </span>
                       </div>
-                      <p className="text-sm font-bold text-[var(--foreground)] truncate">{catLabel}</p>
-                      <p className="text-[11px] text-[var(--foreground)]/40 mt-0.5">
-                        {group.count} {isAr ? 'عادة' : group.count === 1 ? 'habit' : 'habits'}
-                      </p>
-                      <div className="mt-3 h-1.5 rounded-full bg-[var(--foreground)]/[0.06] overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${group.count > 0 ? (doneCount / group.count) * 100 : 0}%`,
-                            background: 'var(--color-primary)',
-                          }}
-                        />
+
+                      {/* Segmented progress — one dash per habit, done first */}
+                      <div className="flex gap-[2px] mb-2" dir="ltr">
+                        {[...group.habits]
+                          .sort((a, b) => {
+                            const aDone = isHabitDoneToday(a, store.habitLogs, today) ? 0 : 1;
+                            const bDone = isHabitDoneToday(b, store.habitLogs, today) ? 0 : 1;
+                            return aDone - bDone;
+                          })
+                          .map((h) => {
+                            const isDone = isHabitDoneToday(h, store.habitLogs, today);
+                            return (
+                              <div
+                                key={h.id}
+                                className="h-1.5 flex-1 rounded-full transition-all duration-500"
+                                style={{
+                                  background: isDone
+                                    ? 'var(--color-primary)'
+                                    : 'rgba(var(--color-foreground-rgb) / 0.1)',
+                                }}
+                              />
+                            );
+                          })}
+                        {group.count === 0 && (
+                          <div className="h-1.5 flex-1 rounded-full" style={{ background: 'rgba(var(--color-foreground-rgb) / 0.06)' }} />
+                        )}
                       </div>
-                      {/* View habits button */}
-                      <div className="mt-3 pt-3 border-t border-[var(--foreground)]/[0.05]">
-                        <span className="group/btn flex items-center justify-center gap-1.5 w-full h-7 rounded-lg text-[11px] font-semibold text-[var(--color-primary)] bg-[rgba(var(--color-primary-rgb)/0.06)] transition-all duration-200 hover:bg-[rgba(var(--color-primary-rgb)/0.14)] hover:shadow-sm active:scale-[0.97]">
-                          <Eye className="w-3 h-3 transition-transform duration-200 group-hover/btn:scale-110" />
-                          {isAr ? 'عرض العادات' : 'View Habits'}
-                        </span>
-                      </div>
+
+                      {/* View button */}
+                      <span className="flex items-center justify-center gap-1.5 w-full h-7 rounded-lg text-[11px] font-semibold text-[var(--foreground)]/50 border border-[var(--foreground)]/[0.08] bg-[var(--foreground)]/[0.02] group-hover/folder:text-[var(--color-primary)] group-hover/folder:border-[rgba(var(--color-primary-rgb)/0.2)] group-hover/folder:bg-[rgba(var(--color-primary-rgb)/0.04)] transition-all duration-200">
+                        <Eye className="w-3 h-3" />
+                        {isAr ? 'عرض العادات' : 'View Habits'}
+                      </span>
                     </motion.button>
                   </SortableItem>
                 );

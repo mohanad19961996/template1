@@ -470,6 +470,7 @@ export interface AppState {
   customCategories: string[];
   categoryOrder: string[];
   deletedCategories: string[];
+  categoryNotes: Record<string, string>;
   settings: UserSettings;
   activeTimer: ActiveTimer | null;
   _durationMigratedToSecs?: boolean;
@@ -683,6 +684,7 @@ export const DEFAULT_APP_STATE: AppState = {
   customCategories: [],
   categoryOrder: [],
   deletedCategories: [],
+  categoryNotes: {},
   settings: DEFAULT_SETTINGS,
   activeTimer: null,
 };

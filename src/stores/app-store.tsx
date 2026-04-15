@@ -172,6 +172,7 @@ function normalizeState(state: AppState): AppState {
     habitLogs,
     categoryOrder: state.categoryOrder ?? [],
     deletedCategories: state.deletedCategories ?? [],
+    categoryNotes: state.categoryNotes ?? {},
   };
 }
 
@@ -459,6 +460,9 @@ interface AppStore extends AppState {
   deleteHabit: (id: string) => void;
   toggleHabitArchive: (id: string) => void;
   reorderHabits: (orderedIds: string[]) => void;
+  reorderHabitsInCategory: (orderedIds: string[]) => void;
+  setCategoryNote: (category: string, note: string) => void;
+  categoryNotes: Record<string, string>;
   logHabit: (log: Omit<HabitLog, 'id'>) => HabitLog;
   deleteHabitLog: (id: string) => void;
   getHabitLogs: (habitId: string, startDate?: string, endDate?: string) => HabitLog[];
@@ -768,6 +772,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     orderedIds.forEach((id, idx) => {
       apiPatch(`/api/habits/${id}`, { order: idx + 1 });
     });
+  }, [update]);
+
+  const reorderHabitsInCategory = useCallback((orderedIds: string[]) => {
+    update(s => ({
+      ...s,
+      habits: s.habits.map(h => {
+        const idx = orderedIds.indexOf(h.id);
+        return idx >= 0 ? { ...h, categoryViewOrder: idx + 1 } : h;
+      }),
+    }));
+    orderedIds.forEach((id, idx) => {
+      apiPatch(`/api/habits/${id}`, { categoryViewOrder: idx + 1 });
+    });
+  }, [update]);
+
+  const setCategoryNote = useCallback((category: string, note: string) => {
+    update(s => ({
+      ...s,
+      categoryNotes: { ...(s.categoryNotes ?? {}), [category]: note },
+    }));
   }, [update]);
 
   const logHabit = useCallback((data: Omit<HabitLog, 'id'>): HabitLog => {
@@ -1513,7 +1537,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const store: AppStore = {
     ...state,
-    addHabit, updateHabit, deleteHabit, toggleHabitArchive, reorderHabits,
+    addHabit, updateHabit, deleteHabit, toggleHabitArchive, reorderHabits, reorderHabitsInCategory, setCategoryNote,
+    categoryNotes: stateRef.current.categoryNotes ?? {},
     logHabit, deleteHabitLog, getHabitLogs, getHabitStats, getHabitStreak,
     isHabitCompletedToday, getTodayCompletionRate,
     addSkill, updateSkill, deleteSkill,
